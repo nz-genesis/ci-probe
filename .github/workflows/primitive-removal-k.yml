@@ -1,0 +1,21 @@
+name: Primitive Removal K
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  primitive-removal:
+    name: seven-dimension-removal
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute primitive removal experiment
+        run: PYTHONPATH=. python3 primitive_removal_k_test.py
