@@ -4,10 +4,12 @@ from action_probe import (
     ActionContract,
     AdmissionError,
     DuplicateExecutionError,
+    ScopeViolationError,
     Status,
     admit,
     execute_once,
     observe,
+    reconcile,
     safe_retry,
     verify,
 )
@@ -23,6 +25,7 @@ class ActionSemanticsTests(unittest.TestCase):
             authority=authority,
             expected_outcome={"value": 42},
             verification={"source": "fixture"},
+            idempotency_key="fixture-action-42",
         )
 
     def admitted(self):
@@ -37,6 +40,11 @@ class ActionSemanticsTests(unittest.TestCase):
             admit(self.contract(), capabilities=set(), authorities={"test-authority"})
         with self.assertRaises(AdmissionError):
             admit(self.contract(), capabilities={"fixture-write"}, authorities=set())
+
+    def test_admission_requires_explicit_capability_and_authority_fields(self):
+        contract = ActionContract(target="fixture-target", operation="set-value")
+        with self.assertRaises(AdmissionError):
+            admit(contract, capabilities=set(), authorities=set())
 
     def test_success_requires_observed_and_verified_outcome(self):
         record = execute_once(self.admitted(), effect={"value": 42})
@@ -57,12 +65,21 @@ class ActionSemanticsTests(unittest.TestCase):
         with self.assertRaises(DuplicateExecutionError):
             execute_once(record, effect={"value": 42})
 
-    def test_admission_scope_is_not_executor_scope(self):
+    def test_unknown_state_requires_reconciliation_before_classification(self):
+        record = execute_once(self.admitted(), effect={"value": 42}, acknowledgement_lost=True)
+        reconcile(record, {"value": 42})
+        verify(record, {"value": 42})
+        self.assertEqual(record.status, Status.VERIFIED)
+        self.assertFalse(safe_retry(record))
+
+    def test_executor_cannot_expand_target_or_operation_scope(self):
         record = self.admitted()
-        record.trace.append("executor-requested-extra-scope")
-        # The generic probe has no API for silently expanding the contract.
+        with self.assertRaises(ScopeViolationError):
+            execute_once(record, effect={"value": 42}, target="other-target")
+        with self.assertRaises(ScopeViolationError):
+            execute_once(record, effect={"value": 42}, operation="delete-value")
+        self.assertEqual(record.attempts, 0)
         self.assertEqual(record.status, Status.ADMITTED)
-        self.assertEqual(record.action_id, "fixture-target:set-value")
 
     def test_realization_is_replaceable_at_contract_boundary(self):
         first = execute_once(self.admitted(), effect={"value": 42})
