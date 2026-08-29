@@ -6,7 +6,9 @@ Clean-room, Genesis-agnostic executable experiment. It extends the previous succ
 
 ## Frozen request contract
 
-For request `req-001`, establish the requested value `v1` at key `item`, version `1`, and retain enough observable information to classify the resulting condition.
+For request `req-001`, establish the requested value `v1` at two keys, `item-a` and `item-b`, version `1`, and retain enough observable information to classify the resulting condition.
+
+The two-effect contract is deliberate: it makes `partial` semantically observable rather than merely a label attached to a complete single-key effect.
 
 Two realization mechanisms are compared:
 
@@ -17,14 +19,14 @@ The mechanisms receive the same injected condition and must produce the same bou
 
 ## Conditions
 
-| Condition | Effect | Acknowledgement | Observation | Recovery classification |
+| Condition | Effect count | Acknowledgement | Observation | Recovery classification |
 |---|---:|---:|---|---|
-| success | 1 | yes | value/version confirmed | success |
+| success | 2 | yes | both values/version confirmed | success |
 | failed before effect | 0 | yes | no requested effect | failed |
-| partial | 1 | yes | incomplete effect evidence | partial |
-| acknowledgement lost | 1 | no | effect not directly confirmed | unknown |
-| duplicate effect | 2 | yes | repeated effect detectable | duplicate |
-| stale version | 0 | yes | existing older state | stale |
+| partial | 1 of 2 | yes | one value present, one absent | partial |
+| acknowledgement lost | 2 | no | requested effect not directly confirmed | unknown |
+| duplicate effect | 3 | yes | repeated effect detectable | duplicate |
+| stale version | 0 | yes | older state remains | stale |
 | revoked before realization | 0 | no | no realization permitted | revoked |
 
 ## Discriminating question
@@ -42,6 +44,12 @@ The stronger result is about the **recovery information boundary**:
 - `FAILED` is retryable only because the fixture explicitly establishes no effect;
 - `STALE` and `REVOKED` are distinct from `FAILED` because their meaning is not simply absence of effect;
 - an acknowledgement remains distinct from evidence of the requested effect.
+
+## Red-Team correction history
+
+The first implementation of this bounded pass used a single-key request while labeling one effect as `partial`. Red Team identified that as a semantic modeling flaw: a single-key write cannot demonstrate partial completion of the requested contract. The fixture was corrected to a two-key contract and a regression test was added requiring one-of-two effects for `partial`.
+
+The initial flawed implementation is historical evidence only and is superseded by the corrected experiment. It must not be counted as independent evidence.
 
 ## Epistemic status
 
