@@ -1,0 +1,19 @@
+name: HITL Recovery Race
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  hitl-recovery-race:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute HITL recovery race experiment
+        run: PYTHONPATH=. python3 hitl_recovery_race.py
+      - name: Execute HITL recovery race regression
+        run: PYTHONPATH=. python3 hitl_recovery_race_test.py
