@@ -1,0 +1,20 @@
+name: HITL Boundary
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hitl-boundary:
+    name: authority-risk-irreversibility-boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute HITL boundary experiment
+        run: PYTHONPATH=. python3 hitl_boundary_test.py
