@@ -1,0 +1,22 @@
+name: Root Lifecycle Authority
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  root-lifecycle-authority:
+    name: root-lifecycle-authority
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute clean-room experiment
+        run: PYTHONPATH=. python3 root_lifecycle_authority.py
+      - name: Execute regression tests
+        run: PYTHONPATH=. python3 root_lifecycle_authority_test.py
