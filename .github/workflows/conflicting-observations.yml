@@ -1,0 +1,24 @@
+name: Conflicting Observations
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  conflicting-observations:
+    name: conflicting-observations
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute conflicting observations probe
+        run: PYTHONPATH=. python3 conflicting_observations.py
+
+      - name: Execute regression tests
+        run: PYTHONPATH=. python3 conflicting_observations_test.py
