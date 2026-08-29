@@ -3,7 +3,7 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parent
-SKIP_DIRS = {".git", ".github"}
+SKIP_DIRS = {".git"}
 MAX_BYTES = 2_000_000
 
 FORBIDDEN_PATTERNS = [
