@@ -1,0 +1,21 @@
+name: Authority Uncertainty
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  authority-uncertainty:
+    name: derive-authority-state-from-evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute authority uncertainty experiment
+        run: PYTHONPATH=. python3 authority_uncertainty_test.py
