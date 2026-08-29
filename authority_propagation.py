@@ -1,8 +1,7 @@
 """Clean-room experiment: authority propagation delay and late evidence.
 
-The experiment keeps authority state as a derived classification. Freshness,
-causal order, and evidence conflict are represented as constraints over
-observations rather than as new authority primitives.
+Authority state is derived from observations. Freshness and causal-order
+constraints determine whether an observation is eligible for admission.
 """
 
 from dataclasses import dataclass
@@ -41,7 +40,8 @@ class DecisionContext:
 def derive_state(observations: tuple[Observation, ...], context: DecisionContext) -> AuthorityState:
     current = [
         o for o in observations
-        if o.observed_at <= context.realization_time
+        if o.event_time <= o.observed_at
+        and o.observed_at <= context.realization_time
         and context.realization_time - o.observed_at <= context.freshness_bound
     ]
     if not current:
@@ -80,11 +80,13 @@ def verify() -> None:
     stale_authorized = Observation("A", AuthorityState.AUTHORIZED, 3, 3)
     fresh_revoke = Observation("A", AuthorityState.REVOKED, 9, 9)
     other_authorized = Observation("B", AuthorityState.AUTHORIZED, 10, 10)
+    malformed = Observation("A", AuthorityState.AUTHORIZED, 20, 9)
 
     assert derive_state((fresh_authorized,), context) is AuthorityState.AUTHORIZED
     assert derive_state((stale_authorized,), context) is AuthorityState.UNKNOWN
     assert derive_state((fresh_revoke,), context) is AuthorityState.REVOKED
     assert derive_state((fresh_revoke, other_authorized), context) is AuthorityState.CONFLICTING
+    assert derive_state((malformed,), context) is AuthorityState.UNKNOWN
 
     assert admit(AuthorityState.AUTHORIZED, context) is Admission.ALLOW
     assert admit(AuthorityState.REVOKED, context) is Admission.BLOCK
@@ -96,10 +98,6 @@ def verify() -> None:
 
     assert reconcile(fresh_revoke, AuthorityState.AUTHORIZED) is AuthorityState.REVOKED
     assert reconcile(other_authorized, AuthorityState.REVOKED) is AuthorityState.CONFLICTING
-
-    # A malformed causal observation must not become fresh authorization.
-    malformed = Observation("A", AuthorityState.AUTHORIZED, 20, 9)
-    assert malformed.event_time > malformed.observed_at
 
 
 if __name__ == "__main__":
