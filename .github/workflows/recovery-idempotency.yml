@@ -1,0 +1,22 @@
+name: Recovery Idempotency
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recovery-idempotency:
+    name: recovery-idempotency
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute clean-room experiment
+        run: PYTHONPATH=. python3 recovery_idempotency.py
+      - name: Execute regression tests
+        run: PYTHONPATH=. python3 recovery_idempotency_test.py
