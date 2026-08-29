@@ -1,0 +1,20 @@
+name: Dynamic Delegation
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dynamic-delegation:
+    name: delegation-chain-revocation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute dynamic delegation experiment
+        run: PYTHONPATH=. python3 dynamic_delegation_test.py
