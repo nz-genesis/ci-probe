@@ -23,8 +23,11 @@ jobs:
           echo "runner=${RUNNER_NAME}"
           echo "os=${RUNNER_OS}"
 
-      - name: Execute deterministic probe
+      - name: Execute deterministic substrate probe
         run: python3 probe.py
+
+      - name: Execute generic action semantics tests
+        run: python3 -m unittest -v test_action_probe.py
 
       - name: Verify probe artifact
         run: |
