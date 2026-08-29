@@ -12,6 +12,11 @@ def test_changed_version_blocks():
     assert decide(Scenario("op", "p1", "v2", True, Evidence.VERIFIED, False, "low", True, approval)) is Decision.BLOCK
 
 
+def test_stale_approval_blocks():
+    approval = Approval("op", "p1", "v1", True, "stale")
+    assert decide(Scenario("op", "p1", "v1", True, Evidence.VERIFIED, False, "low", True, approval)) is Decision.BLOCK
+
+
 def test_revoked_after_approval_blocks():
     approval = Approval("op", "p1", "v1", True, "approved")
     assert decide(Scenario("op", "p1", "v1", False, Evidence.VERIFIED, True, "high", False, approval)) is Decision.BLOCK
@@ -20,6 +25,11 @@ def test_revoked_after_approval_blocks():
 def test_conflicting_evidence_blocks():
     approval = Approval("op", "p1", "v1", True, "approved")
     assert decide(Scenario("op", "p1", "v1", True, Evidence.CONFLICTING, True, "high", False, approval)) is Decision.BLOCK
+
+
+def test_partial_effect_blocks():
+    approval = Approval("op", "p1", "v1", True, "approved")
+    assert decide(Scenario("op", "p1", "v1", True, Evidence.PARTIAL, False, "low", True, approval)) is Decision.BLOCK
 
 
 def test_unknown_high_harm_requires_hitl():
@@ -61,7 +71,7 @@ def test_hitl_does_not_verify_effect():
     assert decide(Scenario("op", "p1", "v1", True, Evidence.UNKNOWN, True, "high", False, None)) is Decision.HITL_REQUIRED
 
 
-def test_stale_approval_is_not_reused():
+def test_stale_parameter_approval_is_not_reused():
     approval = Approval("op", "old", "v1", True, "approved")
     assert decide(Scenario("op", "new", "v1", True, Evidence.UNKNOWN, False, "low", True, approval)) is Decision.BLOCK
 
@@ -70,4 +80,4 @@ if __name__ == "__main__":
     tests = [v for k, v in globals().items() if k.startswith("test_")]
     for test in tests:
         test()
-    print("HITL ADVERSARIAL REGRESSION 14/14 PASS")
+    print("HITL ADVERSARIAL REGRESSION 16/16 PASS")
