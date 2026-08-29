@@ -1,0 +1,1 @@
+Generic clean-room CI verification marker for the recovery/idempotency experiment. No Genesis-private material or canonical decision.
