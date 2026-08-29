@@ -34,3 +34,5 @@ The probes intentionally model semantic distinctions without introducing Genesis
 Workflows perform only generic repository checkout and deterministic probe execution/regression. No external services or repository-specific secrets are required.
 
 Results from this repository must be interpreted and, if warranted, canonicalized only in the private `nz-genesis/genesis-lab` repository.
+
+Verification branches may exist solely to obtain independent pull-request CI observations; they are not part of the Genesis architecture.
