@@ -1,5 +1,6 @@
 name: Idempotency Claim Verification
 
+# Verification-only PR trigger: no semantic change.
 on:
   push:
     paths:
