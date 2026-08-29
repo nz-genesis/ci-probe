@@ -3,6 +3,7 @@ import unittest
 from action_probe import (
     ActionContract,
     AdmissionError,
+    AuthorizationRevokedError,
     DuplicateExecutionError,
     ScopeViolationError,
     Status,
@@ -80,6 +81,24 @@ class ActionSemanticsTests(unittest.TestCase):
             execute_once(record, effect={"value": 42}, operation="delete-value")
         self.assertEqual(record.attempts, 0)
         self.assertEqual(record.status, Status.ADMITTED)
+
+    def test_revoked_authority_blocks_execution(self):
+        record = self.admitted()
+        with self.assertRaises(AuthorizationRevokedError):
+            execute_once(record, effect={"value": 42}, active_authorities=set())
+        self.assertEqual(record.attempts, 0)
+        self.assertEqual(record.status, Status.ADMITTED)
+
+    def test_concurrent_admissions_are_distinct_and_not_exactly_once(self):
+        first = self.admitted()
+        second = self.admitted()
+        execute_once(first, effect={"value": 42})
+        execute_once(second, effect={"value": 42})
+        self.assertEqual(first.action_id, second.action_id)
+        self.assertEqual(first.attempts, 1)
+        self.assertEqual(second.attempts, 1)
+        # The generic probe deliberately does not claim distributed locking
+        # or exactly-once semantics; this is a negative boundary result.
 
     def test_realization_is_replaceable_at_contract_boundary(self):
         first = execute_once(self.admitted(), effect={"value": 42})
