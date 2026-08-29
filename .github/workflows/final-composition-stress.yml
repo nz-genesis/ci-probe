@@ -1,0 +1,19 @@
+name: Final Composition Stress
+
+on:
+  push:
+    branches: [l6n-final-composition]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  final-composition-stress:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute final composition stress experiment
+        run: PYTHONPATH=. python3 final_composition_stress.py
+      - name: Execute final composition stress regression
+        run: PYTHONPATH=. python3 final_composition_stress_test.py
