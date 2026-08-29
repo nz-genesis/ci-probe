@@ -25,7 +25,8 @@ The repository includes independent, bounded experiments covering:
 - concurrent/cross-realizer duplicate-effect risk;
 - differential atomicity/coordination;
 - adversarial contract/effect verification;
-- HITL authority/risk/irreversibility boundaries.
+- HITL authority/risk/irreversibility boundaries;
+- HITL approval × recovery composition.
 
 The probes intentionally model semantic distinctions without introducing Genesis-specific engines or primitives.
 
