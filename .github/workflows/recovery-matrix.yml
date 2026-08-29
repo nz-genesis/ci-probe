@@ -1,0 +1,20 @@
+name: Recovery Matrix
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recovery-matrix:
+    name: generic-recovery-scenarios
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute recovery matrix
+        run: PYTHONPATH=. python3 recovery_matrix_test.py
