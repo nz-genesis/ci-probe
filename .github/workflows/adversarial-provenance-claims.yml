@@ -1,0 +1,24 @@
+name: Adversarial Provenance Claims
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  adversarial-provenance-claims:
+    name: adversarial-provenance-claims
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute clean-room experiment
+        run: PYTHONPATH=. python3 adversarial_provenance_claims.py
+
+      - name: Execute regression tests
+        run: PYTHONPATH=. python3 adversarial_provenance_claims_test.py
