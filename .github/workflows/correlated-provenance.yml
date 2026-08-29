@@ -17,6 +17,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Keep experiment and regression as separate executable gates.
       - name: Execute clean-room experiment
         run: PYTHONPATH=. python3 correlated_provenance.py
 
