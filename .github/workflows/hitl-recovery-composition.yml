@@ -1,0 +1,22 @@
+name: HITL Recovery Composition
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hitl-recovery-composition:
+    name: hitl-recovery-composition
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute clean-room experiment
+        run: PYTHONPATH=. python3 hitl_recovery_composition.py
+      - name: Execute regression tests
+        run: PYTHONPATH=. python3 hitl_recovery_composition_test.py
