@@ -1,0 +1,22 @@
+name: HITL Boundary Adversarial
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hitl-boundary-adversarial:
+    name: hitl-boundary-adversarial
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute clean-room experiment
+        run: PYTHONPATH=. python3 hitl_boundary_adversarial.py
+      - name: Execute regression tests
+        run: PYTHONPATH=. python3 hitl_boundary_adversarial_test.py
