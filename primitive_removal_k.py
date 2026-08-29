@@ -5,7 +5,7 @@ The experiment distinguishes two questions:
 2. Can the same distinction be represented compositionally without naming the
    candidate as an independent primitive?
 
-A collision under projection is evidence that the *distinction* matters. It is
+A collision under projection is evidence that the distinction matters. It is
 not, by itself, evidence that the named candidate must be a Genesis primitive.
 """
 from dataclasses import dataclass
@@ -55,12 +55,12 @@ FIXTURES: dict[str, tuple[Record, Record]] = {
         Record("ready", "write", "write", "deny", "none", "none", "none"),
     ),
     "observation": (
-        Record("active", "start", "none", "none", "none", "effect-seen", "none"),
-        Record("active", "start", "none", "none", "none", "no-effect-seen", "none"),
+        Record("active", "start", "none", "none", "seen", "none", "none"),
+        Record("active", "start", "none", "none", "not-seen", "none", "none"),
     ),
     "evidence": (
-        Record("active", "start", "none", "none", "effect-seen", "verified", "none"),
-        Record("active", "start", "none", "none", "effect-seen", "unverified", "none"),
+        Record("active", "start", "none", "none", "seen", "verified", "none"),
+        Record("active", "start", "none", "none", "seen", "unverified", "none"),
     ),
     "constraint": (
         Record("ready", "start", "write", "allow", "none", "none", "one-effect"),
@@ -79,11 +79,7 @@ def projection_collides(omitted: str) -> bool:
 
 
 def composite_reencoding(record: Record, omitted: str) -> tuple[tuple[str, Any], ...]:
-    """Encode the omitted distinction as generic data, not as a primitive.
-
-    The representation has one fixed generic shape for every candidate:
-    dimension name + dimension value + the remaining record as generic context.
-    """
+    """Encode the omitted distinction as generic data, not as a primitive."""
     values = record.as_dict()
     context = tuple(sorted((key, value) for key, value in values.items() if key != omitted))
     return (
