@@ -1,0 +1,22 @@
+name: HITL Authority Risk
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hitl-authority-risk:
+    name: hitl-authority-risk
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute clean-room experiment
+        run: PYTHONPATH=. python3 hitl_authority_risk.py
+      - name: Execute regression tests
+        run: PYTHONPATH=. python3 hitl_authority_risk_test.py
