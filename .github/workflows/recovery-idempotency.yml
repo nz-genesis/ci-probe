@@ -20,3 +20,7 @@ jobs:
         run: PYTHONPATH=. python3 recovery_idempotency.py
       - name: Execute regression tests
         run: PYTHONPATH=. python3 recovery_idempotency_test.py
+      - name: Execute L6h concurrent duplicate-effect experiment
+        run: PYTHONPATH=. python3 concurrent_duplicate_effect.py
+      - name: Execute L6h regression tests
+        run: PYTHONPATH=. python3 concurrent_duplicate_effect_test.py
