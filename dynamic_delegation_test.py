@@ -38,7 +38,7 @@ def test_stable_chain_remains_mechanism_independent() -> None:
 def test_each_delegation_edge_is_part_of_the_effective_authority_chain() -> None:
     root_revoked = realize(ROOT_REVOKES_AGENT, Mechanism.REVALIDATE_CHAIN)
     executor_revoked = realize(EXECUTOR_DELEGATION_REVOKED, Mechanism.REVALIDATE_CHAIN)
-    assert root_revoked.outcome == executor_revoked.outcome == Outcome.BLOCKED_REVOKED
+    assert root_revoked == executor_revoked == Outcome.BLOCKED_REVOKED
 
 
 if __name__ == "__main__":
