@@ -56,6 +56,10 @@ class ScopeViolationError(Exception):
     pass
 
 
+class AuthorizationRevokedError(Exception):
+    pass
+
+
 def admit(
     contract: ActionContract,
     *,
@@ -85,6 +89,7 @@ def execute_once(
     target: str | None = None,
     operation: str | None = None,
     acknowledgement_lost: bool = False,
+    active_authorities: set[str] | None = None,
 ) -> ExecutionRecord:
     if record.status not in {Status.ADMITTED, Status.UNKNOWN}:
         raise AdmissionError(f"cannot execute from status={record.status.value}")
@@ -95,6 +100,8 @@ def execute_once(
         raise ScopeViolationError("executor target is outside admitted scope")
     if operation is not None and operation != expected_operation:
         raise ScopeViolationError("executor operation is outside admitted scope")
+    if active_authorities is not None and not active_authorities:
+        raise AuthorizationRevokedError("execution authority is no longer active")
     record.attempts += 1
     record.status = Status.STARTED
     record.trace.append("started")
@@ -124,11 +131,7 @@ def verify(record: ExecutionRecord, expected: Mapping[str, Any]) -> ExecutionRec
 
 
 def reconcile(record: ExecutionRecord, observed: Mapping[str, Any]) -> ExecutionRecord:
-    """Resolve an unknown execution state from an independent observation.
-
-    Reconciliation never executes the action. It only moves UNKNOWN to a
-    terminally classified state based on the observed external fixture state.
-    """
+    """Record an independent observation for an unknown execution state."""
     if record.status != Status.UNKNOWN:
         raise AdmissionError(f"reconciliation requires unknown status, got={record.status.value}")
     record.observed = dict(observed)
@@ -137,8 +140,5 @@ def reconcile(record: ExecutionRecord, observed: Mapping[str, Any]) -> Execution
 
 
 def safe_retry(record: ExecutionRecord) -> bool:
-    """Return whether a retry is safe without reconciliation.
-
-    Unknown or already-attempted execution is deliberately unsafe to retry.
-    """
+    """Retry is safe only before any execution attempt and admission is current."""
     return record.status == Status.ADMITTED and record.attempts == 0
