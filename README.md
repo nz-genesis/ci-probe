@@ -1,26 +1,33 @@
 # CI Probe
 
-Minimal, Genesis-agnostic control experiment for GitHub Actions execution.
+Minimal, Genesis-agnostic control repository for executable GitHub Actions experiments.
 
 ## Purpose
 
-This repository exists only to distinguish ordinary public GitHub-hosted Actions execution from repository-specific execution failures.
+This repository exists only for generic executable experiments that can be run on public GitHub-hosted Actions runners.
 
-It contains no Genesis source, research corpus, private fixtures, hypotheses, architecture, unpublished findings, credentials, or private configuration.
+It contains no Genesis source, private research corpus, private fixtures, hypotheses, architecture, unpublished findings, credentials, internal endpoints, datasets, or canonical decisions.
 
-## Interpretation
+## Interpretation boundary
 
-A successful run establishes only that this public repository can execute the probe on the selected GitHub-hosted runner. It does **not** constitute Genesis evidence and does not promote or modify any state in `nz-genesis/genesis-lab`.
+A successful run establishes only that the checked-out generic probe executes successfully on the selected runner and that its bounded assertions pass. It does **not** constitute Genesis evidence by itself and does not promote or modify any state in `nz-genesis/genesis-lab`.
 
-A failed pre-step run is evidence about the execution substrate and must not be interpreted as a Genesis test failure without further investigation.
+A failed pre-step or substrate-related run is evidence about the execution environment and must not be interpreted as a Genesis test failure without further investigation.
 
-## Probe contract
+## Current generic probes
 
-The workflow intentionally performs only:
+The repository includes independent, bounded experiments covering:
 
-1. checkout;
-2. runtime identification;
-3. deterministic probe execution;
-4. artifact generation.
+- execution scenario outcomes;
+- authority/revocation lifecycle;
+- recovery after lost acknowledgement;
+- idempotency-claim verification;
+- concurrent/cross-realizer duplicate-effect risk.
 
-No external services or repository-specific secrets are required.
+The probes intentionally model semantic distinctions without introducing Genesis-specific engines or primitives.
+
+## CI contract
+
+Workflows perform only generic repository checkout and deterministic probe execution/regression. No external services or repository-specific secrets are required.
+
+Results from this repository must be interpreted and, if warranted, canonicalized only in the private `nz-genesis/genesis-lab` repository.
