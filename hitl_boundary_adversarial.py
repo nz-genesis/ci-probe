@@ -1,6 +1,6 @@
 """Clean-room adversarial HITL boundary probe.
 
-The probe tests that human approval is scoped decision evidence, not authority,
+Human approval is modeled as scoped decision evidence, not as authority,
 execution, or proof of external effect.
 """
 from dataclasses import dataclass
@@ -17,6 +17,7 @@ class Evidence(str, Enum):
     VERIFIED = "verified"
     UNKNOWN = "unknown"
     CONFLICTING = "conflicting"
+    PARTIAL = "partial"
 
 
 @dataclass(frozen=True)
@@ -25,7 +26,7 @@ class Approval:
     parameter_fingerprint: str
     resource_version: str
     authority_valid_at_approval: bool
-    status: str  # approved, absent, conflicting
+    status: str  # approved, stale, conflicting
 
 
 @dataclass(frozen=True)
@@ -44,10 +45,10 @@ class Scenario:
 def decide(s: Scenario) -> Decision:
     if not s.authority_valid_now:
         return Decision.BLOCK
-    if s.effect_evidence is Evidence.CONFLICTING:
+    if s.effect_evidence in {Evidence.CONFLICTING, Evidence.PARTIAL}:
         return Decision.BLOCK
     if s.approval is not None:
-        if s.approval.status == "conflicting":
+        if s.approval.status in {"stale", "conflicting"}:
             return Decision.BLOCK
         if not s.approval.authority_valid_at_approval:
             return Decision.BLOCK
@@ -70,6 +71,7 @@ def verify() -> None:
     good = Approval("op", "p1", "v1", True, "approved")
     stale_params = Approval("op", "p0", "v1", True, "approved")
     stale_version = Approval("op", "p1", "v0", True, "approved")
+    stale_time = Approval("op", "p1", "v1", True, "stale")
     revoked_after = Approval("op", "p1", "v1", True, "approved")
     conflicting = Approval("op", "p1", "v1", True, "conflicting")
     invalid_at_approval = Approval("op", "p1", "v1", False, "approved")
@@ -79,16 +81,16 @@ def verify() -> None:
         ("matching_approval_high_harm", Scenario("op", "p1", "v1", True, Evidence.VERIFIED, False, "high", True, good), Decision.HITL_REQUIRED),
         ("changed_parameters", Scenario("op", "p2", "v1", True, Evidence.VERIFIED, False, "low", True, good), Decision.BLOCK),
         ("changed_resource_version", Scenario("op", "p1", "v2", True, Evidence.VERIFIED, False, "low", True, good), Decision.BLOCK),
+        ("stale_time_approval", Scenario("op", "p1", "v1", True, Evidence.VERIFIED, False, "low", True, stale_time), Decision.BLOCK),
         ("revoked_after_approval", Scenario("op", "p1", "v1", False, Evidence.VERIFIED, True, "high", False, revoked_after), Decision.BLOCK),
         ("conflicting_approvals", Scenario("op", "p1", "v1", True, Evidence.CONFLICTING, True, "high", False, conflicting), Decision.BLOCK),
         ("approval_invalid_at_approval", Scenario("op", "p1", "v1", True, Evidence.VERIFIED, True, "high", False, invalid_at_approval), Decision.BLOCK),
         ("unknown_high_harm_without_approval", Scenario("op", "p1", "v1", True, Evidence.UNKNOWN, False, "high", True, None), Decision.HITL_REQUIRED),
         ("unknown_irreversible_without_approval", Scenario("op", "p1", "v1", True, Evidence.UNKNOWN, True, "low", False, None), Decision.HITL_REQUIRED),
         ("unknown_low_reversible", Scenario("op", "p1", "v1", True, Evidence.UNKNOWN, False, "low", True, None), Decision.AUTO_PROCEED),
-        ("stale_parameter_approval", Scenario("op", "p1", "v1", True, Evidence.UNKNOWN, False, "low", True, stale_params), Decision.BLOCK),
-        ("stale_version_approval", Scenario("op", "p1", "v1", True, Evidence.UNKNOWN, False, "low", True, stale_version), Decision.BLOCK),
-        ("partial_effect_is_not_no_effect", Scenario("op", "p1", "v1", True, Evidence.UNKNOWN, True, "high", False, good), Decision.HITL_REQUIRED),
+        ("partial_effect_blocks", Scenario("op", "p1", "v1", True, Evidence.PARTIAL, False, "low", True, good), Decision.BLOCK),
         ("hitl_does_not_create_authority", Scenario("op", "p1", "v1", False, Evidence.UNKNOWN, True, "high", False, good), Decision.BLOCK),
+        ("hitl_does_not_verify_effect", Scenario("op", "p1", "v1", True, Evidence.UNKNOWN, True, "high", False, None), Decision.HITL_REQUIRED),
     ]
     for name, scenario, expected in cases:
         actual = decide(scenario)
