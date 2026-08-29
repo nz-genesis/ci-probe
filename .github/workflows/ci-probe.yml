@@ -1,0 +1,39 @@
+name: CI Probe
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: public-github-hosted-execution
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Runtime identification
+        run: |
+          python3 --version
+          uname -a
+          echo "runner=${RUNNER_NAME}"
+          echo "os=${RUNNER_OS}"
+
+      - name: Execute deterministic probe
+        run: python3 probe.py
+
+      - name: Verify probe artifact
+        run: |
+          test -f ci-probe-result.txt
+          grep -Fx "CI_PROBE_OK" ci-probe-result.txt
+
+      - name: Upload probe result
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-probe-result-${{ github.run_id }}
+          path: ci-probe-result.txt
+          if-no-files-found: error
