@@ -8,7 +8,6 @@ The experiment distinguishes two questions:
 A collision under projection is evidence that the *distinction* matters. It is
 not, by itself, evidence that the named candidate must be a Genesis primitive.
 """
-
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
@@ -56,8 +55,8 @@ FIXTURES: dict[str, tuple[Record, Record]] = {
         Record("ready", "write", "write", "deny", "none", "none", "none"),
     ),
     "observation": (
-        Record("active", "start", "none", "none", "effect-seen", "none", "none"),
-        Record("active", "start", "none", "none", "no-effect-seen", "none", "none"),
+        Record("active", "start", "none", "none", "none", "effect-seen", "none"),
+        Record("active", "start", "none", "none", "none", "no-effect-seen", "none"),
     ),
     "evidence": (
         Record("active", "start", "none", "none", "effect-seen", "verified", "none"),
@@ -79,11 +78,18 @@ def projection_collides(omitted: str) -> bool:
     return project(left, omitted) == project(right, omitted)
 
 
-def composite_reencoding(record: Record, omitted: str) -> tuple[tuple[str, str], ...]:
-    """Encode every field as a generic attributed value, without a named primitive."""
-    return tuple(sorted((key, value) for key, value in record.as_dict().items() if key != omitted)) + (
+def composite_reencoding(record: Record, omitted: str) -> tuple[tuple[str, Any], ...]:
+    """Encode the omitted distinction as generic data, not as a primitive.
+
+    The representation has one fixed generic shape for every candidate:
+    dimension name + dimension value + the remaining record as generic context.
+    """
+    values = record.as_dict()
+    context = tuple(sorted((key, value) for key, value in values.items() if key != omitted))
+    return (
         ("dimension", omitted),
-        ("value", record.as_dict()[omitted]),
+        ("value", values[omitted]),
+        ("context", context),
     )
 
 
