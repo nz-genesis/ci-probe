@@ -28,3 +28,7 @@ jobs:
         run: PYTHONPATH=. python3 atomicity_coordination.py
       - name: Execute L6i regression tests
         run: PYTHONPATH=. python3 atomicity_coordination_test.py
+      - name: Execute L6j contract effect verification experiment
+        run: PYTHONPATH=. python3 contract_effect_verification.py
+      - name: Execute L6j regression tests
+        run: PYTHONPATH=. python3 contract_effect_verification_test.py
