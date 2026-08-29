@@ -22,7 +22,10 @@ The repository includes independent, bounded experiments covering:
 - authority/revocation lifecycle;
 - recovery after lost acknowledgement;
 - idempotency-claim verification;
-- concurrent/cross-realizer duplicate-effect risk.
+- concurrent/cross-realizer duplicate-effect risk;
+- differential atomicity/coordination;
+- adversarial contract/effect verification;
+- HITL authority/risk/irreversibility boundaries.
 
 The probes intentionally model semantic distinctions without introducing Genesis-specific engines or primitives.
 
