@@ -1,0 +1,17 @@
+name: Primitive Removal K3
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  heterogeneous-invariants:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Execute K3 experiment
+        run: python primitive_removal_k3.py
