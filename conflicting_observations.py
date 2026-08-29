@@ -1,8 +1,8 @@
 """Clean-room conflicting-observation reduction experiment.
 
-A fixed effect contract is evaluated from two independent observations. The
-experiment varies freshness and causal relation. It deliberately does not
-choose a winner when the evidence cannot justify one.
+A fixed effect contract is evaluated from independent observations. The
+experiment varies freshness and causal relation. It does not choose a winner
+when the evidence cannot justify one.
 """
 from dataclasses import dataclass
 from enum import Enum
@@ -41,12 +41,38 @@ PARTIAL = ("A",)
 def classify(observations: tuple[Observation, ...]) -> State:
     if not observations:
         return State.UNKNOWN
-    fresh = tuple(o for o in observations if o.freshness is Freshness.FRESH)
-    candidates = fresh or observations
-    states = {State.COMPLETE if o.effects == CONTRACT else State.PARTIAL for o in candidates}
-    if len(states) > 1:
-        return State.CONFLICTING
-    return next(iter(states))
+
+    # Evidence that is both fresh and causally after the target boundary is
+    # the strongest direct evidence for the post-effect state. Fresh evidence
+    # with no causal ordering remains admissible but cannot defeat contradictory
+    # evidence. BEFORE evidence cannot refute a later AFTER observation.
+    post = tuple(
+        o for o in observations
+        if o.freshness is Freshness.FRESH and o.causal_relation is Causality.AFTER
+    )
+    if post:
+        states = {State.COMPLETE if o.effects == CONTRACT else State.PARTIAL for o in post}
+        if len(states) > 1:
+            return State.CONFLICTING
+        return next(iter(states))
+
+    fresh_unordered = tuple(
+        o for o in observations
+        if o.freshness is Freshness.FRESH and o.causal_relation is Causality.UNRELATED
+    )
+    if fresh_unordered:
+        states = {
+            State.COMPLETE if o.effects == CONTRACT else State.PARTIAL
+            for o in fresh_unordered
+        }
+        if len(states) > 1:
+            return State.CONFLICTING
+        return next(iter(states))
+
+    # If only BEFORE evidence exists, it does not establish the post-effect
+    # state. Retain uncertainty rather than projecting a pre-effect observation
+    # forward in time.
+    return State.UNKNOWN
 
 
 def verify() -> None:
@@ -64,6 +90,14 @@ def verify() -> None:
     unrelated_partial = Observation(PARTIAL, "observer-b", Freshness.FRESH, Causality.UNRELATED)
     assert classify((unrelated_complete, unrelated_partial)) is State.CONFLICTING
 
+    # A fresh BEFORE observation cannot refute a causally later COMPLETE state.
+    fresh_before_partial = Observation(PARTIAL, "observer-b", Freshness.FRESH, Causality.BEFORE)
+    assert classify((complete, fresh_before_partial)) is State.COMPLETE
+
+    # BEFORE-only evidence cannot establish the post-effect state.
+    before_complete = Observation(CONTRACT, "observer-a", Freshness.FRESH, Causality.BEFORE)
+    assert classify((before_complete,)) is State.UNKNOWN
+
     assert classify(()) is State.UNKNOWN
 
     # Negative control: source name alone cannot resolve fresh conflict.
@@ -72,7 +106,7 @@ def verify() -> None:
 
 def main() -> None:
     verify()
-    print("CONFLICTING OBSERVATIONS 6/6 PASS")
+    print("CONFLICTING OBSERVATIONS 8/8 PASS")
 
 
 if __name__ == "__main__":
