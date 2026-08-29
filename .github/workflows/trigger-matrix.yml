@@ -3,7 +3,7 @@ name: Trigger Matrix
 on:
   workflow_dispatch:
   schedule:
-    - cron: '17 3 * * *'
+    - cron: '40 9 * * *'
 
 permissions:
   contents: read
