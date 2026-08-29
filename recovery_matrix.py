@@ -7,7 +7,6 @@ classify recovery state without treating an acknowledgement as proof of effect.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable
 
 
 class Status(str, Enum):
