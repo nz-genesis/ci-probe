@@ -4,9 +4,9 @@ from environment_symmetry import CONTRACT, ENVIRONMENTS, run
 def test_contract_is_environment_independent():
     results = run()
     assert len(results) == len(ENVIRONMENTS) == 10
-    assert {r.admitted for r in results} == {True}
-    assert {r.verified for r in results} == {True}
-    assert {r.final_state for r in results} == {{"value": 1}}
+    assert all(r.admitted for r in results)
+    assert all(r.verified for r in results)
+    assert all(r.final_state == {"value": 1} for r in results)
     assert {r.effect_key for r in results} == {CONTRACT.effect_key}
 
 
