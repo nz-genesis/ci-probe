@@ -1,0 +1,24 @@
+name: Adversarial Reporting Observation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  adversarial-reporting-observation:
+    name: adversarial-reporting-observation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute adversarial reporting probe
+        run: PYTHONPATH=. python3 adversarial_reporting_observation.py
+
+      - name: Execute regression tests
+        run: PYTHONPATH=. python3 adversarial_reporting_observation_test.py
