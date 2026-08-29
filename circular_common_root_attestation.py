@@ -44,6 +44,29 @@ def _has_cycle(graph: dict[str, set[str]]) -> bool:
     return any(visit(node) for node in graph)
 
 
+def _reachable(graph: dict[str, set[str]], start: str) -> set[str]:
+    """Return transitive attestation targets, including the direct targets."""
+    seen: set[str] = set()
+    stack = list(graph.get(start, set()))
+    while stack:
+        node = stack.pop()
+        if node in seen:
+            continue
+        seen.add(node)
+        stack.extend(graph.get(node, set()))
+    return seen
+
+
+def _has_shared_upstream(graph: dict[str, set[str]], sources: tuple[str, ...]) -> bool:
+    """Detect distinct sources whose attestation chains converge upstream."""
+    closures = {source: _reachable(graph, source) for source in sources}
+    for index, left in enumerate(sources):
+        for right in sources[index + 1 :]:
+            if closures[left] & closures[right]:
+                return True
+    return False
+
+
 def classify(attestations: tuple[Attestation, ...]) -> State:
     usable = tuple(a for a in attestations if a.attested)
     if not usable:
@@ -55,9 +78,12 @@ def classify(attestations: tuple[Attestation, ...]) -> State:
 
     roots = {a.root for a in usable}
     states = {a.state for a in usable}
+    sources = tuple(a.source for a in usable)
 
     # Apparently different sources sharing one root are not independent votes.
     if len(roots) == 1 and len(states) > 1:
+        return State.UNKNOWN
+    if _has_shared_upstream(graph, sources):
         return State.UNKNOWN
     if len(roots) == 1:
         return next(iter(states))
@@ -110,6 +136,7 @@ def verify() -> None:
     )
     # Declared roots look distinct, but A and B share a transitive upstream
     # attestation. Their apparent independence cannot be inferred from labels.
+    assert naive_source_majority(hidden_common_root) is State.COMPLETE
     assert classify(hidden_common_root) is State.UNKNOWN
 
     one_root_consistent = (
