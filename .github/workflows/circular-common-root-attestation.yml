@@ -1,0 +1,22 @@
+name: Circular Common Root Attestation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  circular-common-root-attestation:
+    name: circular-common-root-attestation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute clean-room experiment
+        run: PYTHONPATH=. python3 circular_common_root_attestation.py
+      - name: Execute regression tests
+        run: PYTHONPATH=. python3 circular_common_root_attestation_test.py
