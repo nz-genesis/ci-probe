@@ -1,0 +1,23 @@
+name: Idempotency Claim Verification
+
+on:
+  push:
+    paths:
+      - "idempotency_claim_verification.py"
+      - "idempotency_claim_verification_test.py"
+      - ".github/workflows/idempotency-claim-verification.yml"
+  pull_request:
+    paths:
+      - "idempotency_claim_verification.py"
+      - "idempotency_claim_verification_test.py"
+      - ".github/workflows/idempotency-claim-verification.yml"
+
+jobs:
+  l6g-r:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute L6g-R experiment
+        run: python3 idempotency_claim_verification.py
+      - name: Execute L6g-R regression
+        run: python3 idempotency_claim_verification_test.py
