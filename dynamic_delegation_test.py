@@ -35,10 +35,17 @@ def test_stable_chain_remains_mechanism_independent() -> None:
     assert realize(STABLE, Mechanism.REVALIDATE_CHAIN) == Outcome.EXECUTED
 
 
+def test_each_delegation_edge_is_part_of_the_effective_authority_chain() -> None:
+    root_revoked = realize(ROOT_REVOKES_AGENT, Mechanism.REVALIDATE_CHAIN)
+    executor_revoked = realize(EXECUTOR_DELEGATION_REVOKED, Mechanism.REVALIDATE_CHAIN)
+    assert root_revoked.outcome == executor_revoked.outcome == Outcome.BLOCKED_REVOKED
+
+
 if __name__ == "__main__":
     test_experiment_invariants()
     test_revocation_at_each_delegation_edge_blocks_revalidated_realization()
     test_stale_chain_is_not_semantically_equivalent()
     test_late_evidence_remains_unknown()
     test_stable_chain_remains_mechanism_independent()
+    test_each_delegation_edge_is_part_of_the_effective_authority_chain()
     print("dynamic delegation: PASS")
