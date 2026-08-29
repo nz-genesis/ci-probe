@@ -24,19 +24,34 @@ class Attestation:
     attests: tuple[str, ...] = ()
 
 
+def _has_cycle(graph: dict[str, set[str]]) -> bool:
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(node: str) -> bool:
+        if node in visiting:
+            return True
+        if node in visited:
+            return False
+        visiting.add(node)
+        for target in graph.get(node, set()):
+            if target in graph and visit(target):
+                return True
+        visiting.remove(node)
+        visited.add(node)
+        return False
+
+    return any(visit(node) for node in graph)
+
+
 def classify(attestations: tuple[Attestation, ...]) -> State:
     usable = tuple(a for a in attestations if a.attested)
     if not usable:
         return State.UNKNOWN
 
-    # A cycle means the apparent attestation chain has no independent anchor.
     graph = {a.source: set(a.attests) for a in usable}
-    for source, targets in graph.items():
-        if source in targets:
-            return State.UNKNOWN
-        for target in targets:
-            if target in graph and source in graph[target]:
-                return State.UNKNOWN
+    if _has_cycle(graph):
+        return State.UNKNOWN
 
     roots = {a.root for a in usable}
     states = {a.state for a in usable}
@@ -80,6 +95,23 @@ def verify() -> None:
     )
     assert classify(circular) is State.UNKNOWN
 
+    three_cycle = (
+        Attestation("a", State.COMPLETE, "root-a", True, ("b",)),
+        Attestation("b", State.COMPLETE, "root-b", True, ("c",)),
+        Attestation("c", State.COMPLETE, "root-c", True, ("a",)),
+    )
+    assert classify(three_cycle) is State.UNKNOWN
+
+    hidden_common_root = (
+        Attestation("a", State.COMPLETE, "root-a", True, ("shared",)),
+        Attestation("b", State.COMPLETE, "root-b", True, ("shared",)),
+        Attestation("c", State.PARTIAL, "root-c", True),
+        Attestation("shared", State.COMPLETE, "root-shared", True),
+    )
+    # Declared roots look distinct, but A and B share a transitive upstream
+    # attestation. Their apparent independence cannot be inferred from labels.
+    assert classify(hidden_common_root) is State.UNKNOWN
+
     one_root_consistent = (
         Attestation("a", State.COMPLETE, "root-a"),
         Attestation("b", State.COMPLETE, "root-a"),
@@ -91,4 +123,4 @@ def verify() -> None:
 
 if __name__ == "__main__":
     verify()
-    print("CIRCULAR COMMON-ROOT ATTESTATION 5/5 PASS")
+    print("CIRCULAR COMMON-ROOT ATTESTATION 7/7 PASS")
