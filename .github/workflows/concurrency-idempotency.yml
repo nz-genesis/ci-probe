@@ -1,0 +1,20 @@
+name: Concurrency Idempotency
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  concurrency-idempotency:
+    name: deterministic-concurrency-recovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute concurrency and idempotency experiment
+        run: PYTHONPATH=. python3 concurrency_idempotency_test.py
