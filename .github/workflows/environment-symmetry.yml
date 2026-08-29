@@ -18,8 +18,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Execute environment symmetry probe
-        run: python3 environment_symmetry.py
+        run: PYTHONPATH=. python3 environment_symmetry.py
 
       - name: Execute regression tests
-        run: |
-          python3 -m pytest -q environment_symmetry_test.py
+        run: PYTHONPATH=. python3 environment_symmetry_test.py

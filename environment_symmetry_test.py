@@ -23,3 +23,14 @@ def test_environment_identity_does_not_change_semantic_outcome():
     for result in results:
         assert result.final_state["value"] == 1
         assert result.effect_key == CONTRACT.effect_key
+
+
+def main():
+    test_contract_is_environment_independent()
+    test_precondition_blocks_same_contract_after_state_change()
+    test_environment_identity_does_not_change_semantic_outcome()
+    print("ENVIRONMENT SYMMETRY REGRESSION 3/3 PASS")
+
+
+if __name__ == "__main__":
+    main()
