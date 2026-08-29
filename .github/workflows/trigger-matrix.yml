@@ -1,0 +1,41 @@
+name: Trigger Matrix
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  trigger-observation:
+    name: public-trigger-observation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Record execution provenance
+        run: |
+          set -eu
+          test -n "$RUNNER_NAME"
+          test -n "$RUNNER_OS"
+          printf '%s\n' "TRIGGER_MATRIX_OK" > trigger-matrix-result.txt
+          printf 'event=%s\n' "$GITHUB_EVENT_NAME" >> trigger-matrix-result.txt
+          printf 'run_id=%s\n' "$GITHUB_RUN_ID" >> trigger-matrix-result.txt
+          printf 'sha=%s\n' "$GITHUB_SHA" >> trigger-matrix-result.txt
+
+      - name: Verify result
+        run: |
+          set -eu
+          grep -Fx "TRIGGER_MATRIX_OK" trigger-matrix-result.txt
+          test -s trigger-matrix-result.txt
+
+      - name: Upload bounded evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: trigger-matrix-${{ github.run_id }}
+          path: trigger-matrix-result.txt
+          if-no-files-found: error
