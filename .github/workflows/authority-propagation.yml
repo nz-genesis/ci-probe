@@ -1,0 +1,21 @@
+name: Authority Propagation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  authority-propagation:
+    name: propagation-delay-concurrent-authority
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute authority propagation experiment
+        run: PYTHONPATH=. python3 authority_propagation_test.py
