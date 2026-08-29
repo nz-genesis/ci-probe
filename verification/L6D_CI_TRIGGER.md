@@ -1,1 +1,0 @@
-Temporary clean-room verification marker for L6d. Contains no Genesis-private material or canonical decision.
