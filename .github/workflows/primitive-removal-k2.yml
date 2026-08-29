@@ -1,0 +1,19 @@
+name: Primitive Removal K2
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  invariant-preservation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Execute K2 experiment
+        run: python primitive_removal_k2.py
+      - name: Execute K2 regression checks
+        run: python -m unittest discover -s . -p 'primitive_removal_k2_test.py'
