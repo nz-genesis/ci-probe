@@ -20,3 +20,15 @@ jobs:
         run: PYTHONPATH=. python3 root_lifecycle_authority.py
       - name: Execute regression tests
         run: PYTHONPATH=. python3 root_lifecycle_authority_test.py
+
+  in-flight-authority:
+    name: in-flight-authority-l6e
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute L6e clean-room experiment
+        run: PYTHONPATH=. python3 in_flight_authority.py
+      - name: Execute L6e regression tests
+        run: PYTHONPATH=. python3 in_flight_authority_test.py
