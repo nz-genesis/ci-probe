@@ -31,6 +31,7 @@ class ActionContract:
     authority: str = ""
     expected_outcome: Mapping[str, Any] = field(default_factory=dict)
     verification: Mapping[str, Any] = field(default_factory=dict)
+    idempotency_key: str = ""
 
 
 @dataclass
@@ -51,18 +52,26 @@ class DuplicateExecutionError(Exception):
     pass
 
 
+class ScopeViolationError(Exception):
+    pass
+
+
 def admit(
     contract: ActionContract,
     *,
     capabilities: set[str],
     authorities: set[str],
 ) -> ExecutionRecord:
+    if not contract.target or not contract.operation:
+        raise AdmissionError("target and operation are required")
+    if not contract.required_capability:
+        raise AdmissionError("required capability is required")
+    if not contract.authority:
+        raise AdmissionError("authority is required")
     if contract.required_capability not in capabilities:
         raise AdmissionError("required capability is unavailable")
     if contract.authority not in authorities:
         raise AdmissionError("required authority is unavailable")
-    if not contract.target or not contract.operation:
-        raise AdmissionError("target and operation are required")
     record = ExecutionRecord(action_id=f"{contract.target}:{contract.operation}")
     record.status = Status.ADMITTED
     record.trace.append("admitted")
@@ -73,12 +82,19 @@ def execute_once(
     record: ExecutionRecord,
     *,
     effect: Mapping[str, Any],
+    target: str | None = None,
+    operation: str | None = None,
     acknowledgement_lost: bool = False,
 ) -> ExecutionRecord:
     if record.status not in {Status.ADMITTED, Status.UNKNOWN}:
         raise AdmissionError(f"cannot execute from status={record.status.value}")
     if record.attempts:
         raise DuplicateExecutionError("execution already attempted; reconcile before retry")
+    expected_target, expected_operation = record.action_id.split(":", 1)
+    if target is not None and target != expected_target:
+        raise ScopeViolationError("executor target is outside admitted scope")
+    if operation is not None and operation != expected_operation:
+        raise ScopeViolationError("executor operation is outside admitted scope")
     record.attempts += 1
     record.status = Status.STARTED
     record.trace.append("started")
@@ -104,6 +120,19 @@ def verify(record: ExecutionRecord, expected: Mapping[str, Any]) -> ExecutionRec
         raise AdmissionError(f"cannot verify from status={record.status.value}")
     record.status = Status.VERIFIED if record.observed == dict(expected) else Status.VERIFICATION_FAILED
     record.trace.append(record.status.value)
+    return record
+
+
+def reconcile(record: ExecutionRecord, observed: Mapping[str, Any]) -> ExecutionRecord:
+    """Resolve an unknown execution state from an independent observation.
+
+    Reconciliation never executes the action. It only moves UNKNOWN to a
+    terminally classified state based on the observed external fixture state.
+    """
+    if record.status != Status.UNKNOWN:
+        raise AdmissionError(f"reconciliation requires unknown status, got={record.status.value}")
+    record.observed = dict(observed)
+    record.trace.append("reconciled")
     return record
 
 
