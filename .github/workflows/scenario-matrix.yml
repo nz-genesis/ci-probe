@@ -1,0 +1,23 @@
+name: Execution Scenario Matrix
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scenario-matrix:
+    name: generic-execution-scenarios
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute scenario matrix
+        run: PYTHONPATH=action_probe python3 action_probe/run_scenario_tests.py
+
+      - name: Verify public-boundary documentation
+        run: test -f research/EXECUTION_SCENARIO_MATRIX.md
