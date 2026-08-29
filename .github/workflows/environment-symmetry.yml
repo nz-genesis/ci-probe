@@ -1,0 +1,25 @@
+name: Environment Symmetry
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  environment-symmetry:
+    name: environment-symmetry
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute environment symmetry probe
+        run: python3 environment_symmetry.py
+
+      - name: Execute regression tests
+        run: |
+          python3 -m pytest -q environment_symmetry_test.py
