@@ -1,0 +1,24 @@
+name: Mechanism Differential Failure
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mechanism-differential-failure:
+    name: mechanism-differential-failure
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute mechanism differential failure probe
+        run: PYTHONPATH=. python3 mechanism_differential_failure.py
+
+      - name: Execute regression tests
+        run: PYTHONPATH=. python3 mechanism_differential_failure_test.py
