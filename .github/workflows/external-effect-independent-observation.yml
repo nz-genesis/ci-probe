@@ -1,0 +1,19 @@
+name: External Effect Independent Observation
+
+on:
+  push:
+    paths:
+      - 'external_effect_independent_observation.py'
+      - '.github/workflows/external-effect-independent-observation.yml'
+      - 'research/EXTERNAL_EFFECT_INDEPENDENT_OBSERVATION_2026-08-31.md'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute bounded probe
+        run: python3 external_effect_independent_observation.py
+      - name: Require research record
+        run: test -f research/EXTERNAL_EFFECT_INDEPENDENT_OBSERVATION_2026-08-31.md
