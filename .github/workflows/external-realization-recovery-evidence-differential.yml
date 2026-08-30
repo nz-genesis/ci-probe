@@ -1,0 +1,19 @@
+name: External Realization Recovery Evidence Differential
+
+on:
+  push:
+    paths:
+      - 'external_realization_recovery_evidence_differential.py'
+      - '.github/workflows/external-realization-recovery-evidence-differential.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recovery-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run recovery/evidence differential
+        run: python external_realization_recovery_evidence_differential.py
