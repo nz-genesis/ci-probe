@@ -1,0 +1,19 @@
+name: Derived Field Noninterference
+
+on:
+  push:
+    paths:
+      - 'derived_field_noninterference.py'
+      - '.github/workflows/derived-field-noninterference.yml'
+      - 'research/DERIVED_FIELD_NONINTERFERENCE_2026-08-31.md'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute bounded probe
+        run: python3 derived_field_noninterference.py
+      - name: Require research record
+        run: test -f research/DERIVED_FIELD_NONINTERFERENCE_2026-08-31.md
