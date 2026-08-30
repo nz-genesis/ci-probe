@@ -1,0 +1,20 @@
+name: Private Public Correspondence Harness
+
+on:
+  push:
+    paths:
+      - 'private_public_correspondence_harness.py'
+      - '.github/workflows/private-public-correspondence.yml'
+      - 'research/PRIVATE_PUBLIC_CORRESPONDENCE_2026-08-30.md'
+  workflow_dispatch:
+
+jobs:
+  correspondence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute correspondence harness
+        run: python3 private_public_correspondence_harness.py
+      - name: Verify research record
+        run: test -s research/PRIVATE_PUBLIC_CORRESPONDENCE_2026-08-30.md
