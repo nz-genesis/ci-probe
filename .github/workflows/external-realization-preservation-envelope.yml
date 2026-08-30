@@ -1,0 +1,20 @@
+name: External Realization Preservation Envelope
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preservation-envelope:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute preservation envelope
+        run: PYTHONPATH=. python3 external_realization_preservation_envelope.py
+      - name: Verify research record exists
+        run: test -f research/EXTERNAL_REALIZATION_PRESERVATION_ENVELOPE_2026-08-30.md
