@@ -46,8 +46,7 @@ CASES = (
     Case("FOREIGN_EVIDENCE", True, 1, 1, False, "r1", "v1", "foreign", 1, "verified"),
     Case("STALE_AUTHORITY_EPOCH", True, 1, 1, False, "r1", "v1", "bound", 2, "verified"),
     Case("CAUSALLY_INVALID", True, 1, 1, False, "r1", "v1", "bound", 1, "effect-before-admission"),
-    Case("REQUEST_R1", True, 1, 1, False, "r1", "v1", "bound", 1, "verified"),
-    Case("REQUEST_R2", True, 1, 1, False, "r2", "v1", "bound", 1, "verified"),
+    Case("REQUEST_R2_BOUND", True, 1, 1, False, "r2", "v1", "bound", 1, "verified-for-r2"),
     Case("CURRENT_VERSION", True, 1, 1, False, "r1", "v1", "bound", 1, "current-version"),
     Case("STALE_VERSION", True, 1, 1, False, "r1", "v0", "bound", 1, "stale-version"),
 )
