@@ -1,0 +1,19 @@
+name: Action Class Environment Symmetry
+
+on:
+  push:
+    paths:
+      - 'action_class_environment_symmetry.py'
+      - '.github/workflows/action-class-environment-symmetry.yml'
+      - 'research/ACTION_CLASS_ENVIRONMENT_SYMMETRY_2026-08-31.md'
+  workflow_dispatch:
+
+jobs:
+  symmetry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run 4x11 bounded matrix
+        run: python3 action_class_environment_symmetry.py
+      - name: Verify research record exists
+        run: test -f research/ACTION_CLASS_ENVIRONMENT_SYMMETRY_2026-08-31.md
