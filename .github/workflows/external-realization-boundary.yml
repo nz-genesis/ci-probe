@@ -1,0 +1,20 @@
+name: External Realization Boundary
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  external-realization-boundary:
+    name: sanitized-contract-two-realizers
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute boundary check
+        run: PYTHONPATH=. python3 external_realization_boundary.py
