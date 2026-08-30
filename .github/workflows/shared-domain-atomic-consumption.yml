@@ -1,0 +1,17 @@
+name: Shared Domain Atomic Consumption
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  shared-domain-atomic-consumption:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute shared-domain atomic consumption probe
+        run: PYTHONPATH=. python3 shared_domain_atomic_consumption.py
+      - name: Verify regression baseline
+        run: PYTHONPATH=. python3 mechanism_differential_failure.py
