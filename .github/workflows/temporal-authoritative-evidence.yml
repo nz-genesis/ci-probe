@@ -1,0 +1,16 @@
+name: Temporal Authoritative Evidence
+
+on:
+  push:
+    paths:
+      - 'temporal_authoritative_evidence.py'
+      - '.github/workflows/temporal-authoritative-evidence.yml'
+  workflow_dispatch:
+
+jobs:
+  bounded-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute bounded probe
+        run: python3 temporal_authoritative_evidence.py
