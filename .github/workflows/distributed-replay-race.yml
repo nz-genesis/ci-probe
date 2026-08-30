@@ -1,0 +1,12 @@
+name: Distributed Replay Race
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+jobs:
+  race:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute distributed replay race probe
+        run: python3 distributed_replay_race.py
