@@ -1,0 +1,18 @@
+name: Evidence Grounded Cognitive Synthesis
+
+on:
+  push:
+    paths:
+      - 'evidence_grounded_cognitive_synthesis.py'
+      - '.github/workflows/evidence-grounded-cognitive-synthesis.yml'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute bounded probe
+        run: python3 evidence_grounded_cognitive_synthesis.py
+      - name: Require research record
+        run: test -f research/EVIDENCE_GROUNDED_COGNITIVE_SYNTHESIS_2026-08-31.md
