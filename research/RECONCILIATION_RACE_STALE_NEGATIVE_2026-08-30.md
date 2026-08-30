@@ -18,16 +18,21 @@ Actor A observes `(commitment=c-1, version=7, effect_count=0)`. Actor B then com
 
 The fixture contains no `stale`, `race`, `duplicate`, `reconciled`, or semantic-status input labels.
 
+## Local result
+
+The corrected executable fixture contains eleven assertions and prints `Assertions: 11/11 PASS` when all assertions succeed.
+
 ## Red Team
 
 1. Negative observation is treated as permanently authoritative: rejected.
 2. Retry is allowed without reconciliation: rejected.
 3. Authority/version change is ignored: rejected.
 4. Substituted commitment is accepted as the original operation: rejected.
+5. A printed PASS count is accepted without checking assertion count: rejected during pre-evidence review; the initial `8/8` label was corrected to `11/11` before promotion.
 
 ## Result
 
-The bounded model blocks the duplicate caused by a stale negative observation when the retry performs current-state reconciliation before commit.
+The bounded model blocks the duplicate caused by a stale negative observation when the retry performs current-state reconciliation before committing.
 
 ## Non-claims
 
@@ -36,6 +41,10 @@ This does not prove production crash safety, distributed consensus, network-part
 ## Primitive reduction
 
 No new Genesis-level primitive follows. The tested distinction is representable using operation identity, current durable state, version/authority constraints, uniqueness and a guarded state transition.
+
+## Evidence state
+
+Public artifact and executable workflow are committed. Exact hosted execution for the corrected SHA is not yet independently confirmed, so status remains `BOUNDED / EXPERIMENTAL / HOSTED-CI PENDING`.
 
 ## Next discriminator
 
