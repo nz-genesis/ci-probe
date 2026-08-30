@@ -1,0 +1,25 @@
+name: External Realization Envelope Integrity
+
+on:
+  push:
+    paths:
+      - 'external_realization_envelope_minimization.py'
+      - 'external_realization_envelope_integrity.py'
+      - '.github/workflows/external-realization-envelope-integrity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  envelope-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up job
+        run: python --version
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run envelope minimization baseline
+        run: python external_realization_envelope_minimization.py
+      - name: Run envelope integrity red team
+        run: python external_realization_envelope_integrity.py
