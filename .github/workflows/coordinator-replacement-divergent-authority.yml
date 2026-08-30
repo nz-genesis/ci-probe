@@ -1,0 +1,17 @@
+name: Coordinator Replacement Divergent Authority
+
+on:
+  push:
+    paths:
+      - 'coordinator_replacement_divergent_authority.py'
+      - '.github/workflows/coordinator-replacement-divergent-authority.yml'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute divergent authority probe
+        run: python3 coordinator_replacement_divergent_authority.py
+      - name: Verify research record exists
+        run: test -s research/COORDINATOR_REPLACEMENT_DIVERGENT_AUTHORITY_2026-08-30.md
