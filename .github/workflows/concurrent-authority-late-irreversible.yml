@@ -1,0 +1,16 @@
+name: Concurrent Authority Late Irreversible
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "concurrent_authority_late_irreversible_reconciliation.py"
+      - ".github/workflows/concurrent-authority-late-irreversible.yml"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run concurrent authority late irreversible probe
+        run: python3 concurrent_authority_late_irreversible_reconciliation.py
