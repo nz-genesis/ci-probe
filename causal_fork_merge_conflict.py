@@ -56,13 +56,14 @@ def run() -> None:
     assert derive_merge([root, a, b, merge]) == "RECONCILE"
 
     # Same causal fork, but concurrent branches disagree on claim/effect.
-    c = Event("c", "r2", 2, 700, ("root",), "accepted", 1)
-    d = Event("d", "r2", 2, 650, ("root",), "rejected", 0)
+    root2 = Event("root2", "r2", 1, 800, (), "accepted", 1)
+    c = Event("c", "r2", 2, 700, ("root2",), "accepted", 1)
+    d = Event("d", "r2", 2, 650, ("root2",), "rejected", 0)
     bad_merge = Event("bm", "r2", 3, 620, ("c", "d"), "accepted", 1)
-    assert derive_merge([root, c, d, bad_merge]) == "UNRESOLVED"
+    assert derive_merge([root2, c, d, bad_merge]) == "UNRESOLVED"
 
     # No explicit semantic flags are accepted by the representation.
-    for e in (root, a, b, merge, c, d, bad_merge):
+    for e in (root, a, b, merge, root2, c, d, bad_merge):
         assert not hasattr(e, "conflict")
         assert not hasattr(e, "merge_state")
         assert not hasattr(e, "stale")
