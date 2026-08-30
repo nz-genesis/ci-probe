@@ -1,0 +1,17 @@
+name: E1 Heterogeneous Semantic Closure
+
+on:
+  push:
+    paths:
+      - 'heterogeneous_semantic_closure_e1_redesigned.py'
+      - '.github/workflows/heterogeneous-semantic-closure-e1.yml'
+  workflow_dispatch:
+
+jobs:
+  e1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run E1 bounded closure probe
+        run: python3 heterogeneous_semantic_closure_e1_redesigned.py
