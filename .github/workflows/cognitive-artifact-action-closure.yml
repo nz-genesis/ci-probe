@@ -1,0 +1,17 @@
+name: Cognitive Artifact Action Closure
+
+on:
+  push:
+    paths:
+      - 'cognitive_artifact_action_closure.py'
+      - '.github/workflows/cognitive-artifact-action-closure.yml'
+      - 'research/COGNITIVE_ARTIFACT_ACTION_CLOSURE_2026-08-31.md'
+  workflow_dispatch:
+
+jobs:
+  closure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 cognitive_artifact_action_closure.py
+      - run: test -f research/COGNITIVE_ARTIFACT_ACTION_CLOSURE_2026-08-31.md
