@@ -1,4 +1,4 @@
-"""Clean-room differential reduction for authenticated external realization.
+"""Clean-room differential reduction for external realization envelopes.
 
 Generic experiment only. It compares three progressively stronger boundary models
 and asks which added property closes which bounded adversarial distinction.
@@ -52,34 +52,33 @@ def accept(e: Envelope, seen: set[str], require_effect: bool = False) -> str:
 
 
 def main() -> None:
-    # E1: authenticity/provenance can distinguish request substitution, but the
-    # model has no freshness discriminator and no post-effect binding.
+    # E1: provenance binding detects mutation of the bound request/admission,
+    # but by itself supplies neither freshness nor effect/evidence binding.
     base = e1()
     assert base.provenance == provenance(base.request_id, base.operation, base.value, base.admission)
     assert accept(base, set()) == "accepted"
     forged = Envelope(base.request_id, base.operation, base.value, "deny", base.provenance)
     assert accept(forged, set()) == "rejected"
 
-    # E2: freshness/replay state is an independent requirement; a valid
-    # envelope remains valid cryptographically but is rejected on second use.
+    # E2: freshness/replay state is independent. A valid envelope is rejected
+    # on second use even though its content remains unchanged.
     fresh = e2()
     seen: set[str] = set()
     assert accept(fresh, seen) == "accepted"
     assert accept(fresh, seen) == "replay"
 
-    # E3: post-effect binding is independently required for evidence/effect
-    # correspondence. Its presence is not inferred from authentication.
+    # E3: post-effect binding is independently required for effect/evidence
+    # correspondence; it cannot be inferred from provenance alone.
     bound = e3()
     assert accept(bound, set(), require_effect=True) == "accepted"
     unbound = Envelope(bound.request_id, bound.operation, bound.value, bound.admission, bound.provenance, bound.nonce)
     assert accept(unbound, set(), require_effect=True) == "missing-effect-binding"
 
-    # Primitive-removal observation: the three properties answer different
-    # adversarial questions, so they cannot be collapsed merely by naming them
-    # all "execution security". This experiment does not assert they must become
-    # Genesis primitives; it only records the tested semantic distinctions.
+    # Primitive-removal observation: these properties answer different tested
+    # adversarial questions. This does not promote any of them to a Genesis
+    # primitive; it records only the bounded semantic distinctions observed.
     print("external realization envelope differential reduction: PASS")
-    print("E1=authenticated_provenance")
+    print("E1=provenance_binding")
     print("E2=E1+replay_state")
     print("E3=E2+effect_binding")
     print("primitive_removal=NO_COLLAPSE_WITHIN_TESTED_ATTACKS")
