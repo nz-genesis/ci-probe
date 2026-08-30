@@ -1,0 +1,22 @@
+name: External Realization Concurrent Recovery
+
+on:
+  push:
+    paths:
+      - 'external_realization_concurrent_recovery.py'
+      - '.github/workflows/external-realization-concurrent-recovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  concurrent-recovery:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up job
+        run: python --version
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run concurrent recovery red team
+        run: python external_realization_concurrent_recovery.py
