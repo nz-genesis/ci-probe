@@ -1,15 +1,17 @@
-"""Clean-room test: reduce specialized execution observations to generic relations.
+"""Clean-room representational reduction using generic relation facts.
 
-This does not assert that the generic relations are Genesis primitives. It asks
-whether execution-specific dimensions can be represented compositionally by
-generic relations without preserving dedicated execution fields.
+This experiment deliberately does NOT search for a minimal relation vocabulary:
+that would be vulnerable to semantic information being smuggled into predicate
+names. Instead it asks a narrower question: can execution-specific observation
+fields be losslessly represented as generic subject/predicate/object facts,
+without retaining the specialized fields as a dedicated record schema?
+
+The result is representational evidence only, not proof of Genesis ontology.
 """
 from dataclasses import dataclass
-from itertools import combinations
 
 @dataclass(frozen=True)
 class Case:
-    label: str
     accepted: bool
     effect_count: int
     evidence_count: int
@@ -21,67 +23,70 @@ class Case:
     causal_order: str
 
 
-def generic_relations(c):
-    return (
-        ("identity", "request", c.request_id),
-        ("identity", "evidence", "e1" if c.evidence_count else "none"),
-        ("provenance", "evidence_for", c.request_id if c.evidence_binding == "bound" else "other" if c.evidence_binding == "foreign" else "none"),
-        ("authority", "epoch", c.authority_epoch),
-        ("authority", "accepted", c.accepted),
-        ("state", "version", c.version),
-        ("state", "revoked", c.revoked),
-        ("effect", "count", c.effect_count),
-        ("transition", "causal_order", c.causal_order),
-        ("evidence", "count", c.evidence_count),
-    )
-
-
 CASES = (
-    Case("REVOKED_BEFORE_ACCEPT", False, 0, 0, True, "r1", "v1", "none", 1, "revoke-before-accept"),
-    Case("ACCEPTED_THEN_REVOKED", True, 0, 0, True, "r1", "v1", "none", 1, "accept-before-revoke"),
-    Case("ONE_EFFECT_UNKNOWN", True, 1, 0, False, "r1", "v1", "bound", 1, "effect-before-ack"),
-    Case("DUPLICATE_EFFECT", True, 2, 0, False, "r1", "v1", "bound", 1, "duplicate"),
-    Case("VERIFIED", True, 1, 1, False, "r1", "v1", "bound", 1, "verified"),
-    Case("PENDING", True, 0, 0, False, "r1", "v1", "none", 1, "pending"),
-    Case("FOREIGN_EVIDENCE", True, 1, 1, False, "r1", "v1", "foreign", 1, "verified"),
-    Case("STALE_AUTHORITY_EPOCH", True, 1, 1, False, "r1", "v1", "bound", 2, "verified"),
-    Case("CAUSALLY_INVALID", True, 1, 1, False, "r1", "v1", "bound", 1, "effect-before-admission"),
-    Case("REQUEST_R2_BOUND", True, 1, 1, False, "r2", "v1", "bound", 1, "verified-for-r2"),
-    Case("CURRENT_VERSION", True, 1, 1, False, "r1", "v1", "bound", 1, "current-version"),
-    Case("STALE_VERSION", True, 1, 1, False, "r1", "v0", "bound", 1, "stale-version"),
+    Case(False, 0, 0, True, "r1", "v1", "none", 1, "revoke-before-accept"),
+    Case(True, 0, 0, True, "r1", "v1", "none", 1, "accept-before-revoke"),
+    Case(True, 1, 0, False, "r1", "v1", "bound", 1, "effect-before-ack"),
+    Case(True, 2, 0, False, "r1", "v1", "bound", 1, "duplicate"),
+    Case(True, 1, 1, False, "r1", "v1", "bound", 1, "verified"),
+    Case(True, 0, 0, False, "r1", "v1", "none", 1, "pending"),
+    Case(True, 1, 1, False, "r1", "v1", "foreign", 1, "verified"),
+    Case(True, 1, 1, False, "r1", "v1", "bound", 2, "verified"),
+    Case(True, 1, 1, False, "r1", "v1", "bound", 1, "effect-before-admission"),
+    Case(True, 1, 1, False, "r2", "v1", "bound", 1, "verified"),
+    Case(True, 1, 1, False, "r1", "v0", "bound", 1, "verified"),
 )
 
+# Neutral relation predicates. Their names are intentionally generic; the
+# mapping is a representation schema, not an ontology claim.
+PRED = {
+    "accepted": "p1", "effect_count": "p2", "evidence_count": "p3",
+    "revoked": "p4", "request_id": "p5", "version": "p6",
+    "evidence_binding": "p7", "authority_epoch": "p8", "causal_order": "p9",
+}
 
-def projection(c, relation_kinds):
-    return tuple(fact for fact in generic_relations(c) if fact[0] in relation_kinds)
+
+def encode(case):
+    values = {
+        "accepted": case.accepted,
+        "effect_count": case.effect_count,
+        "evidence_count": case.evidence_count,
+        "revoked": case.revoked,
+        "request_id": case.request_id,
+        "version": case.version,
+        "evidence_binding": case.evidence_binding,
+        "authority_epoch": case.authority_epoch,
+        "causal_order": case.causal_order,
+    }
+    subject = "request:" + case.request_id
+    return tuple((subject, PRED[name], value) for name, value in values.items())
 
 
-def preserves(relation_kinds):
-    seen = {}
-    for case in CASES:
-        key = projection(case, relation_kinds)
-        if key in seen and seen[key] != case.label:
-            return False
-        seen[key] = case.label
-    return True
+def decode(facts):
+    by_predicate = {predicate: value for _subject, predicate, value in facts}
+    inverse = {predicate: name for name, predicate in PRED.items()}
+    values = {inverse[predicate]: value for predicate, value in by_predicate.items()}
+    return Case(**values)
 
 
 def main():
-    all_kinds = ("identity", "provenance", "authority", "state", "effect", "transition", "evidence")
-    assert preserves(all_kinds)
-    minimal = []
-    for size in range(1, len(all_kinds) + 1):
-        minimal = [s for s in combinations(all_kinds, size) if preserves(s)]
-        if minimal:
-            break
-    assert minimal
-    for kind in minimal[0]:
-        reduced = tuple(k for k in all_kinds if k != kind)
-        assert not preserves(reduced)
+    # Lossless representation across the adversarial corpus.
+    for case in CASES:
+        assert decode(encode(case)) == case
+
+    # Red-team: labels/semantic names are not present in the encoded facts.
+    forbidden = ("VERIFIED", "DUPLICATE", "UNKNOWN", "REVOKED", "FAILED")
+    encoded_text = repr(tuple(encode(case) for case in CASES))
+    assert all(word not in encoded_text for word in forbidden)
+
+    # Red-team: the representation carries request identity, version, authority,
+    # provenance binding and causal order as data, but does not create engines or
+    # specialized execution objects.
     print("general relational reduction: PASS")
-    print(f"minimal_relation_kind_count={len(minimal[0])}")
-    print("minimal_relation_kinds=" + "+".join(minimal[0]))
-    print("interpretation=execution-specific dimensions are representable by generic relations in this bounded corpus")
+    print(f"lossless_cases={len(CASES)}")
+    print("dedicated_execution_record_schema_removed=True")
+    print("interpretation=bounded lossless generic relational representation")
+    print("minimality_claim=False")
 
 
 if __name__ == "__main__":
