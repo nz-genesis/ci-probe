@@ -3,6 +3,8 @@ name: External Realization Provenance Replay
 on:
   push:
     branches: [main, 'research/**']
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
