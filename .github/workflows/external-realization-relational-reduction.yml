@@ -1,0 +1,20 @@
+name: External Realization Relational Reduction
+
+on:
+  push:
+    paths:
+      - 'external_realization_relational_reduction.py'
+      - '.github/workflows/external-realization-relational-reduction.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  relational-reduction:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run relational reduction
+        run: python external_realization_relational_reduction.py
