@@ -1,0 +1,19 @@
+name: Crash After Prepare Recovery
+
+on:
+  push:
+    paths:
+      - 'crash_recovery_shared_consumption.py'
+      - '.github/workflows/crash-after-prepare-recovery.yml'
+  workflow_dispatch:
+
+jobs:
+  recovery:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute recovery probe
+        run: python3 crash_recovery_shared_consumption.py
+      - name: Verify executable artifact
+        run: test -s crash_recovery_shared_consumption.py
