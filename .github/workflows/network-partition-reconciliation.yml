@@ -1,0 +1,17 @@
+name: Network Partition Reconciliation
+
+on:
+  push:
+    paths:
+      - 'network_partition_reconciliation.py'
+      - '.github/workflows/network-partition-reconciliation.yml'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute network partition reconciliation probe
+        run: python3 network_partition_reconciliation.py
+      - name: Verify research record exists
+        run: test -s research/NETWORK_PARTITION_RECONCILIATION_2026-08-30.md
