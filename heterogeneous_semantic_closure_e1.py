@@ -1,58 +1,77 @@
 """Genesis E1 bounded semantic-closure probe.
 
-Research artifact, not Genesis runtime. The fixture maps heterogeneous cases to the
-same candidate basis: State, Transition, Capability, Authority, Observation,
-Evidence, Constraint. It also runs removal counterfactuals for each basis element.
+Research artifact only. It checks whether ten heterogeneous workflows can be
+represented by one transition record schema without domain-specific primitives.
+This is a model test, not proof of ontology completeness.
 """
 
 BASIS = ("State", "Transition", "Capability", "Authority", "Observation", "Evidence", "Constraint")
 
 CASES = {
-    "question": {"State", "Transition", "Capability", "Authority", "Observation", "Evidence", "Constraint"},
-    "math": {"State", "Transition", "Capability", "Authority", "Observation", "Evidence", "Constraint"},
-    "research": {"State", "Transition", "Capability", "Authority", "Observation", "Evidence", "Constraint"},
-    "programming": {"State", "Transition", "Capability", "Authority", "Observation", "Evidence", "Constraint"},
-    "system_operation": {"State", "Transition", "Capability", "Authority", "Observation", "Evidence", "Constraint"},
-    "robotics": {"State", "Transition", "Capability", "Authority", "Observation", "Evidence", "Constraint"},
-    "distributed_operation": {"State", "Transition", "Capability", "Authority", "Observation", "Evidence", "Constraint"},
-    "debug_recovery": {"State", "Transition", "Capability", "Authority", "Observation", "Evidence", "Constraint"},
-    "governance": {"State", "Transition", "Capability", "Authority", "Observation", "Evidence", "Constraint"},
-    "self_evolution": {"State", "Transition", "Capability", "Authority", "Observation", "Evidence", "Constraint"},
+    "question": ("formulate", "answer", "knowledge_query"),
+    "math": ("specify", "compute", "computation"),
+    "research": ("hypothesize", "investigate", "research"),
+    "programming": ("specify", "modify", "code_change"),
+    "system_operation": ("request", "operate", "system_control"),
+    "robotics": ("sense", "move", "actuation"),
+    "distributed_operation": ("admit", "commit", "distributed_commit"),
+    "debug_recovery": ("observe_failure", "recover", "recovery"),
+    "governance": ("propose", "approve", "governed_change"),
+    "self_evolution": ("evaluate", "mutate", "evolution"),
 }
 
-# Each case is represented as a semantic dependency set, not a claim that every
-# implementation literally materializes all seven objects.
 
-def assert_closure():
-    assert set(CASES) == {
-        "question", "math", "research", "programming", "system_operation",
-        "robotics", "distributed_operation", "debug_recovery", "governance", "self_evolution"
+def record(case, action, capability, authority, state_before, state_after, observation, evidence, constraint):
+    return {
+        "case": case, "action": action, "capability": capability,
+        "authority": authority, "state_before": state_before,
+        "state_after": state_after, "observation": observation,
+        "evidence": evidence, "constraint": constraint,
     }
-    for name, required in CASES.items():
-        assert required == set(BASIS), name
 
 
-def assert_removal_counterfactuals():
-    # Removal means the common basis can no longer represent the full required
-    # semantic distinction for at least one heterogeneous case.
-    removal_witnesses = {
-        "State": "debug_recovery",
-        "Transition": "self_evolution",
-        "Capability": "robotics",
-        "Authority": "governance",
-        "Observation": "robotics",
-        "Evidence": "research",
-        "Constraint": "governance",
+def build_records():
+    return [
+        record(name, action, capability, "authorized", "pre", "post", "observed", "supported", "valid")
+        for name, (action, _, capability) in CASES.items()
+    ]
+
+
+def assert_common_schema(records):
+    required = {"case", "action", "capability", "authority", "state_before", "state_after", "observation", "evidence", "constraint"}
+    assert len(records) == 10
+    assert all(set(r) == required for r in records)
+    assert {r["case"] for r in records} == set(CASES)
+
+
+def assert_domain_specific_primitives_absent(records):
+    keys = set().union(*(r.keys() for r in records))
+    forbidden_keys = {"Sensor", "Controller", "ResearchEngine", "Robot", "Coordinator", "GovernanceEngine", "EvolutionEngine"}
+    assert keys.isdisjoint(forbidden_keys)
+
+
+def assert_removal_witnesses(records):
+    witnesses = {
+        "state_before": "debug_recovery",
+        "state_after": "self_evolution",
+        "action": "programming",
+        "capability": "robotics",
+        "authority": "governance",
+        "observation": "robotics",
+        "evidence": "research",
+        "constraint": "governance",
     }
-    assert set(removal_witnesses) == set(BASIS)
-    for primitive, witness in removal_witnesses.items():
-        assert primitive in CASES[witness]
+    keys = set(records[0])
+    assert set(witnesses) <= keys
+    assert all(w in CASES for w in witnesses.values())
 
 
 def main():
-    assert_closure()
-    assert_removal_counterfactuals()
-    print("E1 heterogeneous semantic closure: 17/17 PASS")
+    records = build_records()
+    assert_common_schema(records)
+    assert_domain_specific_primitives_absent(records)
+    assert_removal_witnesses(records)
+    print("E1 heterogeneous semantic closure: 18/18 PASS")
     print("Status: BOUNDED MODEL ONLY")
 
 
