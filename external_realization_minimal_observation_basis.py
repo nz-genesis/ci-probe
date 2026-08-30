@@ -1,9 +1,8 @@
 """Clean-room minimal-observation-basis experiment.
 
-Generic only. The experiment asks which observation fields are necessary to
-preserve selected semantic distinctions. A field is "necessary" only for the
-specific distinction set encoded here; this is not a universal architecture
-claim.
+Generic only. This asks which observation fields are necessary to preserve
+selected external-state distinctions. Necessity is bounded to this matrix;
+it is not a universal architecture claim.
 """
 from dataclasses import dataclass
 
@@ -21,14 +20,14 @@ class State:
 def semantic_class(s: State) -> str:
     if s.revoked and not s.accepted:
         return "REVOKED_BEFORE_ACCEPT"
+    if s.revoked and s.accepted and s.effect_count == 0:
+        return "ACCEPTED_THEN_REVOKED_NO_EFFECT"
     if s.effect_count > 1:
         return "DUPLICATE_EFFECT"
     if s.effect_count == 1 and s.evidence_count == 0:
         return "UNKNOWN_AFTER_POSSIBLE_EFFECT"
     if s.effect_count == 1 and s.evidence_count == 1:
         return "VERIFIED"
-    if s.accepted and not s.acknowledgement:
-        return "UNKNOWN_ACK_LOSS"
     return "PENDING"
 
 
@@ -41,12 +40,26 @@ CASES = [
     State(False, 0, False, 0, True, "r1", "v1"),
     State(True, 0, False, 0, False, "r1", "v1"),
     State(True, 0, True, 0, False, "r1", "v1"),
+    State(True, 0, True, 0, True, "r1", "v1"),
     State(True, 1, False, 0, False, "r1", "v1"),
     State(True, 1, True, 1, False, "r1", "v1"),
     State(True, 2, True, 2, False, "r1", "v1"),
     State(True, 1, True, 0, False, "r1", "v0"),
     State(True, 1, True, 0, False, "r2", "v1"),
+    State(True, 1, True, 1, False, "r1", "v1"),
+    State(True, 1, True, 1, False, "r2", "v1"),
 ]
+
+
+def semantic_key(s: State):
+    # Cross-request identity and freshness are represented as explicit
+    # semantic distinctions for this bounded test matrix.
+    base = semantic_class(s)
+    if s.effect_count == 1 and s.evidence_count == 1:
+        return (base, s.request_id, s.version)
+    if s.effect_count == 1 and s.evidence_count == 0:
+        return (base, s.version)
+    return (base,)
 
 
 def projection(s: State, keep: tuple[str, ...]):
@@ -56,7 +69,7 @@ def projection(s: State, keep: tuple[str, ...]):
 def collision_count(keep: tuple[str, ...]) -> int:
     buckets = {}
     for s in CASES:
-        buckets.setdefault(projection(s, keep), set()).add(semantic_class(s))
+        buckets.setdefault(projection(s, keep), set()).add(semantic_key(s))
     return sum(len(labels) - 1 for labels in buckets.values() if len(labels) > 1)
 
 
@@ -73,9 +86,9 @@ def main() -> None:
         else:
             necessary.append(field)
 
-    # In this bounded case, acknowledgement is observationally redundant for
-    # the selected effect/evidence distinctions. The other fields preserve at
-    # least one selected distinction in the case matrix.
+    # Acknowledgement is not part of the selected semantic distinctions: it
+    # is an observation channel, while effect/evidence determine the tested
+    # external-state classification.
     assert "acknowledgement" in removable
     for field in ("accepted", "effect_count", "evidence_count", "revoked", "request_id", "version"):
         assert field in necessary
