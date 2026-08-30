@@ -48,8 +48,8 @@ CASES = (
     Case("CAUSALLY_INVALID", True, 1, 1, False, "r1", "v1", "bound", 1, "effect-before-admission"),
     Case("REQUEST_R1", True, 1, 1, False, "r1", "v1", "bound", 1, "verified"),
     Case("REQUEST_R2", True, 1, 1, False, "r2", "v1", "bound", 1, "verified"),
-    Case("CURRENT_VERSION", True, 1, 1, False, "r1", "v1", "bound", 1, "verified"),
-    Case("STALE_VERSION", True, 1, 1, False, "r1", "v0", "bound", 1, "verified"),
+    Case("CURRENT_VERSION", True, 1, 1, False, "r1", "v1", "bound", 1, "current-version"),
+    Case("STALE_VERSION", True, 1, 1, False, "r1", "v0", "bound", 1, "stale-version"),
 )
 
 
