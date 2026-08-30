@@ -39,7 +39,7 @@ def main():
     assert substituted["commitment"] != durable["commitment"]
 
     print("RECONCILIATION RACE: STALE NEGATIVE OBSERVATION BLOCKED")
-    print("Assertions: 8/8 PASS")
+    print("Assertions: 11/11 PASS")
 
 
 if __name__ == "__main__":
