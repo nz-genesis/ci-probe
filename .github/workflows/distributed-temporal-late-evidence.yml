@@ -1,0 +1,21 @@
+name: Distributed Temporal Late Evidence
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run distributed temporal late-evidence probe
+        run: python distributed_temporal_late_evidence.py
