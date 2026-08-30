@@ -1,0 +1,22 @@
+name: External Realization Envelope Differential Reduction
+
+on:
+  push:
+    paths:
+      - 'external_realization_envelope_reduction.py'
+      - '.github/workflows/external-realization-envelope-reduction.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  differential-reduction:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up job
+        run: python --version
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run differential reduction
+        run: python external_realization_envelope_reduction.py
