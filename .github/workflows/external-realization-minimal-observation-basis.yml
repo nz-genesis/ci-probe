@@ -1,0 +1,22 @@
+name: External Realization Minimal Observation Basis
+
+on:
+  push:
+    paths:
+      - 'external_realization_minimal_observation_basis.py'
+      - '.github/workflows/external-realization-minimal-observation-basis.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  minimal-observation-basis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up job
+        run: python --version
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run minimal observation basis
+        run: python external_realization_minimal_observation_basis.py
