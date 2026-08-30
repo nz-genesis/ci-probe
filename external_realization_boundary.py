@@ -8,7 +8,6 @@ same observable contract outcome and request identity.
 
 from dataclasses import dataclass
 from hashlib import sha256
-from typing import Callable
 
 
 @dataclass(frozen=True)
@@ -34,7 +33,7 @@ FORBIDDEN_FIELDS = {"secret", "internal_note", "authority_token", "dataset_ref"}
 
 
 def project_public(internal_request: dict[str, str]) -> PublicContract:
-    assert FORBIDDEN_FIELDS.isdisjoint(internal_request.keys()) is False
+    assert FORBIDDEN_FIELDS.intersection(internal_request.keys())
     public = {key: internal_request[key] for key in ALLOWED_FIELDS}
     assert FORBIDDEN_FIELDS.isdisjoint(public.keys())
     return PublicContract(**public)
@@ -64,7 +63,7 @@ def realize_queued(contract: PublicContract) -> Evidence:
 
 def run_boundary_check() -> tuple[Evidence, Evidence]:
     internal_request = {
-        "request_id": "public-boundary-001",
+        "request_id": "p189-erb-001",
         "operation": "set",
         "key": "fixture",
         "value": "v1",
