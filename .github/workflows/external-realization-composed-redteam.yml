@@ -1,0 +1,22 @@
+name: External Realization Composed Red Team
+
+on:
+  push:
+    paths:
+      - 'external_realization_composed_redteam.py'
+      - '.github/workflows/external-realization-composed-redteam.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  composed-redteam:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up job
+        run: python --version
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run composed Red Team
+        run: python external_realization_composed_redteam.py
