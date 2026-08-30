@@ -1,0 +1,17 @@
+name: Reconciliation Race Stale Negative
+
+on:
+  push:
+    paths:
+      - reconciliation_race_stale_negative.py
+      - .github/workflows/reconciliation-race-stale-negative.yml
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute reconciliation race probe
+        run: python reconciliation_race_stale_negative.py
