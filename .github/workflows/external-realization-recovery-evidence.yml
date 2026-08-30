@@ -1,0 +1,22 @@
+name: External Realization Recovery Evidence
+
+on:
+  push:
+    paths:
+      - 'external_realization_recovery_evidence.py'
+      - '.github/workflows/external-realization-recovery-evidence.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recovery-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up job
+        run: python --version
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run recovery evidence semantics
+        run: python external_realization_recovery_evidence.py
