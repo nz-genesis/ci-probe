@@ -1,8 +1,8 @@
 """Clean-room test: reduce specialized execution observations to generic relations.
 
 This does not assert that the generic relations are Genesis primitives. It asks
-whether several execution-specific dimensions can be represented compositionally
-without preserving them as dedicated fields.
+whether execution-specific dimensions can be represented compositionally by
+generic relations without preserving dedicated execution fields.
 """
 from dataclasses import dataclass
 from itertools import combinations
@@ -46,6 +46,10 @@ CASES = (
     Case("FOREIGN_EVIDENCE", True, 1, 1, False, "r1", "v1", "foreign", 1, "verified"),
     Case("STALE_AUTHORITY_EPOCH", True, 1, 1, False, "r1", "v1", "bound", 2, "verified"),
     Case("CAUSALLY_INVALID", True, 1, 1, False, "r1", "v1", "bound", 1, "effect-before-admission"),
+    Case("REQUEST_R1", True, 1, 1, False, "r1", "v1", "bound", 1, "verified"),
+    Case("REQUEST_R2", True, 1, 1, False, "r2", "v1", "bound", 1, "verified"),
+    Case("CURRENT_VERSION", True, 1, 1, False, "r1", "v1", "bound", 1, "verified"),
+    Case("STALE_VERSION", True, 1, 1, False, "r1", "v0", "bound", 1, "verified"),
 )
 
 
