@@ -1,0 +1,20 @@
+name: External Realization Stable Basis Stress
+
+on:
+  push:
+    paths:
+      - 'external_realization_stable_basis_stress.py'
+      - '.github/workflows/external-realization-stable-basis-stress.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stable-basis-stress:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run stable basis stress
+        run: python external_realization_stable_basis_stress.py
