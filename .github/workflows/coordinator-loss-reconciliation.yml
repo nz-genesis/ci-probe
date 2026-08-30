@@ -1,0 +1,17 @@
+name: Coordinator Loss Reconciliation
+
+on:
+  push:
+    paths:
+      - coordinator_loss_reconciliation.py
+      - .github/workflows/coordinator-loss-reconciliation.yml
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute coordinator-loss probe
+        run: python coordinator_loss_reconciliation.py
