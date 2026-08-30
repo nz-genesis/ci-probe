@@ -36,27 +36,31 @@ def causal_before(events: dict[str, Event], left: str, right: str) -> bool:
 
 
 def latest_by_causal_version(events: list[Event]) -> Event:
-    # Deterministic generic selection: highest version, then causal reachability,
-    # then event id. Wall-clock time is intentionally NOT authoritative.
-    ordered = sorted(events, key=lambda e: (e.version, e.eid))
-    return ordered[-1]
+    # Deterministic generic selection: highest version, then event id.
+    # Wall-clock time is intentionally NOT authoritative.
+    return sorted(events, key=lambda e: (e.version, e.eid))[-1]
 
 
 def derive_observation(events: list[Event]) -> str:
     """Derive a generic observation outcome without semantic flags in input."""
-    by_id = {e.eid: e for e in events}
     current = latest_by_causal_version(events)
-    same_request = [e for e in events if e.request == current.request]
+    same_request = sorted(
+        (e for e in events if e.request == current.request),
+        key=lambda e: (e.version, e.eid),
+    )
 
-    claims = {e.claim for e in same_request if e.version == current.version}
-    if len(claims) > 1:
+    same_version_claims = {
+        e.claim for e in same_request if e.version == current.version
+    }
+    if len(same_version_claims) > 1:
         return "UNRESOLVED"
 
-    if any(e.effect_count != current.effect_count for e in same_request if e.version > current.version):
+    previous = [e for e in same_request if e.version < current.version]
+    if previous and previous[-1].claim != current.claim:
+        # A later contradictory claim after an already observed effect requires
+        # reconciliation; it must not silently become verified success/failure.
         return "UNRESOLVED"
 
-    # A later version arriving after an already observed effect is not an error;
-    # it is a reconciliation condition derived from version/effect facts.
     if current.version > 1 and current.effect_count >= 0:
         return "RECONCILE"
 
@@ -70,26 +74,27 @@ def run() -> None:
     b = Event("b", "r1", "v2", 2, 150, ("a",), "accepted", 1)
     late = Event("late", "r1", "v3", 3, 120, ("b",), "rejected", 1)
 
-    assert causal_before({e.eid: e for e in (a, b, late)}, "a", "b")
-    assert causal_before({e.eid: e for e in (a, b, late)}, "b", "late")
+    history = {e.eid: e for e in (a, b, late)}
+    assert causal_before(history, "a", "b")
+    assert causal_before(history, "b", "late")
     assert b.wall_time < a.wall_time, "clock skew fixture must be active"
     assert derive_observation([a]) == "OBSERVED"
     assert derive_observation([a, b]) == "RECONCILE"
+    assert derive_observation([a, b, late]) == "UNRESOLVED"
 
     # Same-version contradictory observations are not silently promoted.
     c1 = Event("c1", "r2", "v1", 1, 300, (), "accepted", 1)
     c2 = Event("c2", "r2", "v2", 1, 301, (), "rejected", 0)
     assert derive_observation([c1, c2]) == "UNRESOLVED"
 
-    # Removing explicit semantic flags must not remove the tested distinctions:
-    # the model has none; all are derived from generic event facts.
+    # No dedicated semantic flags exist in the representation.
     assert all(not hasattr(e, "late") for e in (a, b, late))
     assert all(not hasattr(e, "stale") for e in (a, b, late))
     assert all(not hasattr(e, "contradictory") for e in (c1, c2))
 
     print("PASS: distributed temporal / late evidence derivation")
     print("PASS: causal ordering survives wall-clock skew")
-    print("PASS: late contradictory evidence remains unresolved/reconcilable")
+    print("PASS: late contradictory evidence remains unresolved")
     print("PASS: same-version conflicting observations do not collapse")
     print("PASS: no dedicated late/stale/contradiction flags are required by fixture")
 
