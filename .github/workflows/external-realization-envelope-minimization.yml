@@ -1,0 +1,22 @@
+name: External Realization Envelope Minimization
+
+on:
+  push:
+    paths:
+      - 'external_realization_envelope_minimization.py'
+      - '.github/workflows/external-realization-envelope-minimization.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  envelope-minimization:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up job
+        run: python --version
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run envelope minimization
+        run: python external_realization_envelope_minimization.py
