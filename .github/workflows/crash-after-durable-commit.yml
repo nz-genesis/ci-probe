@@ -1,0 +1,22 @@
+name: Crash After Durable Commit
+
+on:
+  push:
+    paths:
+      - 'crash_after_durable_commit_ambiguous_ack.py'
+      - '.github/workflows/crash-after-durable-commit.yml'
+      - 'research/CRASH_AFTER_DURABLE_COMMIT_AMBIGUOUS_ACK_2026-08-30.md'
+  workflow_dispatch:
+
+jobs:
+  bounded-probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute ambiguous acknowledgement probe
+        run: python crash_after_durable_commit_ambiguous_ack.py
+      - name: Verify research record
+        run: |
+          test -s research/CRASH_AFTER_DURABLE_COMMIT_AMBIGUOUS_ACK_2026-08-30.md
+          grep -q 'BOUNDED' research/CRASH_AFTER_DURABLE_COMMIT_AMBIGUOUS_ACK_2026-08-30.md
