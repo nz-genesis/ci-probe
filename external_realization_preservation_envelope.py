@@ -1,11 +1,9 @@
 """Bounded clean-room test for a minimal semantic-preservation envelope.
 
-The previous projection deliberately omitted material dimensions and therefore
-collapsed authority, version, temporal, and verification mutations. This probe
-asks a narrower question: can those dimensions be carried generically, without
-Genesis-specific vocabulary, and can omission of each dimension be detected?
-
-This is evidence about a generic boundary mechanism, not Genesis ontology.
+The previous projection omitted material dimensions and collapsed authority,
+version, temporal, and verification mutations. This probe tests whether a
+small generic envelope can carry those dimensions and whether omission of a
+material dimension is detectable. It is not Genesis ontology evidence.
 """
 from dataclasses import dataclass, replace
 from hashlib import sha256
@@ -53,12 +51,10 @@ def mutation_suite() -> dict[str, bool]:
         "irreversibility": replace(b, irreversible=False),
         "predecessor": replace(b, predecessor="opaque-other"),
     }
-    results = {}
+    results: dict[str, bool] = {}
     baseline = realize(b)
     for name, mutated in mutations.items():
         result = realize(mutated)
-        # Every tested dimension must at least change the envelope digest.
-        # Dimensions that affect admissibility/verification must also change outcome.
         digest_changed = result[2] != baseline[2]
         outcome_changed = result[0] != baseline[0]
         required_outcome_change = name in {
@@ -71,31 +67,30 @@ def mutation_suite() -> dict[str, bool]:
 
 def ablation_suite() -> dict[str, bool]:
     b = base()
-    # Each pair differs in exactly one material dimension. Removing that
-    # dimension from a hypothetical projection makes the pair collide.
     pairs = {
         "resource_version": replace(b, resource_version=8),
         "authority_window": replace(b, authority_min=16, authority_max=20),
         "observed_epoch": replace(b, observed_epoch=21),
         "verification_target": replace(b, expected_value=41),
     }
-    fields = {
-        "resource_version", "authority_min", "authority_max", "observed_epoch", "expected_value"
+    fields_by_case = {
+        "resource_version": "resource_version",
+        "authority_window": "authority_min",
+        "observed_epoch": "observed_epoch",
+        "verification_target": "expected_value",
     }
-    results = {}
+    all_fields = (
+        "resource_version", "authority_min", "authority_max", "observed_epoch", "expected_value"
+    )
+    results: dict[str, bool] = {}
     for name, mutated in pairs.items():
-        omitted = fields - {
-            "resource_version" if name == "resource_version" else "authority_min" if name == "authority_window" else "observed_epoch" if name == "observed_epoch" else "expected_value"
-        }
-        # The full envelope distinguishes the pair; an ablation that removes
-        # the mutated dimension must not be accepted as preserving semantics.
+        removed = fields_by_case[name]
+
         def projected(x: Envelope) -> tuple:
-            values = []
-            for field in fields:
-                if field not in omitted:
-                    values.append(getattr(x, field))
-            return tuple(values)
-        # Deliberately assert the opposite: omitted material field collapses.
+            return tuple(getattr(x, field) for field in all_fields if field != removed)
+
+        # Negative test: once the mutated material field is omitted, the pair
+        # becomes indistinguishable at that projection level.
         results[name] = projected(b) == projected(mutated)
     assert all(results.values())
     return results
