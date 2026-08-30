@@ -1,0 +1,19 @@
+name: Environment Symmetry Action Contract
+
+on:
+  push:
+    paths:
+      - 'environment_symmetry_action_contract.py'
+      - '.github/workflows/environment-symmetry-action-contract.yml'
+  workflow_dispatch:
+
+jobs:
+  environment-symmetry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run bounded environment symmetry probe
+        run: python3 environment_symmetry_action_contract.py
+      - name: Verify research record exists
+        run: test -f research/ENVIRONMENT_SYMMETRY_ACTION_CONTRACT_2026-08-31.md
