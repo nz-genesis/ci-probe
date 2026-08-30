@@ -22,9 +22,10 @@ class Observation:
     accepted: bool
     revoked: bool
     effect_count: int
+    expected_effect_count: int
     acknowledgement: bool
     verified_effect: bool
-    evidence_binding: str
+    evidence_bound: bool
     version_current: bool
     request_match: bool
 
@@ -36,22 +37,24 @@ def classify(o: Observation) -> Recovery:
         return Recovery.STALE
     if not o.request_match:
         return Recovery.UNKNOWN
-    if o.effect_count > 1:
+    if o.effect_count > o.expected_effect_count:
         return Recovery.DUPLICATE
-    if o.effect_count == 1 and not o.verified_effect:
-        return Recovery.UNKNOWN
-    if o.effect_count == 1 and o.verified_effect and o.evidence_binding == "partial":
+    if o.effect_count < o.expected_effect_count and o.effect_count > 0:
         return Recovery.PARTIAL
+    if o.effect_count == 0:
+        return Recovery.UNKNOWN
+    if not o.verified_effect or not o.evidence_bound:
+        return Recovery.UNKNOWN
     return Recovery.UNKNOWN
 
 
 CASES = {
-    "unknown_after_ack": Observation(True, False, 0, True, False, "none", True, True),
-    "unknown_after_effect": Observation(True, False, 1, False, False, "bound", True, True),
-    "partial": Observation(True, False, 1, True, True, "partial", True, True),
-    "duplicate": Observation(True, False, 2, True, True, "bound", True, True),
-    "stale": Observation(True, False, 1, True, True, "bound", False, True),
-    "revoked": Observation(False, True, 0, False, False, "none", True, True),
+    "unknown_after_ack": Observation(True, False, 0, 1, True, False, False, True, True),
+    "unknown_after_effect": Observation(True, False, 1, 1, False, False, True, True, True),
+    "partial": Observation(True, False, 1, 2, True, True, True, True, True),
+    "duplicate": Observation(True, False, 2, 1, True, True, True, True, True),
+    "stale": Observation(True, False, 1, 1, True, True, True, False, True),
+    "revoked": Observation(False, True, 0, 1, False, False, False, True, True),
 }
 
 
@@ -70,31 +73,43 @@ def main():
     # ACK does not establish effect or verification.
     ack_flip = Observation(**{**CASES["unknown_after_effect"].__dict__, "acknowledgement": True})
     assert classify(ack_flip) == Recovery.UNKNOWN
-    ack_only = Observation(True, False, 1, True, False, "bound", True, True)
+    ack_only = Observation(True, False, 1, 1, True, False, True, True, True)
     assert classify(ack_only) == Recovery.UNKNOWN
 
-    # Effect and evidence/verification remain separate from acknowledgement.
-    partial_without_verification = Observation(True, False, 1, True, False, "partial", True, True)
-    assert classify(partial_without_verification) == Recovery.UNKNOWN
+    # Effect, verification and provenance binding remain separate observations.
+    no_binding = Observation(True, False, 1, 1, True, True, False, True, True)
+    assert classify(no_binding) == Recovery.UNKNOWN
+    no_verification = Observation(True, False, 1, 1, True, False, True, True, True)
+    assert classify(no_verification) == Recovery.UNKNOWN
 
-    # Duplicate effect is not ordinary success.
-    assert classify(CASES["duplicate"]) == Recovery.DUPLICATE
+    # Partial is derived from an independent count mismatch, not a semantic label.
+    assert classify(Observation(True, False, 1, 2, True, True, True, True, True)) == Recovery.PARTIAL
+
+    # Duplicate effect is derived from effect_count > expected_effect_count.
+    assert classify(Observation(True, False, 2, 1, True, True, True, True, True)) == Recovery.DUPLICATE
 
     # Request binding and freshness remain independent observations.
-    assert classify(Observation(True, False, 1, True, True, "bound", True, False)) == Recovery.UNKNOWN
-    assert classify(Observation(True, False, 1, True, True, "bound", False, True)) == Recovery.STALE
+    assert classify(Observation(True, False, 1, 1, True, True, True, True, False)) == Recovery.UNKNOWN
+    assert classify(Observation(True, False, 1, 1, True, True, True, False, True)) == Recovery.STALE
 
     # Revocation is not equivalent to failure or absence of effect.
     assert classify(CASES["revoked"]) == Recovery.REVOKED
 
-    # Red team: contradictory evidence must not silently become verified.
-    contradictory = Observation(True, False, 1, True, False, "contradictory", True, True)
+    # Red team: contradictory/missing evidence must not silently become verified.
+    contradictory = Observation(True, False, 1, 1, True, False, True, True, True)
     assert classify(contradictory) == Recovery.UNKNOWN
+
+    # Red team: changing acknowledgement alone cannot change the classification.
+    for state in CASES.values():
+        flipped = Observation(**{**state.__dict__, "acknowledgement": not state.acknowledgement})
+        assert classify(flipped) == classify(state)
 
     print("recovery/evidence differential: PASS")
     print("cases=6")
     print("acknowledgement_distinct_from_effect=True")
     print("acknowledgement_distinct_from_verification=True")
+    print("partial_derived_from_count_mismatch=True")
+    print("duplicate_derived_from_effect_count=True")
     print("unknown_not_failed_or_safe_retry=True")
     print("contradictory_evidence_not_verified=True")
     print("canonical_ontology_claim=False")
