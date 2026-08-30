@@ -67,17 +67,20 @@ def verify(claims: tuple[Claim, ...], sources: tuple[Source, ...]) -> None:
 
 
 def main() -> None:
-    a = Source("A", "corpus-A", 1, (("alpha", "verified"), ("beta", "present")))
-    b = Source("B", "corpus-B", 1, (("alpha", "verified"),))
+    # A supplies alpha; B independently supplies alpha and uniquely supplies beta.
+    # Therefore removing B must remove beta while preserving alpha.
+    a = Source("A", "corpus-A", 1, (("alpha", "verified"),))
+    b = Source("B", "corpus-B", 1, (("alpha", "verified"), ("beta", "present")))
     sources = (a, b)
     claims = synthesize(sources)
     verify(claims, sources)
 
-    # Causal input sensitivity: removing B changes the evidence root but not the supported alpha value.
+    # Causal input sensitivity: removing B changes the evidence root and removes beta.
     reduced = (a,)
     reduced_claims = synthesize(reduced)
     verify(reduced_claims, reduced)
     assert reduced_claims[0].input_root != claims[0].input_root
+    assert all(c.subject != "beta" for c in reduced_claims)
 
     # Unsupported claim cannot pass independent verification.
     forged = Claim("c-forged", "alpha", "value", "invented", ("A",), root(sources), 1)
@@ -106,7 +109,7 @@ def main() -> None:
     else:
         raise AssertionError("contradictory evidence silently resolved")
 
-    # Stale/tampered provenance: same claim with a changed evidence root must fail.
+    # Tampered provenance must fail against the original evidence set.
     tampered = Claim(claims[0].claim_id, claims[0].subject, claims[0].predicate,
                      claims[0].value, claims[0].source_ids, root(reduced), claims[0].synthesis_version)
     try:
@@ -116,10 +119,9 @@ def main() -> None:
     else:
         raise AssertionError("tampered provenance accepted")
 
-    # Removal witness: beta is causally dependent on source A.
+    # Removal witness: beta is dependent on B.
     beta_full = next(c for c in claims if c.subject == "beta")
-    assert "A" in beta_full.source_ids
-    assert all(c.subject != "beta" for c in reduced_claims)
+    assert "B" in beta_full.source_ids
 
     print("EVIDENCE-GROUNDED COGNITIVE SYNTHESIS: 8/8 PASS")
     print("Invariant: evidence-bounded synthesis -> claim provenance -> independent verification")
