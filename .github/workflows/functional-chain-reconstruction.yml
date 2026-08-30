@@ -1,0 +1,19 @@
+name: Functional Chain Reconstruction Matrix
+
+on:
+  push:
+    paths:
+      - 'functional_chain_reconstruction_matrix.py'
+      - '.github/workflows/functional-chain-reconstruction.yml'
+  workflow_dispatch:
+
+jobs:
+  reconstruction:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute reconstruction matrix
+        run: python3 functional_chain_reconstruction_matrix.py
+      - name: Verify research record exists
+        run: test -f research/FUNCTIONAL_CHAIN_RECONSTRUCTION_MATRIX_2026-08-31.md
