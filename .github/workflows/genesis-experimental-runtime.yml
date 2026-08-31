@@ -1,0 +1,35 @@
+name: Genesis Experimental Runtime Contract
+
+on:
+  push:
+    paths:
+      - "genesis-experimental-adapter/**"
+      - ".github/workflows/genesis-experimental-runtime.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: public-contract-execution
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+
+      - name: Run semantic contract tests
+        working-directory: genesis-experimental-adapter
+        run: go test -race -count=1 ./...
+
+      - name: Run public adapter
+        working-directory: genesis-experimental-adapter
+        run: |
+          go run . | tee result.txt
+          grep -Fx "GENESIS_PUBLIC_CONTRACT_PROBE_OK" result.txt
