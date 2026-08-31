@@ -1,0 +1,19 @@
+name: pass22-distributed-freshness
+
+on:
+  push:
+    paths:
+      - 'probes/pass22_distributed_freshness_reservation.py'
+      - '.github/workflows/pass22-distributed-freshness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run public-safe Pass 22 probe
+        run: python3 probes/pass22_distributed_freshness_reservation.py
