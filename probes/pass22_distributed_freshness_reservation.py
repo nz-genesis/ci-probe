@@ -2,6 +2,8 @@
 No private Genesis corpus, witness, authority material, or project state.
 """
 
+# PASS24 trigger marker: this update intentionally exercises the push trigger.
+
 def admissible(authority_version, allowed, current_version, reservation_committed):
     return allowed and authority_version == current_version and reservation_committed
 
