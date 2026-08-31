@@ -3,7 +3,9 @@ name: Genesis Experimental Runtime Contract
 on:
   push:
     paths:
-      - "genesis-experimental-adapter/**"
+      - "genesis-experimental-adapter/main.go"
+      - "genesis-experimental-adapter/main_test.go"
+      - "genesis-experimental-adapter/go.mod"
       - ".github/workflows/genesis-experimental-runtime.yml"
   workflow_dispatch:
 
