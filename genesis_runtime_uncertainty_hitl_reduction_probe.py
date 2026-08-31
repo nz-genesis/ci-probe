@@ -18,8 +18,8 @@ def main():
         ("adjudication_does_not_mutate_admitted_context", "ADJUDICATED", {"same_context": False}),
         ("human_resolution_does_not_create_duplicate_effect", "RESOLVED", {"second_effect": False}),
     ]
-    expected_false = {"success", "failure", "retry", "silent_latest", "effect_absent", "verified_effect", "requires_hitl", "same_context", "second_effect"}
-    expected_true = {"admit", "authority"}
+    expected_false = {"success", "failure", "retry", "silent_latest", "admit", "effect_absent", "verified_effect", "requires_hitl", "same_context", "second_effect"}
+    expected_true = {"authority"}
     for name, state, props in cases:
         require(state in {"UNKNOWN", "CONFLICT", "REVOKED", "APPROVED", "LOW_RISK", "ADJUDICATED", "RESOLVED"}, name)
         for key, value in props.items():
