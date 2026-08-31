@@ -5,6 +5,10 @@ on:
     paths:
       - 'probes/pass27_safe_reconciliation.py'
       - '.github/workflows/pass27-safe-reconciliation.yml'
+  pull_request:
+    paths:
+      - 'probes/pass27_safe_reconciliation.py'
+      - '.github/workflows/pass27-safe-reconciliation.yml'
   workflow_dispatch:
 
 permissions:
