@@ -5,6 +5,7 @@ on:
     paths:
       - 'probes/p207/private-witness-public-realization.json'
       - 'p207_public_witness_contract.py'
+      - 'p207_public_witness_contract_red_team.py'
       - '.github/workflows/p207-public-witness.yml'
   workflow_dispatch:
 
@@ -28,3 +29,6 @@ jobs:
 
       - name: Validate non-disclosing public witness
         run: python3 p207_public_witness_contract.py
+
+      - name: Run public-boundary Red Team
+        run: python3 p207_public_witness_contract_red_team.py
