@@ -1,0 +1,17 @@
+name: authorization-to-execution-race
+on:
+  push:
+    paths:
+      - 'authorization_to_execution_race.py'
+      - '.github/workflows/authorization-to-execution-race.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: python authorization_to_execution_race.py
