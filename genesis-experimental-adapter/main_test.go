@@ -35,11 +35,14 @@ func TestUncertainRealizerErrorBlocksRetry(t *testing.T) {
 	if got := k.execute(e, r); got != rejected { t.Fatalf("expected rejected retry, got %s", got) }
 }
 
-func TestObservationBindingFailsClosed(t *testing.T) {
+func TestObservationIdentityFailsClosed(t *testing.T) {
 	k, _ := newKernel(1)
 	if got := k.execute(publicEnvelope("1"), &probeRealizer{ack: true, observe: true, badID: true}); got != unknown { t.Fatalf("expected unknown, got %s", got) }
-	k, _ = newKernel(1)
-	if got := k.execute(publicEnvelope("1"), &probeRealizer{ack: true, observe: true, badDigest: true}); got != observed { t.Fatalf("non-empty digest is not itself proof of world effect; observation binding only requires identity here, got %s", got) }
+}
+
+func TestMissingObservationDigestFailsClosed(t *testing.T) {
+	k, _ := newKernel(1)
+	if got := k.execute(publicEnvelope("1"), &probeRealizer{ack: true, observe: true, missingDigest: true}); got != unknown { t.Fatalf("expected unknown, got %s", got) }
 }
 
 func TestConstraintCannotWiden(t *testing.T) {
