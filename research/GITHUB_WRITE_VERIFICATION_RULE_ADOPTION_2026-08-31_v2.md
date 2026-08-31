@@ -1,0 +1,3 @@
+# GitHub Write Verification Rule Adoption — 2026-08-31
+
+A GitHub write is not reported as committed, created, updated, or verified until the resulting object is independently re-fetched and its expected identity, state, content, and resulting commit are checked. For workflows, exact workflow/run association and completed conclusion are additionally required when execution is part of the claim. If post-write verification cannot be completed, status remains UNVERIFIED/PENDING.
