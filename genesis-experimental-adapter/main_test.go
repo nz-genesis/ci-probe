@@ -8,7 +8,7 @@ import (
 func TestCapabilityDoesNotGrantAuthority(t *testing.T) {
 	k, _ := newKernel(1)
 	e := publicEnvelope("1")
-	e.Authority = authority{Operations: []string{"other"}, Targets: []string{"probe-target"}}
+	e.Authority = authority{Principal: "public-principal", Operations: []string{"other"}, Targets: []string{"probe-target"}}
 	if got := k.execute(e, &probeRealizer{}); got != rejected {
 		t.Fatalf("expected rejected, got %s", got)
 	}
@@ -127,6 +127,32 @@ func TestReconcileRejectsAlteredConstraints(t *testing.T) {
 	e.Constraints[0].Value = "different-target"
 	if got := k.reconcile(e, r); got != rejected {
 		t.Fatalf("expected rejected altered reconciliation, got %s", got)
+	}
+}
+
+func TestReconcileRejectsAuthorityMutation(t *testing.T) {
+	k, _ := newKernel(1)
+	e := publicEnvelope("1")
+	r := &probeRealizer{ack: true, observe: false}
+	if got := k.execute(e, r); got != unknown {
+		t.Fatalf("expected unknown, got %s", got)
+	}
+	e.Authority.Principal = "different-principal"
+	if got := k.reconcile(e, r); got != rejected {
+		t.Fatalf("expected rejected authority mutation, got %s", got)
+	}
+}
+
+func TestReconcileRejectsCapabilityMutation(t *testing.T) {
+	k, _ := newKernel(1)
+	e := publicEnvelope("1")
+	r := &probeRealizer{ack: true, observe: false}
+	if got := k.execute(e, r); got != unknown {
+		t.Fatalf("expected unknown, got %s", got)
+	}
+	e.Capability.ID = "different-capability"
+	if got := k.reconcile(e, r); got != rejected {
+		t.Fatalf("expected rejected capability mutation, got %s", got)
 	}
 }
 
