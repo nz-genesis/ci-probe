@@ -1,0 +1,19 @@
+name: Authorized Derived Public Semantics
+
+on:
+  push:
+    paths:
+      - 'authorized_derived_public_semantics.py'
+      - '.github/workflows/authorized-derived-public-semantics.yml'
+      - 'research/AUTHORIZED_DERIVED_PUBLIC_SEMANTICS_2026-08-31.md'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute bounded probe
+        run: python3 authorized_derived_public_semantics.py
+      - name: Require research record
+        run: test -f research/AUTHORIZED_DERIVED_PUBLIC_SEMANTICS_2026-08-31.md
