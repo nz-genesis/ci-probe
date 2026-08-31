@@ -5,6 +5,10 @@ on:
     paths:
       - 'probes/pass22_distributed_freshness_reservation.py'
       - '.github/workflows/pass22-distributed-freshness.yml'
+  pull_request:
+    paths:
+      - 'probes/pass22_distributed_freshness_reservation.py'
+      - '.github/workflows/pass22-distributed-freshness.yml'
   workflow_dispatch:
 
 permissions:
