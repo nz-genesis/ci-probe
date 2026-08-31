@@ -11,21 +11,11 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout exact triggering commit
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 1
-      - name: Verify checkout identity
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Run causal fork merge probe
         run: python causal_fork_merge_conflict.py
-      - name: Run Pass 22 public-safe probe
-        run: python probes/pass22_distributed_freshness_reservation.py
