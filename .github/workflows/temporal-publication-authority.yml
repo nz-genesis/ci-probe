@@ -5,7 +5,7 @@ on:
     paths:
       - 'temporal_publication_authority.py'
       - '.github/workflows/temporal-publication-authority.yml'
-      - 'research/TEMPORAL_PUBLICATION_AUTHORITY_2026-08-31.md'
+      - 'research/**'
   workflow_dispatch:
 
 jobs:
