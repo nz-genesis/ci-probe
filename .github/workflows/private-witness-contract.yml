@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'private_witness_contract_probe.py'
+      - 'probes/p207/private-witness-public-realization.json'
       - '.github/workflows/private-witness-contract.yml'
   workflow_dispatch:
 
