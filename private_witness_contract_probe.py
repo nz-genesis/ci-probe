@@ -1,12 +1,13 @@
 """Generic public contract test for Genesis private semantic witnesses.
 
-This file intentionally contains only synthetic public fixtures. It verifies the
+This file intentionally contains only public-contract fixtures. It verifies the
 NON-DISCLOSING OUTPUT CONTRACT used by a private Genesis witness boundary. A
 PASS here is not private Genesis evidence and must never be reported as such.
 """
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 FORBIDDEN = {
     "private_note", "private_state", "secret", "token", "raw_state", "raw_private"
@@ -27,6 +28,15 @@ def validate(record: dict) -> None:
     assert isinstance(record["independent_witness_digest"], str) and record["independent_witness_digest"]
     assert record["disclosure"] == "non-disclosing"
     assert not FORBIDDEN.intersection(record)
+
+
+def validate_realization(envelope: dict) -> None:
+    assert envelope == {
+        "format": "genesis-private-witness-public-realization/v1",
+        "predicate_id": "synapse.admission_boundary.exists_and_is_verified",
+        "realization_class": "public-contract-only",
+        "disclosure": "non-disclosing",
+    }
 
 
 def main() -> None:
@@ -50,7 +60,11 @@ def main() -> None:
     else:
         raise AssertionError("private-field leakage was not rejected")
 
-    print("PRIVATE WITNESS PUBLIC CONTRACT: 2/2 PASS")
+    envelope_path = Path("probes/p207/private-witness-public-realization.json")
+    envelope = json.loads(envelope_path.read_text(encoding="utf-8"))
+    validate_realization(envelope)
+
+    print("PRIVATE WITNESS PUBLIC CONTRACT: 3/3 PASS")
     print("Interpretation: contract-only; no private Genesis evidence")
 
 
