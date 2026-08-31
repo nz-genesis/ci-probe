@@ -2,6 +2,7 @@ name: Genesis Pass 26 Verification
 
 on:
   push:
+  pull_request:
   workflow_dispatch:
 
 permissions:
