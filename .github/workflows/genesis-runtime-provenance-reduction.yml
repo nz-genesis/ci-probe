@@ -1,0 +1,29 @@
+name: Genesis runtime provenance reduction
+
+on:
+  push:
+    paths:
+      - "genesis_runtime_provenance_reduction_probe.py"
+      - ".github/workflows/genesis-runtime-provenance-reduction.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provenance-reduction:
+    name: public-provenance-reduction
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact public commit
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Execute clean-room provenance reduction
+        run: python3 genesis_runtime_provenance_reduction_probe.py
+      - name: Verify public boundary text
+        run: |
+          grep -Fq "does not prove that private Genesis semantics were preserved" P207_PRIVATE_WITNESS_PUBLIC_CONTRACT_RU.md
