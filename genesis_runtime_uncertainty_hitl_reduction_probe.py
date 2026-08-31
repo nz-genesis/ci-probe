@@ -18,10 +18,17 @@ def main():
         ("adjudication_does_not_mutate_admitted_context", "ADJUDICATED", {"same_context": False}),
         ("human_resolution_does_not_create_duplicate_effect", "RESOLVED", {"second_effect": False}),
     ]
+    expected_false = {"success", "failure", "retry", "silent_latest", "effect_absent", "verified_effect", "requires_hitl", "same_context", "second_effect"}
+    expected_true = {"admit", "authority"}
     for name, state, props in cases:
         require(state in {"UNKNOWN", "CONFLICT", "REVOKED", "APPROVED", "LOW_RISK", "ADJUDICATED", "RESOLVED"}, name)
-        for key, expected in props.items():
-            require(expected, f"{name}: {key}")
+        for key, value in props.items():
+            if key in expected_false:
+                require(value is False, f"{name}: {key} must remain false")
+            elif key in expected_true:
+                require(value is True, f"{name}: {key} must remain true")
+            else:
+                raise AssertionError(f"unclassified assertion: {key}")
     print("GENESIS RUNTIME UNCERTAINTY HITL REDUCTION: PASS")
 
 
