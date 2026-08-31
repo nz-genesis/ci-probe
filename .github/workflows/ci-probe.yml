@@ -46,6 +46,9 @@ jobs:
       - name: Execute Pass 25 public-safe runtime contract probe
         run: python3 probes/pass25_runtime_contract_probe.py
 
+      - name: Execute Pass 26 public-safe fencing/idempotency probe
+        run: python3 probes/pass26_fencing_idempotency_reconciliation.py
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
