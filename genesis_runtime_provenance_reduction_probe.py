@@ -2,8 +2,9 @@
 
 No private Genesis state, witness material, authority payloads, corpus, or
 private identifiers are used. The probe tests only generic evidence properties:
-causal binding is stronger than ordering alone, replay/conflict is rejected,
-and accepted evidence is not promoted to world truth.
+causal binding is stronger than ordering alone, duplicate evidence is not
+mistaken for a new effect, conflicts are rejected, and admissible evidence is
+not promoted to world truth.
 """
 from dataclasses import dataclass
 
@@ -48,16 +49,16 @@ def main() -> None:
     base = Evidence("t1", "source-a", 7, "attempt-a", True, "digest-a")
     same = Evidence("t1", "source-a", 7, "attempt-a", True, "digest-a")
     stale = Evidence("t1", "source-a", 6, "attempt-old", True, "digest-old")
-    replay = Evidence("t1", "source-a", 7, "attempt-a", True, "digest-a")
     source_swap = Evidence("t1", "source-b", 8, "attempt-a", True, "digest-a")
     causal_swap = Evidence("t1", "source-a", 8, "attempt-b", True, "digest-b")
     conflict = Evidence("t1", "source-a", 8, "attempt-a", True, "digest-b")
     unattested = Evidence("t1", "source-a", 8, "attempt-a", False, "digest-a")
 
     assert token_only(None, base)
+    # Identical evidence is idempotently admissible; it must not be interpreted
+    # as permission for a second external realization.
     assert token_only(base, same)
     assert not token_only(base, stale)
-    assert not token_only(base, replay) is False  # admissibility alone is not a replay proof
     assert not token_only(base, source_swap)
     assert not token_only(base, causal_swap)
     assert not token_only(base, conflict)
