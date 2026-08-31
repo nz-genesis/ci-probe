@@ -1,0 +1,19 @@
+name: Delegated Authority Attenuation
+
+on:
+  push:
+    paths:
+      - 'delegated_authority_attenuation.py'
+      - '.github/workflows/delegated-authority-attenuation.yml'
+      - 'research/DELEGATED_AUTHORITY_ATTENUATION_2026-08-31.md'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute bounded probe
+        run: python3 delegated_authority_attenuation.py
+      - name: Require research record
+        run: test -f research/DELEGATED_AUTHORITY_ATTENUATION_2026-08-31.md
