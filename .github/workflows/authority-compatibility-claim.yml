@@ -1,0 +1,19 @@
+name: P202 authority compatibility claim
+
+on:
+  push:
+    paths:
+      - 'authority_compatibility_claim.py'
+      - '.github/workflows/authority-compatibility-claim.yml'
+      - 'research/AUTHORITY_COMPATIBILITY_CLAIM_2026-08-31.md'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: python authority_compatibility_claim.py
