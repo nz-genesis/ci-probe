@@ -52,3 +52,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# Verification checkpoint: semantic logic unchanged; this commit intentionally retriggers hosted CI for post-write verification.
