@@ -21,6 +21,17 @@ jobs:
       - name: Checkout exact public commit
         uses: actions/checkout@v4
 
+      - name: Assert exact public commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          checked_out="$(git rev-parse HEAD)"
+          if [[ "$checked_out" != "$GITHUB_SHA" ]]; then
+            echo "P207_PUBLIC_CONTRACT_FAIL: checkout=$checked_out github_sha=$GITHUB_SHA"
+            exit 1
+          fi
+          echo "P207_EXACT_CHECKOUT_PASS: $checked_out"
+
       - name: Runtime identification
         run: |
           python3 --version
@@ -29,6 +40,13 @@ jobs:
 
       - name: Validate non-disclosing public witness
         run: python3 p207_public_witness_contract.py
+
+      - name: Record public envelope blob identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          blob_sha="$(git hash-object -t blob probes/p207/private-witness-public-realization.json)"
+          echo "P207_PUBLIC_ENVELOPE_BLOB_SHA=$blob_sha"
 
       - name: Run public-boundary Red Team
         run: python3 p207_public_witness_contract_red_team.py
