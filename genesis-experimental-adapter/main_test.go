@@ -23,8 +23,23 @@ func TestUnknownBlocksBlindRetry(t *testing.T) {
 	e := publicEnvelope("1")
 	if got := k.execute(e, r); got != unknown { t.Fatalf("expected unknown, got %s", got) }
 	if got := k.execute(e, r); got != rejected { t.Fatalf("expected rejected blind retry, got %s", got) }
-	if r.calls != 1 { t.Fatalf("realizer was called again: %d", r.calls) }
-	if got := k.reconcile(e, r); got != observed { t.Fatalf("expected observed after reconciliation, got %s", got) }
+	r.mu.Lock(); calls := r.calls; r.mu.Unlock()
+	if calls != 1 { t.Fatalf("realizer was called again: %d", calls) }
+}
+
+func TestUncertainRealizerErrorBlocksRetry(t *testing.T) {
+	k, _ := newKernel(1)
+	r := &probeRealizer{err: true}
+	e := publicEnvelope("1")
+	if got := k.execute(e, r); got != unknown { t.Fatalf("expected unknown, got %s", got) }
+	if got := k.execute(e, r); got != rejected { t.Fatalf("expected rejected retry, got %s", got) }
+}
+
+func TestObservationBindingFailsClosed(t *testing.T) {
+	k, _ := newKernel(1)
+	if got := k.execute(publicEnvelope("1"), &probeRealizer{ack: true, observe: true, badID: true}); got != unknown { t.Fatalf("expected unknown, got %s", got) }
+	k, _ = newKernel(1)
+	if got := k.execute(publicEnvelope("1"), &probeRealizer{ack: true, observe: true, badDigest: true}); got != unknown { t.Fatalf("expected unknown, got %s", got) }
 }
 
 func TestConstraintCannotWiden(t *testing.T) {
@@ -58,20 +73,23 @@ func TestBoundedConcurrentAdmission(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if err := k.admit(publicEnvelope("same")); err == nil {
-				mu.Lock(); accepted++; mu.Unlock()
-			}
+			if err := k.admit(publicEnvelope("same")); err == nil { mu.Lock(); accepted++; mu.Unlock() }
 		}()
 	}
 	wg.Wait()
 	if accepted != 1 { t.Fatalf("expected exactly one admission, got %d", accepted) }
 }
 
-func TestPublicAdapterContainsNoPrivateState(t *testing.T) {
-	// The public fixture contains only synthetic probe values and no Genesis
-	// project state, authority payloads, witness material or private identifiers.
+func TestReconcileRejectsAlteredConstraints(t *testing.T) {
+	k, _ := newKernel(1)
+	e := publicEnvelope("1")
+	r := &probeRealizer{ack: true, observe: false}
+	if got := k.execute(e, r); got != unknown { t.Fatalf("expected unknown, got %s", got) }
+	e.Constraints[0].Value = "different-target"
+	if got := k.reconcile(e, r); got != rejected { t.Fatalf("expected rejected altered reconciliation, got %s", got) }
+}
+
+func TestPublicAdapterContainsOnlySyntheticFixture(t *testing.T) {
 	e := publicEnvelope("public-disclosure-test")
-	if e.Transition.Target != "probe-target" || e.Transition.Operation != "probe" || e.Transition.Payload != "public-fixture" {
-		t.Fatal("unexpected non-public fixture")
-	}
+	if e.Transition.Target != "probe-target" || e.Transition.Operation != "probe" || e.Transition.Payload != "public-fixture" { t.Fatal("unexpected fixture") }
 }
