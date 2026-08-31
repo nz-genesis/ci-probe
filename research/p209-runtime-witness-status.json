@@ -1,0 +1,8 @@
+{
+  "protocol": "P209_RUNTIME_TO_WITNESS_CONFORMANCE",
+  "status": "OPEN",
+  "verified": false,
+  "private_witness_available": false,
+  "public_role": "integrity_and_contract_verification_only",
+  "closure_requires": ["real_private_derived_envelope", "exact_public_commit", "workflow_run", "job", "steps", "logs", "red_team"]
+}
