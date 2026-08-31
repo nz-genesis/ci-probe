@@ -1,0 +1,6 @@
+{
+  "format": "genesis-private-witness-public-realization/v1",
+  "predicate_id": "synapse.admission_boundary.exists_and_is_verified",
+  "realization_class": "public-contract-only",
+  "disclosure": "non-disclosing"
+}
