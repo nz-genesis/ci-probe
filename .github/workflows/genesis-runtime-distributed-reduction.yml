@@ -1,0 +1,19 @@
+name: Genesis Runtime Distributed Reduction
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'genesis_runtime_distributed_reduction_probe.py'
+      - '.github/workflows/genesis-runtime-distributed-reduction.yml'
+
+jobs:
+  distributed-reduction:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run clean-room distributed reduction
+        run: python3 genesis_runtime_distributed_reduction_probe.py
+      - name: Verify public-safe boundary
+        run: |
+          ! grep -R -E '(private corpus|private witness|private authority|secret)' genesis_runtime_distributed_reduction_probe.py
