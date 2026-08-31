@@ -1,0 +1,19 @@
+name: Adaptive Transitive Observation
+
+on:
+  push:
+    paths:
+      - "adaptive_transitive_observation.py"
+      - ".github/workflows/adaptive-transitive-observation.yml"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run bounded probe
+        run: python adaptive_transitive_observation.py
