@@ -56,4 +56,4 @@ jobs:
           git commit -m "ci: record public Genesis contract probe result" || exit 0
           git push
 
-      # Proof is generated only after all contract gates pass.
+      # Proof is generated only after all contract gates pass; public proof is synthetic only.
