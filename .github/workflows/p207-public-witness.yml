@@ -1,0 +1,30 @@
+name: P207 Public Witness Contract
+
+on:
+  push:
+    paths:
+      - 'probes/p207/private-witness-public-realization.json'
+      - 'p207_public_witness_contract.py'
+      - '.github/workflows/p207-public-witness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-contract:
+    name: public-witness-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact public commit
+        uses: actions/checkout@v4
+
+      - name: Runtime identification
+        run: |
+          python3 --version
+          echo "sha=${GITHUB_SHA}"
+          echo "repository=${GITHUB_REPOSITORY}"
+
+      - name: Validate non-disclosing public witness
+        run: python3 p207_public_witness_contract.py
