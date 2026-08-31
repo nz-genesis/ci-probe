@@ -29,12 +29,12 @@ class Lease:
 class ExternalSystem:
     def __init__(self, idempotent: bool):
         self.idempotent = idempotent
-        self.effects = set()
+        self.effects = []
 
     def apply(self, effect_id: str) -> bool:
         if self.idempotent and effect_id in self.effects:
             return False
-        self.effects.add(effect_id)
+        self.effects.append(effect_id)
         return True
 
 
@@ -61,11 +61,11 @@ def idempotent_external_system_deduplicates() -> None:
     require(len(ext.effects) == 1, "idempotent system created duplicate effect")
 
 
-def_non_idempotent_requires_fencing_or_reconciliation() -> None:
+def non_idempotent_requires_fencing_or_reconciliation() -> None:
     ext = ExternalSystem(idempotent=False)
     require(ext.apply("e1"), "first non-idempotent effect was rejected")
     require(ext.apply("e1"), "fixture did not model non-idempotent system")
-    require(len(ext.effects) == 1, "set cannot expose physical duplicate; matrix marker only")
+    require(ext.effects == ["e1", "e1"], "non-idempotent duplicate was not modeled")
 
 
 def unknown_is_not_safe_retry_without_contract() -> None:
@@ -105,7 +105,7 @@ def substitution_preserves_authority() -> None:
 def main() -> None:
     stale_lease_is_rejected()
     idempotent_external_system_deduplicates()
-    _non_idempotent_requires_fencing_or_reconciliation()
+    non_idempotent_requires_fencing_or_reconciliation()
     unknown_is_not_safe_retry_without_contract()
     stale_reservation_is_not_blindly_released()
     contradictory_evidence_does_not_create_authority()
