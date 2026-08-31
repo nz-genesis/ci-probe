@@ -31,6 +31,7 @@ class ReconciliationEvidence:
     verified_absent: bool = False
     verified_applied: bool = False
     contradictory: bool = False
+    external_unavailable: bool = False
 
 
 def require(condition: bool, message: str) -> None:
@@ -105,6 +106,13 @@ def stale_realization_cannot_be_revived_by_reconciliation() -> None:
     require(result.status is Status.RELEASED, "closed reservation was revived by evidence")
 
 
+def permanently_unavailable_external_system_stays_uncertain() -> None:
+    reservation = Reservation("e1", 1, Status.UNKNOWN)
+    evidence = ReconciliationEvidence("e1", external_unavailable=True)
+    result = reconcile(reservation, evidence, current_authority_version=2)
+    require(result.status is Status.UNKNOWN, "external unavailability was converted to success or absence")
+
+
 def no_new_primitive_is_needed_for_reconciliation() -> None:
     # The complete decision uses only existing semantic dimensions represented
     # here as state, transition conditions, authority version, observation/evidence,
@@ -129,8 +137,9 @@ def reconcile(
         return replace(reservation, status=Status.REALIZED)
     if evidence.verified_absent:
         return replace(reservation, status=Status.RELEASED)
-    # Authority staleness alone is not evidence of external absence.
-    if reservation.authority_version != current_authority_version:
+    # Authority staleness or external unavailability alone is not evidence of
+    # external absence. The correct outcome remains uncertainty/hold.
+    if reservation.authority_version != current_authority_version or evidence.external_unavailable:
         return reservation
     return reservation
 
@@ -145,8 +154,9 @@ def main() -> None:
     reconciliation_does_not_grant_authority()
     reconciliation_is_repeatable()
     stale_realization_cannot_be_revived_by_reconciliation()
+    permanently_unavailable_external_system_stays_uncertain()
     no_new_primitive_is_needed_for_reconciliation()
-    print("PASS27_PUBLIC: PASS; cases=10; private_data=none; new_primitives=0")
+    print("PASS27_PUBLIC: PASS; cases=11; private_data=none; new_primitives=0")
 
 
 if __name__ == "__main__":
