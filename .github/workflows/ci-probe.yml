@@ -43,6 +43,9 @@ jobs:
       - name: Execute Pass 22 public-safe semantic probe
         run: python3 probes/pass22_distributed_freshness_reservation.py
 
+      - name: Execute Pass 25 public-safe runtime contract probe
+        run: python3 probes/pass25_runtime_contract_probe.py
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
