@@ -26,6 +26,14 @@ jobs:
         with:
           go-version: "1.22.x"
 
+      - name: Verify formatting
+        working-directory: genesis-experimental-adapter
+        run: test -z "$(gofmt -l main.go main_test.go)"
+
+      - name: Run static analysis
+        working-directory: genesis-experimental-adapter
+        run: go vet ./...
+
       - name: Run semantic contract tests
         working-directory: genesis-experimental-adapter
         run: go test -race -count=1 ./...
