@@ -1,0 +1,20 @@
+name: semantic-behavior-kernel-reduction-pass19
+
+on:
+  push:
+    paths:
+      - "semantic_behavior_kernel_reduction_pass19.py"
+      - ".github/workflows/semantic-behavior-kernel-reduction-pass19.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reduction:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run bounded reduction
+        run: python3 semantic_behavior_kernel_reduction_pass19.py
