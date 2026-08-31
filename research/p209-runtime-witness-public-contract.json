@@ -1,0 +1,9 @@
+{
+  "protocol": "P209_RUNTIME_TO_WITNESS_CONFORMANCE",
+  "purpose": "public verification of an approved non-disclosing runtime-derived witness envelope",
+  "private_authority": "genesis-lab",
+  "public_role": "integrity_and_contract_verification_only",
+  "required_fields": ["predicate_id", "state_digest", "execution_digest", "witness_digest", "projection_version"],
+  "forbidden_fields": ["private_state", "private_transcript", "private_inputs", "private_outputs", "secret_material"],
+  "status": "CONTRACT_ONLY_PENDING_REAL_PRIVATE_WITNESS"
+}
