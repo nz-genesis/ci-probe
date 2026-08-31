@@ -1,0 +1,2 @@
+Pass 26 hosted-run verification marker.
+Public-safe; no private Genesis state, corpus, authority, or witness material.
