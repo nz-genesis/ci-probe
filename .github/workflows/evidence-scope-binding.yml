@@ -1,0 +1,16 @@
+name: evidence-scope-binding
+
+on:
+  push:
+    paths:
+      - 'evidence_scope_binding.py'
+      - '.github/workflows/evidence-scope-binding.yml'
+  workflow_dispatch:
+
+jobs:
+  p203:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run P203
+        run: python evidence_scope_binding.py
