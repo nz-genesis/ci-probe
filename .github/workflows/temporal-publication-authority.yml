@@ -1,0 +1,19 @@
+name: Temporal Publication Authority
+
+on:
+  push:
+    paths:
+      - 'temporal_publication_authority.py'
+      - '.github/workflows/temporal-publication-authority.yml'
+      - 'research/TEMPORAL_PUBLICATION_AUTHORITY_2026-08-31.md'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute bounded probe
+        run: python3 temporal_publication_authority.py
+      - name: Require research record
+        run: test -f research/TEMPORAL_PUBLICATION_AUTHORITY_2026-08-31.md
