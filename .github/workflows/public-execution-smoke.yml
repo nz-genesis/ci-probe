@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  GENESIS_PUBLIC_PROBE: pass22_distributed_freshness_reservation.py
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
@@ -26,7 +29,7 @@ jobs:
           test "$actual" = "$GITHUB_SHA"
           printf 'GITHUB_SHA=%s\nCHECKED_OUT_SHA=%s\n' "$GITHUB_SHA" "$actual"
       - name: Execute public-safe probe
-        run: python3 probes/pass22_distributed_freshness_reservation.py
+        run: python3 "$GENESIS_PUBLIC_PROBE"
       - name: Emit identity
         run: |
           printf 'repository=%s\nworkflow=%s\nrun_id=%s\nsha=%s\n' "$GITHUB_REPOSITORY" "$GITHUB_WORKFLOW" "$GITHUB_RUN_ID" "$GITHUB_SHA"
