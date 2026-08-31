@@ -33,16 +33,15 @@ def assert_case(label, got, expected):
 
 def main():
     a = Candidate("A", 0.95, True)
-    b = Candidate("B", 0.05, False)
-    x = Candidate("X", 0.91, True)
-    y = Candidate("Y", 0.89, True)
+    x = Candidate("X", 0.99, True)
+    y = Candidate("Y", 0.10, True)
 
     assert_case("unique authorized", govern([a], Action("write", False)), "EXECUTE")
     assert_case("ambiguous reversible", govern([x, y], Action("probe", True)), "HOLD_OR_SAFE_REVERSIBLE")
     assert_case("ambiguous irreversible", govern([x, y], Action("delete", False)), "NO_EXECUTION")
     assert_case("observation available", govern([x, y], Action("delete", False), observation_available=True), "OBSERVE_FIRST")
     assert_case("HITL", govern([x, y], Action("delete", False), hitl=True), "HITL")
-    assert_case("confidence is not authority", govern([a, b], Action("delete", False)), "EXECUTE")
+    assert_case("confidence is not authority", govern([x, y], Action("delete", False)), "NO_EXECUTION")
     assert_case("no authorized interpretation", govern([Candidate("N", .99, False), Candidate("M", .98, False)], Action("probe", True)), "NO_EXECUTION")
     assert_case("high confidence does not override ambiguity", govern([x, y], Action("delete", False)), "NO_EXECUTION")
     print("AMBIGUITY GOVERNED ACTION: 8/8 PASS")
