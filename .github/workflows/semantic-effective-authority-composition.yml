@@ -1,0 +1,18 @@
+name: Semantic Effective Authority Composition
+
+on:
+  push:
+    paths:
+      - "semantic_effective_authority_composition.py"
+      - ".github/workflows/semantic-effective-authority-composition.yml"
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python semantic_effective_authority_composition.py
