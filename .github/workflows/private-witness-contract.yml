@@ -1,0 +1,19 @@
+name: private-witness-contract
+
+on:
+  push:
+    paths:
+      - 'private_witness_contract_probe.py'
+      - '.github/workflows/private-witness-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute public contract probe
+        run: python3 private_witness_contract_probe.py
