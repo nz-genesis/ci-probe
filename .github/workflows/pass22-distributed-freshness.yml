@@ -13,7 +13,31 @@ permissions:
 jobs:
   semantic-probe:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Verify checkout identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          expected="${GITHUB_SHA}"
+          test "$actual" = "$expected"
+          printf 'GITHUB_SHA=%s\nCHECKED_OUT_SHA=%s\n' "$expected" "$actual"
+
+      - name: Syntax check
+        run: python3 -m py_compile probes/pass22_distributed_freshness_reservation.py
+
       - name: Run public-safe Pass 22 probe
         run: python3 probes/pass22_distributed_freshness_reservation.py
+
+      - name: Emit execution identity
+        shell: bash
+        run: |
+          printf 'repository=%s\nworkflow=%s\nrun_id=%s\ncommit=%s\n' \
+            "$GITHUB_REPOSITORY" "$GITHUB_WORKFLOW" "$GITHUB_RUN_ID" "$GITHUB_SHA"
