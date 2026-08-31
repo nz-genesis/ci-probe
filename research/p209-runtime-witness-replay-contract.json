@@ -1,0 +1,14 @@
+{
+  "protocol": "P209_RUNTIME_TO_WITNESS_CONFORMANCE",
+  "test": "replay_and_identity_binding",
+  "public_verifier_must_reject": [
+    "stale envelope replay",
+    "predicate substitution",
+    "state digest substitution",
+    "execution digest substitution",
+    "witness digest substitution",
+    "projection version substitution"
+  ],
+  "boundary": "public verification cannot establish private Genesis semantic truth",
+  "status": "CONTRACT_ONLY"
+}
