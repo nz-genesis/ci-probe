@@ -1,0 +1,20 @@
+name: intent-goal-transition-reduction-pass12
+
+on:
+  push:
+    paths:
+      - "intent_goal_transition_reduction_pass12.py"
+      - ".github/workflows/intent-goal-transition-reduction-pass12.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reduction:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run bounded reduction
+        run: python3 intent_goal_transition_reduction_pass12.py
