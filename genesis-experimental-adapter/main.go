@@ -17,9 +17,7 @@ const (
 	unknown  outcome = "UNKNOWN"
 )
 
-type transition struct {
-	ID, Target, Operation, Payload string
-}
+type transition struct { ID, Target, Operation, Payload string }
 type capability struct { Operations, Targets []string }
 type authority struct { Operations, Targets []string; RequiresHITL, ApprovedHITL bool }
 type constraint struct { Key, Value string }
@@ -83,12 +81,12 @@ func (k *kernel) reconcile(e envelope, r realizer) outcome {
 func has(values []string, wanted string) bool { for _, v := range values { if v == wanted { return true } }; return false }
 func digest(s string) string { h := sha256.Sum256([]byte(s)); return hex.EncodeToString(h[:]) }
 
-type probeRealizer struct { ack, observe, err, badID, badDigest bool; calls int; mu sync.Mutex }
+type probeRealizer struct { ack, observe, err, badID, missingDigest bool; calls int; mu sync.Mutex }
 func (r *probeRealizer) Execute(t transition) attempt {
 	r.mu.Lock(); defer r.mu.Unlock(); r.calls++
 	if r.err { return attempt{Ack: true, Err: errors.New("uncertain realizer error")} }
 	if !r.observe { return attempt{Ack: r.ack} }
-	id, d := t.ID, digest(t.Payload); if r.badID { id = "other" }; if r.badDigest { d = "forged" }
+	id, d := t.ID, digest(t.Payload); if r.badID { id = "other" }; if r.missingDigest { d = "" }
 	return attempt{Ack: r.ack, Observation: &observation{TransitionID: id, Digest: d}}
 }
 func (r *probeRealizer) Reconcile(t transition) attempt { return attempt{Observation: &observation{TransitionID: t.ID, Digest: digest(t.Payload)}} }
