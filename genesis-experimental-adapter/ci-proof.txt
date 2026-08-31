@@ -1,0 +1,4 @@
+workflow=Genesis Experimental Runtime Contract
+commit=0f4d387ebc7a3002ccbdc6c71b32256fe60dde92
+run_id=33435484116
+result=PASS
