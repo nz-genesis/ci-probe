@@ -1,4 +1,4 @@
-# P209 — Decision / Selection Reduction
+# P209 — Decision / Selection / Policy / Preference Reduction
 
 ## Question
 
@@ -16,24 +16,53 @@ Basis:
 
 ## Bounded scenarios
 
-- select among multiple admissible transitions using an explicit constraint/criterion;
-- change the admissible choice by changing state/constraint;
-- represent policy change as a protected state transition;
+The strengthened probe tests:
+
+- constructive selection among admissible candidates;
+- preference carried explicitly in State;
+- selection changed by Constraint;
+- capability membership as an admissibility condition;
+- unauthorized high-score candidate cannot win;
 - tie/ambiguity does not become success automatically;
-- unauthorized preference cannot expand authority;
+- policy update represented as a State transition;
 - observation is not decision;
 - UNKNOWN is not success;
 - evidence of one realization does not become authority for another;
-- conflicting authority is resolved by authority/constraint, not by preference laundering;
 - malformed candidate fails closed;
-- primitive reduction check.
+- Decision/Selection/Policy/Preference are absent from the candidate basis.
+
+## Red-Team correction
+
+The first P209 model was not treated as closure evidence. Red Team identified two weaknesses: preference was not explicit enough as State, and capability admissibility was not explicit enough in selection. The probe was strengthened before closure and rerun on a fresh hosted commit.
 
 ## Falsifier
 
 P209 is falsified if a decision/selection operation requires a semantic primitive outside the seven-element basis, or if policy/preference can silently widen authority, constraints, or execution scope.
 
-## Evidence protocol
+## Exact hosted evidence
 
-The cumulative CI Probe checks out the exact triggering SHA, verifies `HEAD == GITHUB_SHA`, executes the P209 probe after the already-closed cumulative probes, and preserves the existing hosted evidence chain.
+Public execution substrate: `nz-genesis/ci-probe`
 
-A hosted PASS is execution evidence for the probe, not proof of canonical Genesis semantic correctness.
+Exact hosted SHA:
+
+`965a69b4575355ed700c37b82185722d3083c6cf`
+
+Run: `33532837999`
+
+Job: `99939934336` — `public-github-hosted-execution`
+
+Conclusion: `success`
+
+The fetched job record shows the cumulative workflow completed successfully, including Passes 44–49, P208, and P209. The hosted log verifies `GITHUB_SHA == CHECKED_OUT_SHA == 965a69b4575355ed700c37b82185722d3083c6cf`.
+
+P209 output:
+
+`P209_DECISION_SELECTION_REDUCTION_PASS; assertions=11; basis_size=7; new_primitive_required=false`
+
+## Evidence artifact
+
+The run finalized `ci-probe-result-33532837999` (artifact `9810425916`) and `pass49-execution-evidence-965a69b4575355ed700c37b82185722d3083c6cf` (artifact `9810424978`). Artifact digests and exact hosted evidence are recorded in the private Genesis research closure.
+
+## Semantic status
+
+Hosted PASS is execution evidence for the probe, not proof of canonical Genesis semantic correctness. P209 supports the reduction of Decision / Selection / Policy / Preference to the seven-element candidate basis for the bounded model. It does not establish global completeness or final minimality.
