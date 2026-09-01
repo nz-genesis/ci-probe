@@ -1,0 +1,27 @@
+name: Pass 49 hosted trigger probe
+
+on:
+  push:
+    branches:
+      - pass49-hosted-trigger
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Verify exact SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$GITHUB_SHA"
+          printf 'GITHUB_SHA=%s\nCHECKED_OUT_SHA=%s\n' "$GITHUB_SHA" "$actual"
+      - name: Record trigger proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'WORKFLOW=%s\nRUN_SHA=%s\n' "$GITHUB_WORKFLOW" "$GITHUB_SHA"
