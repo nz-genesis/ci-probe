@@ -1,9 +1,9 @@
 """Pass 45: dynamic k-of-n authority and delegation reduction.
 
-Bounded experiment: represent threshold requirements, membership changes, and
-revocation using existing Authority + Constraint + Evidence. Delegation is
-represented as a constrained authority relation; it must not silently create
-authority beyond the delegator's scope. No new Genesis primitive is introduced.
+Bounded experiment: threshold requirements, membership changes, revocation and
+bounded delegation are represented with Authority + Constraint + Evidence.
+Delegation cannot widen action scope or resurrect revoked authority. No new
+Genesis primitive is introduced.
 """
 from dataclasses import dataclass
 from enum import Enum
@@ -46,6 +46,8 @@ def decide(action, authorities, constraint, evidence, observed_epoch=None):
         return Decision.HITL_REQUIRED
     if evidence.claim != action:
         return Decision.REJECT
+    if constraint.threshold < 1 or constraint.threshold > len(constraint.eligible):
+        return Decision.HITL_REQUIRED
     if observed_epoch is not None and observed_epoch != evidence.epoch:
         return Decision.UNKNOWN
 
@@ -62,7 +64,7 @@ def decide(action, authorities, constraint, evidence, observed_epoch=None):
 
 
 def validate_delegation(parent, child):
-    # Delegation can preserve or narrow the parent's action/epoch scope only.
+    """A delegation preserves parent action/epoch scope and cannot resurrect it."""
     if not parent.active or not child.active:
         return Decision.REJECT
     if child.delegator != parent.subject:
@@ -74,8 +76,19 @@ def validate_delegation(parent, child):
     return Decision.ALLOW
 
 
+def validate_chain(chain):
+    """Every edge must preserve the same action/epoch and active authority."""
+    if not chain:
+        return Decision.REJECT
+    for parent, child in zip(chain, chain[1:]):
+        result = validate_delegation(parent, child)
+        if result != Decision.ALLOW:
+            return result
+    return Decision.ALLOW
+
+
 def validate_membership_substitution(original, candidate):
-    # Dynamic membership changes are explicit constraints, never silent widening.
+    """Membership may narrow explicitly, but silent widening/threshold change is unsafe."""
     if not candidate.active:
         return Decision.HITL_REQUIRED
     if candidate.threshold != original.threshold:
@@ -110,12 +123,21 @@ def run():
     parent = Authority("alice", action, True, 10)
     child = Authority("dave", action, True, 10, delegator="alice")
     assert validate_delegation(parent, child) == Decision.ALLOW
+
     wrong_action = Authority("dave", "delete", True, 10, delegator="alice")
     assert validate_delegation(parent, wrong_action) == Decision.REJECT
+
     wrong_parent = Authority("dave", action, True, 10, delegator="mallory")
     assert validate_delegation(parent, wrong_parent) == Decision_REJECT
+
     stale_child = Authority("dave", action, True, 11, delegator="alice")
     assert validate_delegation(parent, stale_child) == Decision_UNKNOWN
+
+    grandchild = Authority("erin", action, True, 10, delegator="dave")
+    assert validate_chain([parent, child, grandchild]) == Decision.ALLOW
+
+    revoked_parent = Authority("alice", action, False, 11)
+    assert validate_chain([revoked_parent, child, grandchild]) == Decision_REJECT
 
     narrowed = Constraint(threshold=2, eligible=frozenset({"alice", "bob"}))
     widened = Constraint(threshold=2, eligible=frozenset({"alice", "bob", "carol", "mallory"}))
@@ -125,10 +147,13 @@ def run():
     assert validate_membership_substitution(base, threshold_changed) == Decision.HITL_REQUIRED
 
     forged = Evidence(action, 10, True, "delegated-claim-without-authority")
-    assert decide(action, [authorities[0]], base, forged) == Decision.REJECT
+    assert decide(action, [authorities[0]], base, forged) == Decision_REJECT
 
+    malformed = Constraint(threshold=0, eligible=base.eligible)
+    assert decide(action, authorities, malformed, evidence) == Decision_HITL_REQUIRED
     assert all(name not in globals() for name in ("ThresholdAuthority", "DelegationPrimitive", "AuthoritySet"))
-    print("PASS45_PUBLIC: PASS; cases=12")
+
+    print("PASS45_PUBLIC: PASS; cases=14")
 
 
 Decision_REJECT = Decision.REJECT
