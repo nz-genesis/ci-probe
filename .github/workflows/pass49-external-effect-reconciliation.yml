@@ -25,7 +25,20 @@ jobs:
           set -euo pipefail
           actual="$(git rev-parse HEAD)"
           test "$actual" = "$GITHUB_SHA"
-          printf 'GITHUB_SHA=%s\nCHECKED_OUT_SHA=%s\n' "$GITHUB_SHA" "$actual"
+          printf 'GITHUB_SHA=%s\nCHECKED_OUT_SHA=%s\n' "$GITHUB_SHA" "$actual" | tee pass49-checkout-identity.txt
 
       - name: Run Go external-effect reconciliation probe
-        run: go run -race ./probes/pass49_external_effect_reconciliation.go
+        shell: bash
+        run: |
+          set -o pipefail
+          go run -race ./probes/pass49_external_effect_reconciliation.go | tee pass49-probe-output.txt
+
+      - name: Upload exact execution evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pass49-execution-evidence-${{ github.sha }}
+          path: |
+            pass49-checkout-identity.txt
+            pass49-probe-output.txt
+          if-no-files-found: error
