@@ -1,7 +1,7 @@
 # P213 — Partial-order / Incomparable Normative Trade-off Reduction
 
 ## Status
-`EXPERIMENTAL / LOCAL PASS / HOSTED-CI PENDING / NOT CANONICAL`
+`SUPPORTED / HOSTED-VERIFIED / NOT CANONICAL`
 
 ## Purpose and new discriminator
 P212 tested weighted/hierarchical objective ordering. P213 deliberately changes the discriminator: objectives can be genuinely incomparable, a partial precedence relation can later make one objective dominant, and the unresolved set can resemble a Pareto frontier.
@@ -24,9 +24,9 @@ This is a clean-room probe and does not import Genesis runtime code.
 
 ## Red Team / correction genealogy
 
-The first P213 implementation contained two defects caught before closure:
+Two substantive defects were caught before closure:
 
-1. it printed `assertions=12` while implementing 13 checks;
+1. the first implementation printed `assertions=12` while implementing 13 checks;
 2. its first dominance implementation ignored the precedence relation, so the claimed state-relation mutation did not actually change the frontier.
 
 Both defects were rejected as evidence. The implementation was corrected so `objective_order` is an explicit State relation and only top-level incomparable objectives participate in the bounded dominance test. The corrected local reproduction produced `13/13 PASS`.
@@ -46,7 +46,7 @@ Attacks:
 - missing explicit tie-break authority;
 - implementation/runtime dependence.
 
-A falsifier is a bounded case where an irreducible normative relation, authority boundary, or safety invariant cannot be represented through the seven-element composition.
+No Red-Team attack produced a falsifying semantic residue in the corrected bounded model.
 
 ## Local verification
 
@@ -54,20 +54,49 @@ Corrected committed probe: `partial_order_normative_reduction.py`.
 
 Independent clean-environment reproduction: `13/13 PASS`.
 
-## Hosted verification boundary
+## Hosted verification — independently fetched and verified
 
-Dedicated workflow:
-`.github/workflows/partial-order-normative-reduction.yml`
+- workflow: `Partial Order Normative Reduction`
+- run ID: `33541734173`
+- run number: `3`
+- job ID: `99969387904`
+- conclusion: `success`
+- pull-request source SHA: `21ce8d22fc668153cc759db28be7b7ae2b2fd9be`
+- exact hosted `GITHUB_SHA`: `24dd0ac3f52130c85d832ed7daaa5660034f6e32`
+- exact checkout: `git rev-parse HEAD == GITHUB_SHA`
+- probe: `13/13 PASS`
+- basis size: `7`
+- new primitive required: `false`
 
-Hosted PASS is not claimed until exact run/SHA/job/log/artifact evidence is fetched and verified.
+The workflow ran against the pull-request merge ref. The hosted log records checkout of merge SHA `24dd0ac3...`, the exact SHA identity check, all 13 PASS lines, and artifact finalization. The fetched merge commit was independently verified; the merge contains the P213 workflow, corrected probe and public research record from the source SHA.
 
-Required chain:
-`checkout github.sha → verify git rev-parse HEAD == GITHUB_SHA → execute → fetch run → fetch job/logs → fetch artifact → verify artifact digest`.
+Execution artifact:
 
-## Cumulative interpretation
+- name: `p213-execution-evidence-24dd0ac3f52130c85d832ed7daaa5660034f6e32`
+- artifact ID: `9813869742`
+- size: `462` bytes
+- expired: `false`
+- GitHub digest: `sha256:c0040242334ebb82a4af4f8ba7c3f3f4ec9808b68b4a98d167fbe57f173befb6`
 
-P208–P212 remain prior evidence. P213 adds a new discriminator rather than repeating weighted decision or planning tests. Even a successful P213 run would be bounded evidence against primitive inflation, not proof of global completeness or final minimality.
+The artifact ZIP was downloaded and its SHA-256 independently recomputed to the same GitHub-reported digest. Its payload contains the exact 13-PASS result.
+
+## Semantic result
+
+The bounded evidence supports reduction:
+
+- partial objective precedence → State relation;
+- incomparable objectives → unresolved State/Observation/Evidence boundary rather than invented ordering;
+- precedence mutation → Transition;
+- admissibility → Capability + Authority + Constraint;
+- frontier/Pareto-like set → derived State/Observation;
+- tie-break → explicit Authority/Constraint composition;
+- planner/utility → implementation mechanism.
+
+Therefore P213 provides bounded supporting evidence against primitive inflation. It does **not** prove universal normative reasoning, global ontology completeness, final minimality, or canonical Genesis semantics.
 
 ## Privacy boundary
 
 Synthetic clean-room values only. No private Genesis semantic state, authority corpus, witness material, or private correspondence data is exposed.
+
+## Closure
+`P213 = SUPPORTED / HOSTED-VERIFIED / NO NEW PRIMITIVE / NOT CANONICAL`
