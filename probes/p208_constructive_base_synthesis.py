@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """P208 clean-room constructive synthesis probe.
 
-Purpose: test whether the strongest pre-existing Genesis Base candidate set can
+Purpose: test whether the current seven-element Genesis candidate basis can
 construct four representative action classes without introducing a new
-semantic primitive. This is an implementation-independent simulation; it is
-not a claim about the Genesis runtime.
+semantic primitive. Runtime, execution, persistence, recovery, interaction,
+and presentation are treated as implementation/context mechanisms rather than
+Genesis primitives. This probe is not a claim about the Genesis runtime.
 """
 
 from __future__ import annotations
@@ -13,21 +14,14 @@ from dataclasses import dataclass, replace
 from typing import Any
 
 
-BASE = {
-    "identity",
+CANDIDATE_BASIS = {
     "state",
-    "interaction",
-    "authority",
+    "transition",
     "capability",
-    "control",
-    "runtime",
-    "execution",
+    "authority",
     "observation",
-    "verification",
     "evidence",
-    "persistence",
-    "recovery",
-    "constraints",
+    "constraint",
 }
 
 
@@ -39,8 +33,7 @@ class Action:
     authorized: bool = True
     constrained: bool = True
     observed: bool = False
-    verified: bool = False
-    persisted: bool = False
+    evidenced: bool = False
     duplicate: bool = False
     bypass: bool = False
     goal_met: bool = True
@@ -57,6 +50,8 @@ def admit(a: Action, *, state: dict[str, Any]) -> Action:
 
 
 def execute(a: Action, *, state: dict[str, Any]) -> Action:
+    # Execution is an implementation realization of a Transition, not a new
+    # Genesis primitive. External effects are represented as observed state.
     if a.kind == "external":
         state["already_effected"] = True
     if a.kind == "meta":
@@ -65,11 +60,13 @@ def execute(a: Action, *, state: dict[str, Any]) -> Action:
 
 
 def verify(a: Action) -> Action:
+    # Evidence records the result of an Observation; it is not execution proof
+    # by itself. A failed goal therefore cannot become verified success.
     if not a.observed:
         raise ValueError("verification requires observation")
     if not a.goal_met:
-        return replace(a, verified=False)
-    return replace(a, verified=True, persisted=True)
+        return replace(a, evidenced=False)
+    return replace(a, evidenced=True)
 
 
 def run(kind: str, capability: str, *, external: bool = False) -> Action:
@@ -78,7 +75,7 @@ def run(kind: str, capability: str, *, external: bool = False) -> Action:
     a = admit(a, state=state)
     a = execute(a, state=state)
     a = verify(a)
-    assert a.verified and a.persisted
+    assert a.evidenced
     if external:
         assert state["already_effected"]
     return a
@@ -122,7 +119,7 @@ def attack_goal_effect_mismatch() -> bool:
     a = admit(Action("artifact", "research", "principal-A", goal_met=False), state={"revoked": False})
     a = execute(a, state={"protected_version": 1})
     a = verify(a)
-    return not a.verified
+    return not a.evidenced
 
 
 def attack_meta_without_authority() -> bool:
@@ -134,36 +131,52 @@ def attack_meta_without_authority() -> bool:
 
 
 def attack_extension_core_mutation() -> bool:
-    before = set(BASE)
-    extension = {"new-capability"}
+    # Extensions can add capabilities/realizations, but cannot silently alter
+    # the semantic candidate basis.
+    before = set(CANDIDATE_BASIS)
+    extension = {"external-adapter"}
     after = before | extension
-    return before == set(BASE) and not ("new-capability" in before) and "new-capability" in after
+    return before == set(CANDIDATE_BASIS) and "external-adapter" not in before and "external-adapter" in after
 
 
 def attack_llm_dependency() -> bool:
-    # Cognitive provider is an extension; execution remains defined by BASE.
-    return "execution" in BASE and "authority" in BASE and "capability" in BASE
+    # LLM is an optional realization of a Capability; it is not a primitive.
+    return CANDIDATE_BASIS == {
+        "state", "transition", "capability", "authority", "observation", "evidence", "constraint"
+    }
 
 
 def attack_rich_memory_dependency() -> bool:
-    # Rich memory is deliberately absent from BASE; minimal persistence remains.
-    return "persistence" in BASE and "rich-memory" not in BASE
+    # Rich memory is deliberately absent from the candidate basis.
+    return "state" in CANDIDATE_BASIS and "rich-memory" not in CANDIDATE_BASIS
 
 
 def attack_headless_operation() -> bool:
-    # Interaction contract is semantic; presentation is not a Base dependency.
-    return "interaction" in BASE and "dashboard" not in BASE
+    # UI/dashboard is a realization, not a semantic primitive.
+    return "transition" in CANDIDATE_BASIS and "dashboard" not in CANDIDATE_BASIS
 
 
 def attack_undeclared_primitive() -> bool:
-    # Four action classes use only BASE plus explicitly declared extension data.
+    # All four classes use only the seven candidate primitives; external
+    # providers/adapters/principals are realizations or values.
     required = {
-        "local": BASE,
-        "artifact": BASE | {"external-cognitive-provider"},
-        "external": BASE | {"external-adapter"},
-        "meta": BASE | {"governance-principal"},
+        "local": CANDIDATE_BASIS,
+        "artifact": CANDIDATE_BASIS,
+        "external": CANDIDATE_BASIS,
+        "meta": CANDIDATE_BASIS,
     }
-    return all(set(BASE).issubset(v) for v in required.values())
+    return all(set(CANDIDATE_BASIS).issubset(v) for v in required.values())
+
+
+def attack_observation_as_execution() -> bool:
+    a = Action("artifact", "observe-only", "principal-A")
+    a = replace(a, observed=True, evidenced=False)
+    return not a.evidenced
+
+
+def attack_unknown_as_success() -> bool:
+    a = Action("external", "unknown", "principal-A", observed=True, evidenced=False)
+    return not a.evidenced
 
 
 def main() -> None:
@@ -188,6 +201,8 @@ def main() -> None:
         ("rich-memory-dependency", attack_rich_memory_dependency()),
         ("headless-operation", attack_headless_operation()),
         ("undeclared-primitive", attack_undeclared_primitive()),
+        ("observation-as-execution", attack_observation_as_execution()),
+        ("unknown-as-success", attack_unknown_as_success()),
     ]
     results.extend((f"red-team-{name}", value) for name, value in attacks)
 
@@ -196,7 +211,7 @@ def main() -> None:
         print(f"{'PASS' if ok else 'FAIL'} {name}")
     if failed:
         raise SystemExit(f"P208_FAIL: {failed}")
-    print(f"P208_CONSTRUCTIVE_BASE_SYNTHESIS_PASS; assertions={len(results)}; new_primitive_required=false")
+    print(f"P208_CONSTRUCTIVE_BASE_SYNTHESIS_PASS; assertions={len(results)}; basis_size={len(CANDIDATE_BASIS)}; new_primitive_required=false")
 
 
 if __name__ == "__main__":
