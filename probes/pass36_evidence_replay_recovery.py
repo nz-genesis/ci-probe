@@ -27,6 +27,7 @@ class State:
 class Transition:
     effect_id: str
     authority_version: int
+    authority_subject: str
 
 
 @dataclass(frozen=True)
@@ -67,6 +68,7 @@ def evidence_valid(e: Evidence, t: Transition, c: Constraint) -> bool:
         e.complete
         and e.admissible
         and e.authority.active
+        and e.authority.subject == t.authority_subject
         and e.authority.version == t.authority_version
         and e.observation.effect_id == t.effect_id
         and e.observation.version >= c.require_fresh_observation_version
@@ -74,7 +76,7 @@ def evidence_valid(e: Evidence, t: Transition, c: Constraint) -> bool:
 
 
 def recover(s: State, t: Transition, cap: Capability, e: Evidence, c: Constraint) -> Decision:
-    if cap.effect_id != t.effect_id:
+    if cap.subject != t.authority_subject or cap.effect_id != t.effect_id:
         return Decision.REJECT
     if s.effect_id != t.effect_id or s.authority_version != t.authority_version:
         return Decision.UNKNOWN
@@ -89,7 +91,7 @@ def recover(s: State, t: Transition, cap: Capability, e: Evidence, c: Constraint
 
 def base() -> tuple[State, Transition, Authority, Capability, Constraint]:
     state = State("effect-36", False, 8)
-    transition = Transition("effect-36", 8)
+    transition = Transition("effect-36", 8, "subject-a")
     authority = Authority("subject-a", 8, True)
     capability = Capability("subject-a", "effect-36")
     constraint = Constraint(8)
@@ -158,7 +160,7 @@ def test_capability_does_not_create_authority() -> None:
     s, t, a, _, c = base()
     foreign_capability = Capability("other-subject", t.effect_id)
     assert foreign_capability.subject != a.subject
-    assert recover(s, t, foreign_capability, evidence(a, False, 8), c) is Decision.EXECUTE
+    assert recover(s, t, foreign_capability, evidence(a, False, 8), c) is Decision.REJECT
 
 
 def test_primitive_inflation_negative() -> None:
