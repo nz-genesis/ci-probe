@@ -1,0 +1,37 @@
+name: Genesis Pass 37 Lost ACK Recovery
+
+on:
+  push:
+    paths:
+      - 'probes/pass37_lost_ack_concurrent_recovery.py'
+      - '.github/workflows/pass37-lost-ack-recovery.yml'
+  pull_request:
+    paths:
+      - 'probes/pass37_lost_ack_concurrent_recovery.py'
+      - '.github/workflows/pass37-lost-ack-recovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pass37:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Verify exact SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+
+      - name: Compile probe
+        run: python3 -m py_compile probes/pass37_lost_ack_concurrent_recovery.py
+
+      - name: Run probe
+        run: python3 probes/pass37_lost_ack_concurrent_recovery.py
