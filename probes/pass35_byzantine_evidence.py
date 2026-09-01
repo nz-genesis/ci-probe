@@ -98,8 +98,6 @@ def assess(t: Transition, evidence: tuple[Evidence, ...]) -> Decision:
     if len(good) == 1:
         return Decision.ALLOW
     if len(good) > 1:
-        # Independent admissible evidence may agree, but identical source
-        # identity is not counted as independent corroboration here.
         observers = {e.observation.observer for e in good}
         if len(observers) == len(good):
             return Decision.ALLOW
@@ -178,10 +176,17 @@ def test_conflicting_admissible_evidence_is_not_silently_resolved() -> None:
     assert assess(t, (e, contradictory)) is Decision.CONFLICT
 
 
-def test_compromised_source_plus_valid_source_stays_unknown() -> None:
+def test_compromised_source_is_ignored_when_independent_valid_source_exists() -> None:
     t, _, e = base()
     compromised = Evidence(e.observation, e.authority, "applied", True, False, True)
-    valid = Evidence(Observation("effect-35", "observer-b", 7, "APPLIED"), e.authority, "applied", True, True, True)
+    valid = Evidence(
+        Observation("effect-35", "observer-b", 7, "APPLIED"),
+        e.authority,
+        "applied",
+        True,
+        True,
+        True,
+    )
     assert assess(t, (compromised, valid)) is Decision.ALLOW
 
 
@@ -227,7 +232,7 @@ def main() -> None:
         test_legitimate_observer_with_forged_claim_is_unknown,
         test_verifier_cannot_create_authority,
         test_conflicting_admissible_evidence_is_not_silently_resolved,
-        test_compromised_source_plus_valid_source_stays_unknown,
+        test_compromised_source_is_ignored_when_independent_valid_source_exists,
         test_incomplete_evidence_is_not_execution_proof,
         test_stale_observation_cannot_verify_newer_effect,
         test_unknown_is_not_retry_permission,
