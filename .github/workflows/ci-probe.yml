@@ -117,6 +117,12 @@ jobs:
           set -o pipefail
           python3 probes/p209_decision_selection_reduction.py | tee p209-probe-output.txt
 
+      - name: Execute Pass 210 public-safe adaptive-plan reduction probe
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 probes/p210_adaptive_plan_reduction.py | tee p210-probe-output.txt
+
       - name: Upload Pass 49 exact hosted execution evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -125,6 +131,14 @@ jobs:
           path: |
             pass49-checkout-identity.txt
             pass49-probe-output.txt
+          if-no-files-found: error
+
+      - name: Upload P210 exact hosted execution evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: p210-execution-evidence-${{ github.sha }}
+          path: p210-probe-output.txt
           if-no-files-found: error
 
       - name: Verify probe artifact
@@ -139,4 +153,4 @@ jobs:
           path: ci-probe-result.txt
           if-no-files-found: error
 
-# P209 strengthened probe trigger: verify the corrected clean-room reduction on a fresh hosted SHA.
+# P210: adaptive planning is tested as State/Transition composition; no Plan primitive is asserted.
