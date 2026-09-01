@@ -64,6 +64,9 @@ jobs:
       - name: Execute Pass 39 public-safe adversarial external-world probe
         run: python3 probes/pass39_adversarial_external_world.py
 
+      - name: Execute Pass 40 public-safe effect-identity/realization-contract probe
+        run: python3 probes/pass40_effect_identity_realization_contract.py
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
