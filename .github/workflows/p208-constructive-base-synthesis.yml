@@ -1,0 +1,43 @@
+name: P208 Constructive Base Synthesis
+
+on:
+  push:
+    paths:
+      - 'probes/p208_constructive_base_synthesis.py'
+      - '.github/workflows/p208-constructive-base-synthesis.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  constructive-base-synthesis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact public commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Verify exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          checked_out="$(git rev-parse HEAD)"
+          if [[ "$checked_out" != "$GITHUB_SHA" ]]; then
+            echo "P208_FAIL: checkout=$checked_out github_sha=$GITHUB_SHA"
+            exit 1
+          fi
+          printf 'GITHUB_SHA=%s\nCHECKED_OUT_SHA=%s\n' "$GITHUB_SHA" "$checked_out" | tee p208-checkout-identity.txt
+
+      - name: Run constructive synthesis and Red Team
+        run: python3 probes/p208_constructive_base_synthesis.py | tee p208-output.txt
+
+      - name: Upload execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p208-execution-evidence-${{ github.sha }}
+          path: |
+            p208-checkout-identity.txt
+            p208-output.txt
