@@ -1,18 +1,21 @@
-"""P214 — basis necessity / anti-encoding reduction.
+"""P214 — minimality-method guard / anti-encoding reduction.
 
-Purpose: test what is actually required to claim a *minimal* Genesis basis.
-P208-P213 mainly supplied sufficiency/non-inflation evidence. P214 attacks
-necessity: can each candidate distinction be removed without losing its
-semantic role?
+This pass deliberately does NOT claim that the seven Genesis candidates are
+proven minimal. P208-P213 supplied substantial bounded sufficiency and
+non-inflation evidence, but naive leave-one-out removal is unsound: with
+unrestricted representation, every distinction can be packed into State.
 
-Critical methodological guard: unrestricted encoding makes minimality trivial
-(everything can be packed into State). Therefore this bounded probe uses a
-neutral typed-role observation contract and rejects role laundering: a witness
-for one semantic role cannot be relabeled as another role merely to preserve
-cardinality.
+P214 therefore tests the *methodological prerequisite* for a valid minimality
+claim: semantic roles must be observed through a neutral typed contract, and
+cross-role laundering must be rejected. The seven role witnesses then show
+that removing a role loses that role under this contract.
 
-This is not a proof of global minimality. It tests the validity and bounded
-necessity of the leave-one-out method itself.
+Result scope: this validates a bounded necessity-testing method and bounded
+role distinguishability. It does not prove that seven implementation
+primitives are globally minimal, because a future calculus could bundle
+multiple roles while preserving the neutral semantics. That stronger claim
+requires an explicit calculus + composition algebra + representation-cost or
+primitive-boundary criterion and independent equivalence/counterexample work.
 """
 
 BASIS = (
@@ -30,7 +33,7 @@ WITNESSES = {
     "Constraint": {"role": "Constraint", "value": "admissibility-boundary"},
 }
 
-# Neutral observation is intentionally role-based, not candidate syntax.
+# Neutral observation is role-based rather than candidate-specific syntax.
 def observe(witness, available_roles):
     role = witness["role"]
     if role not in available_roles:
@@ -44,33 +47,34 @@ def check(name, condition):
 
 
 def main():
-    # 1. Minimality guard: unrestricted encoding cannot distinguish necessity.
+    # Red-Team prerequisite: unrestricted encoding makes naive minimality vacuous.
     packed = {"State": {k: v for k, v in WITNESSES.items()}}
     check("unrestricted_encoding_collapses_minimality", all(k in packed["State"] for k in BASIS))
+
+    # Neutral typed observation blocks laundering a missing semantic role into State.
     check("typed_role_contract_blocks_state_laundering", observe(WITNESSES["Authority"], {"State"})[0] == "UNREPRESENTABLE")
 
-    # 2-8. Leave-one-out: each candidate has a bounded witness that is lost.
+    # Bounded leave-one-out necessity under the declared typed contract.
     for role in BASIS:
         remaining = set(BASIS) - {role}
         result = observe(WITNESSES[role], remaining)
-        check(f"remove_{role.lower()}_loses_distinction", result[0] == "UNREPRESENTABLE")
+        check(f"remove_{role.lower()}_loses_role_under_contract", result[0] == "UNREPRESENTABLE")
 
-    # 9-13. Cross-role anti-laundering: similar-looking distinctions remain distinct.
+    # Anti-laundering of historically confusable semantic distinctions.
     check("capability_is_not_authority", WITNESSES["Capability"]["role"] != WITNESSES["Authority"]["role"])
     check("observation_is_not_evidence", WITNESSES["Observation"]["role"] != WITNESSES["Evidence"]["role"])
     check("state_is_not_transition", WITNESSES["State"]["role"] != WITNESSES["Transition"]["role"])
     check("constraint_is_not_authority", WITNESSES["Constraint"]["role"] != WITNESSES["Authority"]["role"])
     check("evidence_is_not_authority", WITNESSES["Evidence"]["role"] != WITNESSES["Authority"]["role"])
 
-    # 14. No extra named primitive is smuggled into the basis.
-    check("no_eighth_primitive", len(BASIS) == 7)
+    check("basis_has_seven_declared_roles", len(BASIS) == 7)
 
-    print("P214_BASIS_NECESSITY_ANTI_ENCODING_PASS")
+    print("P214_MINIMALITY_METHOD_GUARD_PASS")
     print("assertions=14")
     print("basis_size=7")
     print("new_primitive_required=false")
-    print("global_minimality_proven=false")
-
+    print("bounded_role_necessity_supported=true")
+    print("global_primitive_minimality_proven=false")
 
 if __name__ == "__main__":
     main()
