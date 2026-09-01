@@ -58,7 +58,8 @@ def assess(effect_id: str, e: Evidence, c: Constraint) -> Decision:
     if a.scope != c.required_scope or not e.chain_complete:
         return Decision.UNKNOWN
     eligible = [v for v in e.verifier_authorities if v.active and v.scope == c.verifier_scope]
-    if not e.verified or len(eligible) < c.minimum_verifiers:
+    subjects = {v.subject for v in eligible}
+    if not e.verified or len(subjects) < c.minimum_verifiers:
         return Decision.UNKNOWN
     if e.claim == "conflict":
         return Decision.CONFLICT
@@ -104,7 +105,7 @@ def test_capability_like_delegation_does_not_mutate_effect_authority() -> None:
 
 def test_multi_party_verification_requires_distinct_active_verifiers() -> None:
     e, c = baseline()
-    one = Evidence(e.observation, e.observer_authority, (e.verifier_authorities[0],), True, True, "applied")
+    one = Evidence(e.observation, e.observer_authority, (e.verifier_authorities[0], e.verifier_authorities[0]), True, True, "applied")
     assert assess("e1", one, c) is Decision.UNKNOWN
 
 
