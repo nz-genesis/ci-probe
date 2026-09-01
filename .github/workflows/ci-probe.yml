@@ -111,6 +111,12 @@ jobs:
           set -o pipefail
           python3 probes/p208_constructive_base_synthesis.py | tee p208-probe-output.txt
 
+      - name: Execute Pass 209 public-safe decision/selection reduction probe
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 probes/p209_decision_selection_reduction.py | tee p209-probe-output.txt
+
       - name: Upload Pass 49 exact hosted execution evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
