@@ -1,0 +1,49 @@
+name: P206 Private Public Correspondence
+
+on:
+  push:
+    branches:
+      - p206-private-public-correspondence
+
+permissions:
+  contents: read
+
+jobs:
+  verify-correspondence:
+    runs-on: ubuntu-latest
+    env:
+      P206_EXPECTED_SOURCE_COMMIT: 08b639a4d423bc5d98660369150f3c06244f2a4a
+      P206_EXPECTED_SOURCE_BLOB_SHA1: 0164e9c15c7b25bb3adeb365184b37dad0efdacf
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Verify checkout identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          checked_out_sha="$(git rev-parse HEAD)"
+          test "$checked_out_sha" = "$GITHUB_SHA"
+          printf 'GITHUB_SHA=%s\nCHECKED_OUT_SHA=%s\n' "$GITHUB_SHA" "$checked_out_sha" > p206-checkout-identity.txt
+
+      - name: Run P206 public correspondence verifier
+        run: python3 probes/p206_private_public_correspondence.py | tee p206-public-output.txt
+
+      - name: Verify public artifact is private-safe
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -Eqi 'purpose_text|private_note|authority_payload|secret|witness_material|private_state' correspondence/p206_private_public_envelope.json
+
+      - name: Upload exact-SHA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p206-correspondence-evidence-${{ github.sha }}
+          path: |
+            p206-checkout-identity.txt
+            p206-public-output.txt
+            correspondence/p206_private_public_envelope.json
+          if-no-files-found: error
