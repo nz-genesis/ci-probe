@@ -76,6 +76,9 @@ jobs:
       - name: Execute Pass 43 public-safe realization-contract primitive-reduction probe
         run: python3 probes/pass43_realization_contract_primitive_reduction.py
 
+      - name: Execute Pass 44 public-safe multi-party authority/concurrent-revocation probe
+        run: python3 probes/pass44_multiparty_authority_concurrent_revocation.py
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
