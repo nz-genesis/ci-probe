@@ -23,6 +23,12 @@ P208 tested constructive action classes; P209 tested decision/selection/policy/p
 - duplicate planned external-effect entries are data, not evidence of duplicate world effects;
 - no Plan primitive is added to the seven-element basis.
 
+## Red-Team correction
+
+The first hosted run failed on the UNKNOWN case because the probe asserted that recording the observation could not update State revision. That assertion was stronger than the semantic contract: UNKNOWN must not trigger unconditional **plan revision**, but recording the new observation/revision in State is allowed and useful. The probe was corrected to assert the plan remains unchanged while the revision records the observation.
+
+The failed run is retained as negative evidence; it is not counted as a P210 PASS.
+
 ## Falsifier
 
 P210 is falsified if adaptive planning requires a semantic primitive outside:
