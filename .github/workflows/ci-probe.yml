@@ -83,13 +83,37 @@ jobs:
         run: python3 probes/pass45_dynamic_threshold_delegation.py
 
       - name: Execute Pass 46 public-safe concurrent delegation/revocation/cycle reduction probe
-        run: python3 probes/pass46_concurrent_delegation_revocation_cycles.py
+        run: go run -race ./probes/pass46_concurrent_delegation_revocation_cycles.py
 
       - name: Execute Pass 47 public-safe concurrent kernel probe
         run: go run -race ./probes/pass47_concurrent_kernel.go
 
       - name: Execute Pass 48 public-safe crash/durable-state probe
         run: go run -race ./probes/pass48_crash_durable_state.go
+
+      - name: Capture Pass 49 exact hosted checkout identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$GITHUB_SHA"
+          printf 'GITHUB_SHA=%s\nCHECKED_OUT_SHA=%s\n' "$GITHUB_SHA" "$actual" | tee pass49-checkout-identity.txt
+
+      - name: Execute Pass 49 public-safe external-effect reconciliation probe
+        shell: bash
+        run: |
+          set -o pipefail
+          go run -race ./probes/pass49_external_effect_reconciliation.go | tee pass49-probe-output.txt
+
+      - name: Upload Pass 49 exact hosted execution evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pass49-execution-evidence-${{ github.sha }}
+          path: |
+            pass49-checkout-identity.txt
+            pass49-probe-output.txt
+          if-no-files-found: error
 
       - name: Verify probe artifact
         run: |
