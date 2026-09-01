@@ -96,6 +96,19 @@ def admit(t: Transition, c: Capability, a: Authority, e: Evidence | None) -> str
     return Outcome.ALLOW
 
 
+def reconcile(observations: list[Observation]) -> str:
+    if not observations:
+        return Outcome.UNKNOWN
+    values = {o.happened for o in observations}
+    if len(values) > 1:
+        return Outcome.CONFLICT
+    if True in values:
+        return Outcome.REJECT
+    if None in values:
+        return Outcome.UNKNOWN
+    return Outcome.ALLOW
+
+
 def test_local_fence_cannot_claim_external_safety() -> None:
     world = AdversarialExternalWorld()
     fence = LocalFence()
@@ -135,13 +148,11 @@ def test_negative_observation_is_bounded_permission() -> None:
     assert admit(t, c, a, not_happened) == Outcome.ALLOW
 
 
-def test_conflicting_observations_remain_conflict() -> None:
+def test_conflicting_observations_are_conflict() -> None:
     a = Authority("alice", True, 1)
     yes = Evidence(Observation("E5", True, 1), a, "A")
     no = Evidence(Observation("E5", False, 1), a, "B")
-    values = {yes.observation.happened, no.observation.happened}
-    assert len(values) == 2
-    assert Outcome.CONFLICT == "CONFLICT"
+    assert reconcile([yes.observation, no.observation]) == Outcome.CONFLICT
 
 
 def test_two_realizers_demonstrate_external_non_idempotence() -> None:
@@ -158,8 +169,8 @@ def test_two_realizers_demonstrate_external_non_idempotence() -> None:
     lock = Lock()
 
     def worker(token: int, name: str) -> None:
-        # Both realizers are adversarially assumed to reach the external world;
-        # the substrate ignores fencing, so both effects can occur.
+        # Both realizers are assumed to reach the external world. The substrate
+        # ignores fencing, so local fencing cannot prevent two external effects.
         world.apply("E6", token, name)
         with lock:
             results.append(Outcome.ALLOW)
@@ -192,7 +203,7 @@ def main() -> None:
     test_genesis_does_not_turn_unknown_into_retry()
     test_positive_observation_prevents_new_admission()
     test_negative_observation_is_bounded_permission()
-    test_conflicting_observations_remain_conflict()
+    test_conflicting_observations_are_conflict()
     test_two_realizers_demonstrate_external_non_idempotence()
     test_capability_never_creates_authority()
     test_primitive_removal()
