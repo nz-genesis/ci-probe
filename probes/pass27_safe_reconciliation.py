@@ -5,7 +5,6 @@ No private Genesis state, witnesses, corpus, credentials, or implementation
 packages are imported or exposed. The probe treats reconciliation as a
 realization-level governed transition, not a new Genesis primitive.
 """
-
 from dataclasses import dataclass, replace
 from enum import Enum
 
@@ -31,6 +30,7 @@ class ReconciliationEvidence:
     verified_absent: bool = False
     verified_applied: bool = False
     contradictory: bool = False
+    external_unavailable: bool = False
 
 
 def require(condition: bool, message: str) -> None:
@@ -68,9 +68,7 @@ def unknown_non_idempotent_has_no_automatic_retry() -> None:
 
 def contradictory_evidence_enters_conflict() -> None:
     reservation = Reservation("e1", 1, Status.UNKNOWN)
-    evidence = ReconciliationEvidence(
-        "e1", verified_absent=True, verified_applied=True, contradictory=True
-    )
+    evidence = ReconciliationEvidence("e1", verified_absent=True, verified_applied=True, contradictory=True)
     result = reconcile(reservation, evidence, current_authority_version=2)
     require(result.status is Status.CONFLICT, "contradictory evidence was silently resolved")
 
@@ -106,22 +104,23 @@ def stale_realization_cannot_be_revived_by_reconciliation() -> None:
 
 
 def no_new_primitive_is_needed_for_reconciliation() -> None:
-    # The complete decision uses only existing semantic dimensions represented
-    # here as state, transition conditions, authority version, observation/evidence,
-    # and constraints on effect identity. No Effect/Lease/Fence/Recovery primitive
-    # is introduced by the reconciliation operation.
     names = {"State", "Transition", "Authority", "Observation", "Evidence", "Constraint"}
     require("Reconciliation" not in names, "reconciliation became a primitive")
 
 
-def reconcile(
-    reservation: Reservation,
-    evidence: ReconciliationEvidence,
-    current_authority_version: int,
-) -> Reservation:
+def permanent_external_unavailability_stays_unknown() -> None:
+    reservation = Reservation("e1", 1, Status.UNKNOWN)
+    evidence = ReconciliationEvidence("e1", external_unavailable=True)
+    result = reconcile(reservation, evidence, current_authority_version=2)
+    require(result.status is Status.UNKNOWN, "external unavailability became absence or success")
+
+
+def reconcile(reservation: Reservation, evidence: ReconciliationEvidence, current_authority_version: int) -> Reservation:
     if reservation.effect_id != evidence.effect_id:
         return reservation
     if reservation.status in (Status.RELEASED, Status.REALIZED, Status.CONFLICT):
+        return reservation
+    if evidence.external_unavailable:
         return reservation
     if evidence.contradictory or (evidence.verified_absent and evidence.verified_applied):
         return replace(reservation, status=Status.CONFLICT)
@@ -129,7 +128,6 @@ def reconcile(
         return replace(reservation, status=Status.REALIZED)
     if evidence.verified_absent:
         return replace(reservation, status=Status.RELEASED)
-    # Authority staleness alone is not evidence of external absence.
     if reservation.authority_version != current_authority_version:
         return reservation
     return reservation
@@ -146,7 +144,8 @@ def main() -> None:
     reconciliation_is_repeatable()
     stale_realization_cannot_be_revived_by_reconciliation()
     no_new_primitive_is_needed_for_reconciliation()
-    print("PASS27_PUBLIC: PASS; cases=10; private_data=none; new_primitives=0")
+    permanent_external_unavailability_stays_unknown()
+    print("PASS27_PUBLIC: PASS; cases=11; private_data=none; new_primitives=0")
 
 
 if __name__ == "__main__":
