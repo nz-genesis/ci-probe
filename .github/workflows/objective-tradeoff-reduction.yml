@@ -33,3 +33,5 @@ jobs:
         with:
           name: p212-execution-evidence-${{ github.sha }}
           path: p212-result.txt
+
+# Hosted-verification-only branch; no semantic contract change.
