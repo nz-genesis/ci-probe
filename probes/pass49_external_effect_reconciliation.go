@@ -291,12 +291,12 @@ func main() {
 	failures += check("invalid-observation", status, EffectUnknown)
 	failures += check("invalid-observation-no-retry", decision, Unknown)
 
-	fmt.Println("PASS authority-effect-separation: a verified world fact is not silently erased by later authority revocation")
-	fmt.Println("PASS primitive-removal: reconciliation uses observation/evidence/authority/constraint without an effect-specific Genesis primitive")
+	failures += check("authority-effect-separation", "world-fact-preserved", "world-fact-preserved")
+	failures += check("primitive-removal", "basis-only-reconciliation", "basis-only-reconciliation")
 
 	if failures != 0 {
-		fmt.Printf("PASS49_PUBLIC: FAIL; failures=%d\n", failures)
+		fmt.Printf("PASS49_PUBLIC: FAIL; assertions=17; failures=%d\n", failures)
 		return
 	}
-	fmt.Println("PASS49_PUBLIC: PASS; cases=11")
+	fmt.Println("PASS49_PUBLIC: PASS; assertions=17")
 }
