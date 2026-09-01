@@ -1,9 +1,9 @@
 """P213 — partial-order / incomparable normative trade-off reduction.
 
 Clean-room bounded probe. P212 tested weighted hierarchical objectives. P213
-changes the discriminator to genuinely incomparable objectives and Pareto-like
-frontiers. The relation itself is State; admissibility is Constraint +
-Capability + Authority; unresolved incomparability is not silently ordered.
+changes the discriminator to genuinely incomparable objectives and a partial
+precedence relation. The relation itself is State; admissibility is Constraint
++ Capability + Authority; unresolved incomparability is not silently ordered.
 """
 
 BASIS = {"State", "Transition", "Capability", "Authority", "Observation", "Evidence", "Constraint"}
@@ -12,15 +12,20 @@ CANDIDATES = [
     {"id": "fast", "capability": "plan", "authority": "policy", "cost": 2, "risk": 4, "values": {"safety": 5, "speed": 9}},
     {"id": "cheap", "capability": "plan", "authority": "policy", "cost": 1, "risk": 3, "values": {"safety": 4, "speed": 6}},
 ]
-BASE = {"objective_order": {"safety": {"safety"}, "speed": {"speed"}}, "capabilities": {"plan"}, "authorities": {"policy"}, "constraints": {"max_cost": 10, "max_risk": 10}}
+BASE = {"objective_order": {"safety": set(), "speed": set()}, "capabilities": {"plan"}, "authorities": {"policy"}, "constraints": {"max_cost": 10, "max_risk": 10}}
 
 def admissible(candidate, state):
     return (candidate["capability"] in state["capabilities"] and candidate["authority"] in state["authorities"] and candidate["cost"] <= state["constraints"]["max_cost"] and candidate["risk"] <= state["constraints"]["max_risk"])
 
+def top_level_objectives(state):
+    objectives = set(state["objective_order"])
+    subordinate = {x for values in state["objective_order"].values() for x in values}
+    return sorted(objectives - subordinate)
+
 def dominates(a, b, state):
-    order = state["objective_order"]
-    no_worse = all(a["values"].get(o, 0) >= b["values"].get(o, 0) for o in order)
-    strictly_better = any(a["values"].get(o, 0) > b["values"].get(o, 0) for o in order)
+    top = top_level_objectives(state)
+    no_worse = all(a["values"].get(o, 0) >= b["values"].get(o, 0) for o in top)
+    strictly_better = any(a["values"].get(o, 0) > b["values"].get(o, 0) for o in top)
     return no_worse and strictly_better
 
 def frontier(candidates, state):
@@ -33,17 +38,17 @@ def check(name, condition):
 
 def main():
     check("partial_order_is_state", isinstance(BASE["objective_order"], dict))
-    check("incomparable_objectives_are_representable", BASE["objective_order"]["safety"] != BASE["objective_order"]["speed"])
+    check("incomparable_objectives_are_representable", top_level_objectives(BASE) == ["safety", "speed"])
     check("frontier_preserves_incomparable_candidates", set(frontier(CANDIDATES[:2], BASE)) == {"safe", "fast"})
-    safety_dominant = {**BASE, "objective_order": {"safety": {"safety", "speed"}, "speed": {"speed"}}}
-    check("state_relation_change_changes_frontier", set(frontier(CANDIDATES[:2], safety_dominant)) == {"safe"})
+    safety_dominant = {**BASE, "objective_order": {"safety": {"speed"}, "speed": set()}}
+    check("state_relation_change_changes_frontier", top_level_objectives(safety_dominant) == ["safety"] and set(frontier(CANDIDATES[:2], safety_dominant)) == {"safe"})
     constrained = {**BASE, "constraints": {"max_cost": 2, "max_risk": 10}}
     check("constraint_changes_frontier", set(frontier(CANDIDATES[:2], constrained)) == {"fast"})
     unauthorized = {**BASE, "authorities": {"other-policy"}}
     check("authority_still_bounds_incomparable_set", frontier(CANDIDATES[:2], unauthorized) == [])
     no_capability = {**BASE, "capabilities": set()}
     check("capability_still_bounds_incomparable_set", frontier(CANDIDATES[:2], no_capability) == [])
-    changed = {**BASE, "objective_order": {"safety": {"safety", "speed"}, "speed": {"speed"}}}
+    changed = {**BASE, "objective_order": {"safety": {"speed"}, "speed": set()}}
     check("order_mutation_is_state_transition", changed["objective_order"] != BASE["objective_order"])
     check("unresolved_incomparability_is_not_success", set(frontier(CANDIDATES[:2], BASE)) == {"safe", "fast"})
     evidence = {**BASE, "evidence": {"preferred": "fast"}}
