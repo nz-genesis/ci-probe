@@ -1,0 +1,30 @@
+name: Objective Tradeoff Reduction
+
+on:
+  push:
+    paths:
+      - 'objective_tradeoff_reduction.py'
+      - '.github/workflows/objective-tradeoff-reduction.yml'
+      - 'research/P212_OBJECTIVE_TRADEOFF_REDUCTION.md'
+  workflow_dispatch:
+
+jobs:
+  p212:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact checkout SHA
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "CHECKED_OUT_SHA=$(git rev-parse HEAD)"
+      - name: Run P212 bounded probe
+        run: python3 objective_tradeoff_reduction.py | tee p212-result.txt
+      - name: Verify research record exists
+        run: test -f research/P212_OBJECTIVE_TRADEOFF_REDUCTION.md
+      - name: Upload execution evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: p212-execution-evidence-${{ github.sha }}
+          path: p212-result.txt
