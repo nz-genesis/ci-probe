@@ -41,3 +41,5 @@ jobs:
           path: |
             p208-checkout-identity.txt
             p208-output.txt
+
+# Hosted trigger deliberately changes only this comment; no semantic probe logic changes.
