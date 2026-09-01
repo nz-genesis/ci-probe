@@ -62,13 +62,16 @@ class Constraint:
     required_authority_version: int
 
 
+def authority_identity(authority: Authority) -> tuple[str, str, str, int]:
+    return (authority.subject, authority.issuer, authority.scope, authority.version)
+
+
 def authority_matches(authority: Authority, transition: Transition) -> bool:
     return (
         authority.subject == transition.required_subject
         and authority.issuer == transition.required_issuer
         and authority.scope == transition.required_scope
         and authority.version == transition.required_authority_version
-        and authority.active
     )
 
 
@@ -79,8 +82,20 @@ def evidence_supports(evidence: Evidence, transition: Transition) -> bool:
         and observation.effect_id == transition.effect_id
         and observation.observed_version >= transition.required_observation_version
         and authority_matches(evidence.authority, transition)
+        and evidence.authority.active
         and evidence.claim == "applied"
         and observation.status == "APPLIED"
+    )
+
+
+def evidence_contradicts(evidence: Evidence, transition: Transition) -> bool:
+    observation = evidence.observation
+    return (
+        evidence.complete
+        and observation.effect_id == transition.effect_id
+        and observation.observed_version >= transition.required_observation_version
+        and authority_matches(evidence.authority, transition)
+        and evidence.claim in {"revoked", "conflict"}
     )
 
 
@@ -88,20 +103,17 @@ def assess(transition: Transition, evidence: tuple[Evidence, ...]) -> Decision:
     if not evidence:
         return Decision.UNKNOWN
     supporting = tuple(item for item in evidence if evidence_supports(item, transition))
-    contradictory = tuple(
-        item
-        for item in evidence
-        if item.observation.effect_id == transition.effect_id
-        and item.claim == "conflict"
-    )
-    if contradictory:
+    contradictory = tuple(item for item in evidence if evidence_contradicts(item, transition))
+    if supporting and contradictory:
         return Decision.CONFLICT
+    if contradictory:
+        return Decision.UNKNOWN
     if len(supporting) == 1:
         return Decision.ALLOW
     if len(supporting) > 1:
         subjects = {item.observation.observer for item in supporting}
-        versions = {item.authority.version for item in supporting}
-        if len(subjects) == len(supporting) and len(versions) == 1:
+        identities = {authority_identity(item.authority) for item in supporting}
+        if len(subjects) == len(supporting) and len(identities) == 1:
             return Decision.ALLOW
         return Decision.CONFLICT
     return Decision.UNKNOWN
@@ -120,7 +132,7 @@ def transition_v3() -> Transition:
 def evidence_from_state(state: State, observer: str) -> Evidence:
     authority = state.authorities[0]
     observation = Observation("e1", observer, state.observation_version, "APPLIED")
-    return Evidence(observation, authority, "applied", True)
+    return Evidence(observation, authority, "applied", authority.active)
 
 
 def test_each_domain_view_is_internally_coherent() -> None:
@@ -137,15 +149,17 @@ def test_historical_v3_transition_accepts_v3_view() -> None:
 
 def test_v3_transition_does_not_accept_revoked_v4_view() -> None:
     _, b = divergent_states()
-    assert assess(transition_v3(), (evidence_from_state(b, "observer-b"),)) is Decision.UNKNOWN
+    e = Evidence(Observation("e1", "observer-b", 4, "APPLIED"), b.authorities[0], "revoked", True)
+    assert assess(transition_v3(), (e,)) is Decision.UNKNOWN
 
 
 def test_no_global_order_does_not_invent_one() -> None:
-    a, b = divergent_states()
-    e_a = evidence_from_state(a, "observer-a")
-    e_b = evidence_from_state(b, "observer-b")
-    assert e_a.authority.version != e_b.authority.version
-    assert assess(transition_v3(), (e_a, e_b)) is Decision.ALLOW
+    a, _ = divergent_states()
+    active = a.authorities[0]
+    revoked_same_version = Authority(active.subject, active.issuer, active.scope, active.version, False)
+    e_active = evidence_from_state(a, "observer-a")
+    e_revoked = Evidence(Observation("e1", "observer-b", 3, "APPLIED"), revoked_same_version, "revoked", True)
+    assert assess(transition_v3(), (e_active, e_revoked)) is Decision.CONFLICT
 
 
 def test_conflict_marker_blocks_silent_resolution() -> None:
@@ -168,9 +182,9 @@ def test_stale_observation_cannot_resolve_newer_transition() -> None:
 
 
 def test_external_effect_between_divergent_views_remains_unresolved() -> None:
-    a, b = divergent_states()
-    effect_after_a = Evidence(Observation("e1", "observer-b", 4, "APPLIED"), b.authorities[0], "applied", True)
-    assert assess(transition_v3(), (effect_after_a,)) is Decision.UNKNOWN
+    _, b = divergent_states()
+    effect_after_revoke = Evidence(Observation("e1", "observer-b", 4, "APPLIED"), b.authorities[0], "revoked", True)
+    assert assess(transition_v3(), (effect_after_revoke,)) is Decision.UNKNOWN
 
 
 def test_incomplete_evidence_is_not_authority() -> None:
@@ -199,6 +213,13 @@ def test_transition_specificity_prevents_retroactive_authority() -> None:
     assert assess(later, (evidence_from_state(a, "observer-a"),)) is Decision.UNKNOWN
 
 
+def test_two_independent_same_version_supports_can_agree() -> None:
+    a, _ = divergent_states()
+    e1 = evidence_from_state(a, "observer-a")
+    e2 = evidence_from_state(a, "observer-b")
+    assert assess(transition_v3(), (e1, e2)) is Decision.ALLOW
+
+
 def main() -> None:
     tests = (
         test_each_domain_view_is_internally_coherent,
@@ -213,10 +234,11 @@ def main() -> None:
         test_capability_like_observer_identity_does_not_create_authority,
         test_primitive_inflation_is_negative,
         test_transition_specificity_prevents_retroactive_authority,
+        test_two_independent_same_version_supports_can_agree,
     )
     for test in tests:
         test()
-    print("PASS34_PUBLIC: PASS; cases=12; private_data=none; new_primitives=0")
+    print("PASS34_PUBLIC: PASS; cases=13; private_data=none; new_primitives=0")
 
 
 if __name__ == "__main__":
