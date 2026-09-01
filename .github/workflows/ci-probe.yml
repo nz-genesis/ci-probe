@@ -138,3 +138,5 @@ jobs:
           name: ci-probe-result-${{ github.run_id }}
           path: ci-probe-result.txt
           if-no-files-found: error
+
+# P209 strengthened probe trigger: verify the corrected clean-room reduction on a fresh hosted SHA.
