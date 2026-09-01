@@ -61,6 +61,9 @@ jobs:
       - name: Execute Pass 38 public-safe crash-after-effect/fencing probe
         run: python3 probes/pass38_crash_after_effect_fencing.py
 
+      - name: Execute Pass 39 public-safe adversarial external-world probe
+        run: python3 probes/pass39_adversarial_external_world.py
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
