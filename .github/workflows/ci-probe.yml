@@ -83,7 +83,7 @@ jobs:
         run: python3 probes/pass45_dynamic_threshold_delegation.py
 
       - name: Execute Pass 46 public-safe concurrent delegation/revocation/cycle reduction probe
-        run: go run -race ./probes/pass46_concurrent_delegation_revocation_cycles.py
+        run: python3 probes/pass46_concurrent_delegation_revocation_cycles.py
 
       - name: Execute Pass 47 public-safe concurrent kernel probe
         run: go run -race ./probes/pass47_concurrent_kernel.go
