@@ -58,6 +58,9 @@ jobs:
       - name: Execute Pass 37 public-safe lost ACK/concurrent recovery probe
         run: python3 probes/pass37_lost_ack_concurrent_recovery.py
 
+      - name: Execute Pass 38 public-safe crash-after-effect/fencing probe
+        run: python3 probes/pass38_crash_after_effect_fencing.py
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
