@@ -71,7 +71,7 @@ def main() -> int:
     print(f"SOURCE_BLOB_SHA1={value['source_blob_sha1']}")
     print(f"ENVELOPE_SHA256={value['envelope_sha256']}")
     print("PRIVATE_CONTENT_PRESENT=false")
-    print("P206_PUBLIC_CORRESPONDENCE: PASS; assertions=12")
+    print("P206_PUBLIC_CORRESPONDENCE: PASS; assertions=15")
     return 0
 
 
