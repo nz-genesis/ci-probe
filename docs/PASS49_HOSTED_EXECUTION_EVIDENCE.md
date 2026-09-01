@@ -32,3 +32,7 @@ The probe tests crash-after-external-effect reconciliation without introducing a
 `State + Transition + Capability + Authority + Observation + Evidence + Constraint`
 
 The public probe must not imply that capability is authority, observation is execution proof, UNKNOWN is success/retry permission, or a missing local record proves absence of an external effect.
+
+## Verification status
+
+Hosted evidence is considered verified only after the exact run, jobs/steps, logs, and artifact are fetched and the artifact checkout identity matches the triggering SHA.
