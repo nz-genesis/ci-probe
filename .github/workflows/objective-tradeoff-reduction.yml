@@ -6,6 +6,11 @@ on:
       - 'objective_tradeoff_reduction.py'
       - '.github/workflows/objective-tradeoff-reduction.yml'
       - 'research/P212_OBJECTIVE_TRADEOFF_REDUCTION.md'
+  pull_request:
+    paths:
+      - 'objective_tradeoff_reduction.py'
+      - '.github/workflows/objective-tradeoff-reduction.yml'
+      - 'research/P212_OBJECTIVE_TRADEOFF_REDUCTION.md'
   workflow_dispatch:
 
 jobs:
