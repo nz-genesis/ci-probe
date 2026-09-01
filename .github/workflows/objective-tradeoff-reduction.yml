@@ -35,3 +35,4 @@ jobs:
           path: p212-result.txt
 
 # Hosted-verification-only branch; no semantic contract change.
+# P212 execution evidence must be fetched by exact run/SHA before closure.
