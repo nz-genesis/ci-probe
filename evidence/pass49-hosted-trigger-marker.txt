@@ -1,0 +1,3 @@
+Pass 49 hosted execution evidence trigger marker.
+Branch-level push is intentionally used only to create a fresh hosted execution candidate; semantic state remains private in genesis-lab.
+Base merge SHA: 1a536a4fd279d5101d0ae3f9080e49c390dbca93
