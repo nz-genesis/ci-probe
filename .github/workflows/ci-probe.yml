@@ -82,6 +82,9 @@ jobs:
       - name: Execute Pass 45 public-safe dynamic-threshold/delegation reduction probe
         run: python3 probes/pass45_dynamic_threshold_delegation.py
 
+      - name: Execute Pass 46 public-safe concurrent delegation/revocation/cycle reduction probe
+        run: python3 probes/pass46_concurrent_delegation_revocation_cycles.py
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
