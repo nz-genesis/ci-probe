@@ -1,4 +1,9 @@
-"""Pass 43: reduce realization-contract semantics against existing Genesis basis."""
+"""Pass 43: reduce realization-contract semantics against existing Genesis basis.
+
+The realization contract is intentionally NOT a new semantic type here. Its
+public representation is a composition of existing candidate primitives:
+Capability + Constraint + Evidence, while Authority remains independent.
+"""
 from dataclasses import dataclass
 from enum import Enum
 
@@ -24,6 +29,7 @@ class Authority:
 class Constraint:
     effect_class: str
     max_risk: int
+    active: bool = True
 
 @dataclass(frozen=True)
 class Evidence:
@@ -31,26 +37,22 @@ class Evidence:
     source: str
     valid: bool
 
-@dataclass(frozen=True)
-class RealizationContract:
-    name: str
-    supports_effect_class: str
-    max_risk: int
-    provenance: Evidence
-    active: bool
 
-def decide(capability, authority, constraint, contract, observations):
-    if capability.subject != authority.subject or capability.action != authority.action:
+def decide(actor_capability, authority, execution_constraint, realization_capability,
+           realization_constraint, provenance, observations):
+    if actor_capability.subject != authority.subject or actor_capability.action != authority.action:
         return Decision.REJECT
     if not authority.active:
         return Decision.REJECT
-    if not constraint:
-        return Decision.REJECT
-    if not contract.active or not contract.provenance.valid:
+    if not execution_constraint.active or not realization_constraint.active:
         return Decision.HITL_REQUIRED
-    if contract.supports_effect_class != constraint.effect_class:
+    if not provenance.valid:
         return Decision.HITL_REQUIRED
-    if contract.max_risk < constraint.max_risk:
+    if realization_capability.action != actor_capability.action:
+        return Decision.HITL_REQUIRED
+    if realization_constraint.effect_class != execution_constraint.effect_class:
+        return Decision.HITL_REQUIRED
+    if realization_constraint.max_risk < execution_constraint.max_risk:
         return Decision.HITL_REQUIRED
     if observations == {"happened", "not_happened"}:
         return Decision.CONFLICT
@@ -58,25 +60,30 @@ def decide(capability, authority, constraint, contract, observations):
         return Decision.UNKNOWN
     return Decision.ALLOW
 
+
 def run():
-    cap = Capability("alice", "pay")
+    actor = Capability("alice", "pay")
     auth = Authority("alice", "pay", True)
-    constraint = Constraint("irreversible", 3)
-    good = RealizationContract("strong", "irreversible", 3, Evidence("supports irreversible", "cert-A", True), True)
-    weak = RealizationContract("weak", "irreversible", 2, Evidence("supports irreversible", "cert-B", True), True)
-    forged = RealizationContract("forged", "irreversible", 3, Evidence("supports irreversible", "attacker", False), True)
-    revoked = RealizationContract("revoked", "irreversible", 3, Evidence("supports irreversible", "cert-C", True), False)
-    assert decide(cap, auth, constraint, good, set()) == Decision.ALLOW
-    assert decide(cap, auth, constraint, weak, set()) == Decision.HITL_REQUIRED
-    assert decide(cap, auth, constraint, forged, set()) == Decision.HITL_REQUIRED
-    assert decide(cap, auth, constraint, revoked, set()) == Decision.HITL_REQUIRED
-    assert decide(cap, auth, constraint, good, {"unknown"}) == Decision.UNKNOWN
-    assert decide(cap, auth, constraint, good, {"happened", "not_happened"}) == Decision.CONFLICT
-    assert decide(Capability("mallory", "pay"), auth, constraint, good, set()) == Decision.REJECT
-    assert decide(cap, Authority("alice", "pay", False), constraint, good, set()) == Decision.REJECT
-    assert decide(cap, auth, Constraint("irreversible", 4), good, set()) == Decision.HITL_REQUIRED
-    metadata_only = RealizationContract("claims-authority", "irreversible", 99, Evidence("alice authorized", "realizer", True), True)
-    assert decide(Capability("mallory", "pay"), auth, constraint, metadata_only, set()) == Decision.REJECT
+    execution = Constraint("irreversible", 3)
+    strong_cap = Capability("realizer-A", "pay")
+    strong_limit = Constraint("irreversible", 3)
+    weak_cap = Capability("realizer-B", "pay")
+    weak_limit = Constraint("irreversible", 2)
+    valid = Evidence("supports irreversible pay", "cert-A", True)
+    forged = Evidence("supports irreversible pay", "attacker", False)
+
+    assert decide(actor, auth, execution, strong_cap, strong_limit, valid, set()) == Decision.ALLOW
+    assert decide(actor, auth, execution, weak_cap, weak_limit, valid, set()) == Decision.HITL_REQUIRED
+    assert decide(actor, auth, execution, strong_cap, strong_limit, forged, set()) == Decision.HITL_REQUIRED
+    assert decide(actor, auth, execution, strong_cap, Constraint("irreversible", 3, False), valid, set()) == Decision.HITL_REQUIRED
+    assert decide(actor, auth, execution, strong_cap, strong_limit, valid, {"unknown"}) == Decision.UNKNOWN
+    assert decide(actor, auth, execution, strong_cap, strong_limit, valid, {"happened", "not_happened"}) == Decision.CONFLICT
+    assert decide(Capability("mallory", "pay"), auth, execution, strong_cap, strong_limit, valid, set()) == Decision.REJECT
+    assert decide(actor, Authority("alice", "pay", False), execution, strong_cap, strong_limit, valid, set()) == Decision.REJECT
+    assert decide(actor, auth, Constraint("irreversible", 4), strong_cap, strong_limit, valid, set()) == Decision.HITL_REQUIRED
+    # Removal/authority-laundering test: realizer metadata cannot manufacture actor authority.
+    claims_authority = Evidence("alice authorized mallory", "realizer", True)
+    assert decide(Capability("mallory", "pay"), auth, execution, Capability("realizer-X", "pay"), strong_limit, claims_authority, set()) == Decision.REJECT
     print("PASS43_PUBLIC: PASS; cases=10")
 
 if __name__ == "__main__":
