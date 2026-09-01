@@ -4,10 +4,12 @@ on:
   push:
     paths:
       - 'probes/pass27_safe_reconciliation.py'
+      - 'probes/pass28_evidence_quality.py'
       - '.github/workflows/pass27-safe-reconciliation.yml'
   pull_request:
     paths:
       - 'probes/pass27_safe_reconciliation.py'
+      - 'probes/pass28_evidence_quality.py'
       - '.github/workflows/pass27-safe-reconciliation.yml'
   workflow_dispatch:
 
@@ -15,7 +17,7 @@ permissions:
   contents: read
 
 jobs:
-  pass27-public-safe-verification:
+  pass27-pass28-public-safe-verification:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -36,3 +38,6 @@ jobs:
 
       - name: Execute Pass 27 probe
         run: python3 probes/pass27_safe_reconciliation.py
+
+      - name: Execute Pass 28 probe
+        run: python3 probes/pass28_evidence_quality.py
