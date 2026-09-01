@@ -1,10 +1,9 @@
 """Pass 35 public-safe Byzantine evidence/verifier probe.
 
-Synthetic only. Tests whether evidence source/verifier compromise can be
-represented without promoting Trust, Verifier, Provenance, or Witness to
-Genesis primitives. The contract is deliberately fail-closed: compromised
-or unverifiable evidence is UNKNOWN; contradictory admissible evidence is
-CONFLICT; capability does not manufacture authority.
+Synthetic only. This version deliberately keeps source/verifier admissibility
+outside Evidence: they are transition-specific constraints, not evidence
+claims. The test asks whether compromise can be handled with the existing
+candidate basis rather than a Trust/Verifier/Provenance/Witness primitive.
 """
 from dataclasses import dataclass
 from enum import Enum
@@ -49,7 +48,11 @@ class Evidence:
     authority: Authority
     claim: str
     complete: bool
-    source_admissible: bool
+
+
+@dataclass(frozen=True)
+class Constraint:
+    admissible_observers: frozenset[str]
     verifier_admissible: bool
 
 
@@ -63,11 +66,11 @@ def authority_matches(a: Authority, t: Transition) -> bool:
     )
 
 
-def supports(e: Evidence, t: Transition) -> bool:
+def supports(e: Evidence, t: Transition, c: Constraint) -> bool:
     return (
         e.complete
-        and e.source_admissible
-        and e.verifier_admissible
+        and c.verifier_admissible
+        and e.observation.observer in c.admissible_observers
         and e.observation.effect_id == t.effect_id
         and e.observation.version >= t.observation_version
         and e.observation.status == "APPLIED"
@@ -76,11 +79,11 @@ def supports(e: Evidence, t: Transition) -> bool:
     )
 
 
-def contradicts(e: Evidence, t: Transition) -> bool:
+def contradicts(e: Evidence, t: Transition, c: Constraint) -> bool:
     return (
         e.complete
-        and e.source_admissible
-        and e.verifier_admissible
+        and c.verifier_admissible
+        and e.observation.observer in c.admissible_observers
         and e.observation.effect_id == t.effect_id
         and e.observation.version >= t.observation_version
         and e.claim in {"revoked", "conflict"}
@@ -88,9 +91,9 @@ def contradicts(e: Evidence, t: Transition) -> bool:
     )
 
 
-def assess(t: Transition, evidence: tuple[Evidence, ...]) -> Decision:
-    good = tuple(e for e in evidence if supports(e, t))
-    bad = tuple(e for e in evidence if contradicts(e, t))
+def assess(t: Transition, evidence: tuple[Evidence, ...], c: Constraint) -> Decision:
+    good = tuple(e for e in evidence if supports(e, t, c))
+    bad = tuple(e for e in evidence if contradicts(e, t, c))
     if good and bad:
         return Decision.CONFLICT
     if bad:
@@ -105,115 +108,113 @@ def assess(t: Transition, evidence: tuple[Evidence, ...]) -> Decision:
     return Decision.UNKNOWN
 
 
-def base() -> tuple[Transition, Authority, Evidence]:
+def base() -> tuple[Transition, Authority, Evidence, Constraint]:
     a = Authority("subject-a", "root-a", "target-a", 7, True)
     t = Transition("effect-35", "subject-a", "root-a", "target-a", 7, 7)
     o = Observation("effect-35", "observer-a", 7, "APPLIED")
-    e = Evidence(o, a, "applied", True, True, True)
-    return t, a, e
+    e = Evidence(o, a, "applied", True)
+    c = Constraint(frozenset({"observer-a"}), True)
+    return t, a, e, c
 
 
 def test_valid_evidence_allows() -> None:
-    t, _, e = base()
-    assert assess(t, (e,)) is Decision.ALLOW
+    t, _, e, c = base()
+    assert assess(t, (e,), c) is Decision.ALLOW
 
 
 def test_compromised_observer_cannot_supply_authoritative_evidence() -> None:
-    t, _, e = base()
-    compromised = Evidence(e.observation, e.authority, e.claim, True, False, True)
-    assert assess(t, (compromised,)) is Decision.UNKNOWN
+    t, _, e, _ = base()
+    c = Constraint(frozenset(), True)
+    assert assess(t, (e,), c) is Decision.UNKNOWN
 
 
 def test_compromised_verifier_cannot_supply_authoritative_evidence() -> None:
-    t, _, e = base()
-    compromised = Evidence(e.observation, e.authority, e.claim, True, True, False)
-    assert assess(t, (compromised,)) is Decision.UNKNOWN
+    t, _, e, _ = base()
+    c = Constraint(frozenset({"observer-a"}), False)
+    assert assess(t, (e,), c) is Decision.UNKNOWN
 
 
 def test_legitimate_authority_does_not_make_false_observation_true() -> None:
-    t, _, e = base()
+    t, _, e, c = base()
     false_observation = Evidence(
         Observation("effect-35", "observer-a", 7, "FAILED"),
         e.authority,
         "applied",
         True,
-        True,
-        True,
     )
-    assert assess(t, (false_observation,)) is Decision.UNKNOWN
+    assert assess(t, (false_observation,), c) is Decision.UNKNOWN
 
 
 def test_valid_observation_with_wrong_authority_is_unknown() -> None:
-    t, _, e = base()
+    t, _, e, c = base()
     wrong = Authority("subject-a", "foreign-root", "target-a", 7, True)
-    forged = Evidence(e.observation, wrong, "applied", True, True, True)
-    assert assess(t, (forged,)) is Decision.UNKNOWN
+    forged = Evidence(e.observation, wrong, "applied", True)
+    assert assess(t, (forged,), c) is Decision.UNKNOWN
 
 
 def test_legitimate_observer_with_forged_claim_is_unknown() -> None:
-    t, _, e = base()
-    forged = Evidence(e.observation, e.authority, "applied", True, False, True)
-    assert assess(t, (forged,)) is Decision.UNKNOWN
+    t, _, e, c = base()
+    forged = Evidence(e.observation, e.authority, "applied", True)
+    c = Constraint(frozenset(), True)
+    assert assess(t, (forged,), c) is Decision.UNKNOWN
 
 
 def test_verifier_cannot_create_authority() -> None:
-    t, a, e = base()
-    foreign = Evidence(e.observation, a, "applied", True, True, True)
-    assert foreign.authority.subject == t.subject
-    assert foreign.observation.observer != t.subject
+    t, a, e, c = base()
+    assert e.authority.subject == t.subject
+    assert e.observation.observer != t.subject
+    assert assess(t, (e,), c) is Decision.ALLOW
 
 
 def test_conflicting_admissible_evidence_is_not_silently_resolved() -> None:
-    t, _, e = base()
+    t, _, e, c = base()
     contradictory = Evidence(
         Observation("effect-35", "observer-b", 7, "APPLIED"),
         e.authority,
         "conflict",
         True,
-        True,
-        True,
     )
-    assert assess(t, (e, contradictory)) is Decision.CONFLICT
+    c = Constraint(frozenset({"observer-a", "observer-b"}), True)
+    assert assess(t, (e, contradictory), c) is Decision.CONFLICT
 
 
 def test_compromised_source_is_ignored_when_independent_valid_source_exists() -> None:
-    t, _, e = base()
-    compromised = Evidence(e.observation, e.authority, "applied", True, False, True)
+    t, _, e, _ = base()
+    compromised = Evidence(e.observation, e.authority, "applied", True)
     valid = Evidence(
         Observation("effect-35", "observer-b", 7, "APPLIED"),
         e.authority,
         "applied",
         True,
-        True,
-        True,
     )
-    assert assess(t, (compromised, valid)) is Decision.ALLOW
+    c = Constraint(frozenset({"observer-b"}), True)
+    assert assess(t, (compromised, valid), c) is Decision.ALLOW
 
 
 def test_incomplete_evidence_is_not_execution_proof() -> None:
-    t, _, e = base()
-    incomplete = Evidence(e.observation, e.authority, "applied", False, True, True)
-    assert assess(t, (incomplete,)) is Decision.UNKNOWN
+    t, _, e, c = base()
+    incomplete = Evidence(e.observation, e.authority, "applied", False)
+    assert assess(t, (incomplete,), c) is Decision.UNKNOWN
 
 
 def test_stale_observation_cannot_verify_newer_effect() -> None:
-    t, _, e = base()
-    stale = Evidence(Observation("effect-35", "observer-a", 6, "APPLIED"), e.authority, "applied", True, True, True)
-    assert assess(t, (stale,)) is Decision.UNKNOWN
+    t, _, e, c = base()
+    stale = Evidence(Observation("effect-35", "observer-a", 6, "APPLIED"), e.authority, "applied", True)
+    assert assess(t, (stale,), c) is Decision.UNKNOWN
 
 
 def test_unknown_is_not_retry_permission() -> None:
-    t, _, e = base()
-    unknown = Evidence(e.observation, e.authority, "applied", True, False, True)
-    assert assess(t, (unknown,)) is Decision.UNKNOWN
-    assert assess(t, (unknown,)) is Decision.UNKNOWN
+    t, _, e, _ = base()
+    c = Constraint(frozenset(), True)
+    assert assess(t, (e,), c) is Decision.UNKNOWN
+    assert assess(t, (e,), c) is Decision.UNKNOWN
 
 
 def test_capability_is_not_authority() -> None:
-    t, a, e = base()
-    capable = Evidence(e.observation, a, "applied", True, False, True)
-    assert capable.observation.observer != a.subject
-    assert assess(t, (capable,)) is Decision.UNKNOWN
+    t, _, e, _ = base()
+    c = Constraint(frozenset(), True)
+    assert e.observation.observer != e.authority.subject
+    assert assess(t, (e,), c) is Decision.UNKNOWN
 
 
 def test_primitive_inflation_negative() -> None:
