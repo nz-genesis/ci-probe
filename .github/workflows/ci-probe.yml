@@ -67,6 +67,9 @@ jobs:
       - name: Execute Pass 40 public-safe effect-identity/realization-contract probe
         run: python3 probes/pass40_effect_identity_realization_contract.py
 
+      - name: Execute Pass 41 public-safe realization-contract substitution probe
+        run: python3 probes/pass41_realization_contract_substitution.py
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
