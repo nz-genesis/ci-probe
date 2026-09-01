@@ -52,6 +52,9 @@ jobs:
       - name: Execute Pass 35 public-safe Byzantine evidence probe
         run: python3 probes/pass35_byzantine_evidence.py
 
+      - name: Execute Pass 36 public-safe evidence replay/recovery probe
+        run: python3 probes/pass36_evidence_replay_recovery.py
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
