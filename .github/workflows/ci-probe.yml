@@ -70,6 +70,9 @@ jobs:
       - name: Execute Pass 41 public-safe realization-contract substitution probe
         run: python3 probes/pass41_realization_contract_substitution.py
 
+      - name: Execute Pass 42 public-safe contract-change/revocation/conflict probe
+        run: python3 probes/pass42_contract_change_revocation_conflict.py
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
