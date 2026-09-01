@@ -55,6 +55,9 @@ jobs:
       - name: Execute Pass 36 public-safe evidence replay/recovery probe
         run: python3 probes/pass36_evidence_replay_recovery.py
 
+      - name: Execute Pass 37 public-safe lost ACK/concurrent recovery probe
+        run: python3 probes/pass37_lost_ack_concurrent_recovery.py
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
