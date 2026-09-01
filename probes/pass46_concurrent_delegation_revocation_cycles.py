@@ -96,7 +96,7 @@ def validate_chain(chain, constraint):
 def run():
     grant = "delegate-release"
     constraint = Constraint(
-        allowed_targets=frozenset({"bob", "carol", "dave"}), max_depth=2
+        allowed_targets=frozenset({"alice", "bob", "carol", "dave"}), max_depth=2
     )
     current = Evidence(grant, 20, True, "authority-state")
     alice = Authority("alice", grant, True, 20)
@@ -131,7 +131,7 @@ def run():
     revoked_bob = Authority("bob", grant, False, 20)
     assert authorize(child, revoked_bob, constraint, current) == Decision.REJECT
 
-    # 7: cyclic delegation is rejected using the existing transition sequence.
+    # 7: cyclic delegation is rejected by the transition sequence itself.
     cycle = [
         Transition(grant, "alice", "bob"),
         Transition(grant, "bob", "alice"),
