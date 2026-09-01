@@ -105,6 +105,12 @@ jobs:
           set -o pipefail
           go run -race ./probes/pass49_external_effect_reconciliation.go | tee pass49-probe-output.txt
 
+      - name: Execute Pass 208 public-safe constructive Genesis Base synthesis probe
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 probes/p208_constructive_base_synthesis.py | tee p208-probe-output.txt
+
       - name: Upload Pass 49 exact hosted execution evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
