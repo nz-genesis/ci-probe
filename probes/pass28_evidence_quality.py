@@ -103,8 +103,7 @@ def partial_scope_stays_unknown() -> None:
 
 
 def wrong_effect_identity_stays_unknown() -> None:
-    e = base()
-    require(assess("e2", e, Constraint("target-a", 7, 15)) is Decision.UNKNOWN, "foreign evidence reconciled effect")
+    require(assess("e2", base(), Constraint("target-a", 7, 15)) is Decision.UNKNOWN, "foreign evidence reconciled effect")
 
 
 def expired_evidence_stays_unknown() -> None:
@@ -131,14 +130,18 @@ def valid_evidence_below_required_version_is_insufficient() -> None:
 
 def evidence_cannot_grant_authority() -> None:
     e = base()
-    decision = assess("e1", e, Constraint("target-a", 7, 15))
-    require(decision is Decision.REALIZED, "baseline evidence assessment failed")
+    require(assess("e1", e, Constraint("target-a", 7, 15)) is Decision.REALIZED, "baseline evidence assessment failed")
     require(e.observation.scope == "target-a", "evidence changed authority scope")
 
 
 def provider_unavailable_is_not_absence() -> None:
     e = Evidence(Observation("e1", "target-a", 0, 0, "UNAVAILABLE", "provider-a"), False, "absent", 0, 0)
     require(assess("e1", e, Constraint("target-a", 7, 15)) is Decision.UNKNOWN, "provider unavailability became absence")
+
+
+def replayed_observation_does_not_advance_version() -> None:
+    e = Evidence(Observation("e1", "target-a", 7, 7, "APPLIED", "provider-a"), True, "applied", 9, 20)
+    require(assess("e1", e, Constraint("target-a", 8, 15)) is Decision.UNKNOWN, "replayed old observation advanced state")
 
 
 def no_new_primitive_is_needed() -> None:
@@ -159,8 +162,9 @@ def main() -> None:
     valid_evidence_below_required_version_is_insufficient()
     evidence_cannot_grant_authority()
     provider_unavailable_is_not_absence()
+    replayed_observation_does_not_advance_version()
     no_new_primitive_is_needed()
-    print("PASS28_PUBLIC: PASS; cases=13; private_data=none; new_primitives=0")
+    print("PASS28_PUBLIC: PASS; cases=14; private_data=none; new_primitives=0")
 
 
 if __name__ == "__main__":
