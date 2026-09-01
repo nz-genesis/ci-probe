@@ -80,13 +80,18 @@ func load(path string) (Journal, error) {
 	return j, nil
 }
 
+// recoverDecision is deliberately about semantic admissibility, not proof of
+// an external world effect. A durable local commit does not turn UNKNOWN into
+// unconditional retry permission or into verified successful completion.
 func recoverDecision(j Journal) Decision {
 	if !j.Evidence.Valid { return Unknown }
 	if !j.Authority.Active { return Reject }
 	if j.Capability.Subject != j.Authority.Subject || j.Capability.Action != j.Authority.Action { return Reject }
 	if j.Capability.Action != j.Transition.Action { return Reject }
 	if !j.Constraint.AllowedTargets[j.Transition.Target] { return HITLRequired }
-	if j.State.Committed && j.State.Transition == j.Transition.ID { return Allow }
+	// Local durable commit is evidence about local state only. External effect
+	// status remains UNKNOWN until separately observed and verified.
+	if j.State.Committed && j.State.Transition == j.Transition.ID { return Unknown }
 	return Unknown
 }
 
@@ -137,7 +142,10 @@ func main() {
 	defer os.RemoveAll(dir1)
 	if err := runPhase(binary, dir1, "intent"); err != nil { fmt.Println("FAIL crash-before-commit:", err); failures++ } else {
 		j, err := load(filepath.Join(dir1, "journal.json"))
-		if err != nil { fmt.Println("FAIL crash-before-commit load:", err); failures++ } else { failures += check("crash-before-commit", recoverDecision(j), Unknown) }
+		if err != nil { fmt.Println("FAIL crash-before-commit load:", err); failures++ } else {
+			failures += check("crash-before-commit", recoverDecision(j), Unknown)
+			if j.State.Committed { fmt.Println("FAIL pre-commit-local-state: committed=true"); failures++ } else { fmt.Println("PASS pre-commit-local-state: committed=false") }
+		}
 	}
 
 	dir2, _ := os.MkdirTemp("", "pass48-commit-")
@@ -145,8 +153,9 @@ func main() {
 	if err := runPhase(binary, dir2, "commit"); err != nil { fmt.Println("FAIL crash-after-commit:", err); failures++ } else {
 		j, err := load(filepath.Join(dir2, "journal.json"))
 		if err != nil { fmt.Println("FAIL crash-after-commit load:", err); failures++ } else {
-			failures += check("crash-after-commit", recoverDecision(j), Allow)
-			failures += check("recovery-repeat", recoverDecision(j), Allow)
+			failures += check("crash-after-commit-external-effect-status", recoverDecision(j), Unknown)
+			if !j.State.Committed || j.State.Transition != j.Transition.ID { fmt.Println("FAIL durable-local-commit: not recovered"); failures++ } else { fmt.Println("PASS durable-local-commit: recovered") }
+			failures += check("recovery-repeat-external-effect-status", recoverDecision(j), Unknown)
 		}
 	}
 
@@ -173,6 +182,7 @@ func main() {
 	if _, err := load(bad); err == nil { fmt.Println("FAIL malformed-journal"); failures++ } else { fmt.Println("PASS malformed-journal: rejected") }
 
 	fmt.Println("PASS primitive-removal: journal/recovery are implementation techniques, not Genesis primitives")
+	fmt.Println("PASS external-effect-boundary: durable local commit is not verified world effect")
 	if failures != 0 { fmt.Printf("PASS48_PUBLIC: FAIL; failures=%d\n", failures); return }
-	fmt.Println("PASS48_PUBLIC: PASS; cases=7")
+	fmt.Println("PASS48_PUBLIC: PASS; cases=9")
 }
