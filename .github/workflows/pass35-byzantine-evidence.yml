@@ -1,0 +1,34 @@
+name: Genesis Pass 35 Byzantine Evidence
+
+on:
+  push:
+    paths:
+      - 'probes/pass35_byzantine_evidence.py'
+      - '.github/workflows/pass35-byzantine-evidence.yml'
+  pull_request:
+    paths:
+      - 'probes/pass35_byzantine_evidence.py'
+      - '.github/workflows/pass35-byzantine-evidence.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Verify exact SHA
+        run: test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+
+      - name: Compile public probe
+        run: python -m py_compile probes/pass35_byzantine_evidence.py
+
+      - name: Run public probe
+        run: python probes/pass35_byzantine_evidence.py
