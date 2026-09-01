@@ -36,58 +36,40 @@ jobs:
 
       - name: Execute deterministic substrate probe
         run: python3 probe.py
-
       - name: Execute generic action semantics tests
         run: python3 -m unittest -v test_action_probe.py
-
       - name: Execute Pass 22 public-safe semantic probe
         run: python3 probes/pass22_distributed_freshness_reservation.py
-
       - name: Execute Pass 25 public-safe runtime contract probe
         run: python3 probes/pass25_runtime_contract_probe.py
-
       - name: Execute Pass 26 public-safe fencing/idempotency probe
         run: python3 probes/pass26_fencing_idempotency_reconciliation.py
-
       - name: Execute Pass 35 public-safe Byzantine evidence probe
         run: python3 probes/pass35_byzantine_evidence.py
-
       - name: Execute Pass 36 public-safe evidence replay/recovery probe
         run: python3 probes/pass36_evidence_replay_recovery.py
-
       - name: Execute Pass 37 public-safe lost ACK/concurrent recovery probe
         run: python3 probes/pass37_lost_ack_concurrent_recovery.py
-
       - name: Execute Pass 38 public-safe crash-after-effect/fencing probe
         run: python3 probes/pass38_crash_after_effect_fencing.py
-
       - name: Execute Pass 39 public-safe adversarial external-world probe
         run: python3 probes/pass39_adversarial_external_world.py
-
       - name: Execute Pass 40 public-safe effect-identity/realization-contract probe
         run: python3 probes/pass40_effect_identity_realization_contract.py
-
       - name: Execute Pass 41 public-safe realization-contract substitution probe
         run: python3 probes/pass41_realization_contract_substitution.py
-
       - name: Execute Pass 42 public-safe contract-change/revocation/conflict probe
         run: python3 probes/pass42_contract_change_revocation_conflict.py
-
       - name: Execute Pass 43 public-safe realization-contract primitive-reduction probe
         run: python3 probes/pass43_realization_contract_primitive_reduction.py
-
       - name: Execute Pass 44 public-safe multi-party authority/concurrent-revocation probe
         run: python3 probes/pass44_multiparty_authority_concurrent_revocation.py
-
       - name: Execute Pass 45 public-safe dynamic-threshold/delegation reduction probe
         run: python3 probes/pass45_dynamic_threshold_delegation.py
-
       - name: Execute Pass 46 public-safe concurrent delegation/revocation/cycle reduction probe
         run: python3 probes/pass46_concurrent_delegation_revocation_cycles.py
-
       - name: Execute Pass 47 public-safe concurrent kernel probe
         run: go run -race ./probes/pass47_concurrent_kernel.go
-
       - name: Execute Pass 48 public-safe crash/durable-state probe
         run: go run -race ./probes/pass48_crash_durable_state.go
 
@@ -98,7 +80,6 @@ jobs:
           actual="$(git rev-parse HEAD)"
           test "$actual" = "$GITHUB_SHA"
           printf 'GITHUB_SHA=%s\nCHECKED_OUT_SHA=%s\n' "$GITHUB_SHA" "$actual" | tee pass49-checkout-identity.txt
-
       - name: Execute Pass 49 public-safe external-effect reconciliation probe
         shell: bash
         run: |
@@ -110,24 +91,26 @@ jobs:
         run: |
           set -o pipefail
           python3 probes/p208_constructive_base_synthesis.py | tee p208-probe-output.txt
-
       - name: Execute Pass 209 public-safe decision/selection reduction probe
         shell: bash
         run: |
           set -o pipefail
           python3 probes/p209_decision_selection_reduction.py | tee p209-probe-output.txt
-
       - name: Execute Pass 210 public-safe adaptive-plan reduction probe
         shell: bash
         run: |
           set -o pipefail
           python3 probes/p210_adaptive_plan_reduction.py | tee p210-probe-output.txt
-
       - name: Execute Pass 211 public-safe self-evolution/system-construction reduction probe
         shell: bash
         run: |
           set -o pipefail
           python3 probes/p211_self_evolution_system_construction_reduction.py | tee p211-probe-output.txt
+      - name: Execute Pass 212 public-safe objective/tradeoff reduction probe
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 objective_tradeoff_reduction.py | tee p212-probe-output.txt
 
       - name: Upload Pass 49 exact hosted execution evidence
         if: ${{ always() }}
@@ -138,7 +121,6 @@ jobs:
             pass49-checkout-identity.txt
             pass49-probe-output.txt
           if-no-files-found: error
-
       - name: Upload P210 exact hosted execution evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -146,7 +128,6 @@ jobs:
           name: p210-execution-evidence-${{ github.sha }}
           path: p210-probe-output.txt
           if-no-files-found: error
-
       - name: Upload P211 exact hosted execution evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -154,12 +135,18 @@ jobs:
           name: p211-execution-evidence-${{ github.sha }}
           path: p211-probe-output.txt
           if-no-files-found: error
+      - name: Upload P212 exact hosted execution evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: p212-execution-evidence-${{ github.sha }}
+          path: p212-probe-output.txt
+          if-no-files-found: error
 
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
           grep -Fx "CI_PROBE_OK" ci-probe-result.txt
-
       - name: Upload probe result
         uses: actions/upload-artifact@v4
         with:
@@ -167,4 +154,4 @@ jobs:
           path: ci-probe-result.txt
           if-no-files-found: error
 
-# P211: system construction/self-evolution is tested as governed State/Transition composition; no System/Evolution/Proposal/HITL primitive is asserted.
+# P212: competing objectives/trade-offs are tested as State/Transition composition; no Objective/Goal/Tradeoff/Utility/Planner primitive is asserted.
