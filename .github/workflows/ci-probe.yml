@@ -49,6 +49,9 @@ jobs:
       - name: Execute Pass 26 public-safe fencing/idempotency probe
         run: python3 probes/pass26_fencing_idempotency_reconciliation.py
 
+      - name: Execute Pass 35 public-safe Byzantine evidence probe
+        run: python3 probes/pass35_byzantine_evidence.py
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
