@@ -1,0 +1,31 @@
+name: Genesis Pass 42 Contract Change
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pass42:
+    name: pass42-public-hosted-execution
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Verify exact SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$GITHUB_SHA"
+          printf 'GITHUB_SHA=%s\nCHECKED_OUT_SHA=%s\n' "$GITHUB_SHA" "$actual"
+
+      - name: Execute Pass 42
+        run: python3 probes/pass42_contract_change_revocation_conflict.py
