@@ -42,6 +42,7 @@ class Evidence:
 @dataclass(frozen=True)
 class Constraint:
     required_subject: str
+    required_issuer: str
     required_scope: str
     required_authority_version: int
     required_observation_version: int
@@ -57,6 +58,8 @@ def assess(effect_id: str, evidence: Evidence, constraint: Constraint) -> Decisi
     if observation.observed_version < constraint.required_observation_version:
         return Decision.UNKNOWN
     if authority.subject != constraint.required_subject:
+        return Decision.UNKNOWN
+    if authority.issuer != constraint.required_issuer:
         return Decision.UNKNOWN
     if authority.scope != constraint.required_scope:
         return Decision.UNKNOWN
@@ -84,33 +87,35 @@ def evidence_for(authority: Authority, observed_version: int = 1) -> Evidence:
     return Evidence(observation, authority, "applied", True)
 
 
+def constraint_for(authority: Authority, observation_version: int) -> Constraint:
+    return Constraint(authority.subject, authority.issuer, authority.scope, authority.version, observation_version)
+
+
 def test_historical_transition_can_use_historical_authority() -> None:
     v1, _, _, _ = histories()
     e = evidence_for(v1, observed_version=1)
-    c = Constraint("observer-a", "target-a", 1, 1)
-    assert assess("e1", e, c) is Decision.ALLOW
+    assert assess("e1", e, constraint_for(v1, 1)) is Decision.ALLOW
 
 
 def test_revocation_is_effective_for_later_transition() -> None:
     _, v2, _, _ = histories()
     revoked = Authority(v2.subject, v2.issuer, v2.scope, v2.version, False)
     e = evidence_for(revoked, observed_version=2)
-    c = Constraint("observer-a", "target-a", 2, 2)
-    assert assess("e1", e, c) is Decision.UNKNOWN
+    assert assess("e1", e, constraint_for(revoked, 2)) is Decision.UNKNOWN
 
 
 def test_stale_domain_view_cannot_authorize_newer_transition() -> None:
     v1, _, _, _ = histories()
     e = evidence_for(v1, observed_version=1)
-    c = Constraint("observer-a", "target-a", 2, 2)
-    assert assess("e1", e, c) is Decision.UNKNOWN
+    later = Constraint(v1.subject, v1.issuer, v1.scope, 2, 2)
+    assert assess("e1", e, later) is Decision.UNKNOWN
 
 
 def test_concurrent_delegation_narrowing_does_not_widen_scope() -> None:
     _, _, delegated_v1, delegated_v2 = histories()
     narrowed = Authority(delegated_v2.subject, delegated_v2.issuer, "target-a-subset", 2, True)
     e = evidence_for(narrowed, observed_version=2)
-    c = Constraint("observer-b", "target-a", 2, 2)
+    c = Constraint("observer-b", "observer-a", "target-a", 2, 2)
     assert assess("e1", e, c) is Decision.UNKNOWN
     assert delegated_v1.scope == "target-a"
 
@@ -118,7 +123,7 @@ def test_concurrent_delegation_narrowing_does_not_widen_scope() -> None:
 def test_cross_domain_history_cannot_silently_substitute() -> None:
     foreign = Authority("observer-a", "foreign-root", "target-a", 2, True)
     e = evidence_for(foreign, observed_version=2)
-    c = Constraint("observer-a", "target-a", 2, 2)
+    c = Constraint("observer-a", "root-a", "target-a", 2, 2)
     assert assess("e1", e, c) is Decision.UNKNOWN
 
 
@@ -127,31 +132,28 @@ def test_old_evidence_is_not_revalidated_by_newer_authority() -> None:
     active_v2 = Authority(v2.subject, v2.issuer, v2.scope, 2, True)
     old_observation = Observation("e1", "observer-a", 1, "APPLIED")
     e = Evidence(old_observation, active_v2, "applied", True)
-    c = Constraint("observer-a", "target-a", 2, 2)
-    assert assess("e1", e, c) is Decision.UNKNOWN
+    assert assess("e1", e, constraint_for(active_v2, 2)) is Decision.UNKNOWN
 
 
 def test_incomplete_divergent_history_remains_unknown() -> None:
     v1, _, _, _ = histories()
     e = Evidence(evidence_for(v1).observation, v1, "applied", False)
-    c = Constraint("observer-a", "target-a", 1, 1)
-    assert assess("e1", e, c) is Decision.UNKNOWN
+    assert assess("e1", e, constraint_for(v1, 1)) is Decision.UNKNOWN
 
 
 def test_conflicting_authority_claims_remain_conflict() -> None:
     v1, _, _, _ = histories()
     e = Evidence(evidence_for(v1).observation, v1, "conflict", True)
-    c = Constraint("observer-a", "target-a", 1, 1)
-    assert assess("e1", e, c) is Decision.CONFLICT
+    assert assess("e1", e, constraint_for(v1, 1)) is Decision.CONFLICT
 
 
 def test_divergent_views_do_not_create_authority() -> None:
     v1, v2, _, _ = histories()
     e1 = evidence_for(v1, 1)
     e2 = evidence_for(v2, 2)
-    c = Constraint("observer-a", "target-a", 2, 2)
-    assert assess("e1", e1, c) is Decision.UNKNOWN
-    assert assess("e1", e2, c) is Decision.UNKNOWN
+    later = constraint_for(v2, 2)
+    assert assess("e1", e1, later) is Decision.UNKNOWN
+    assert assess("e1", e2, later) is Decision.UNKNOWN
 
 
 def test_no_history_primitive_is_required() -> None:
