@@ -1,15 +1,9 @@
 #!/usr/bin/env python3
-"""P209 clean-room decision/selection reduction probe.
-
-Tests whether decision/selection/policy/preference can be represented as
-State + Transition + Capability + Authority + Observation + Evidence +
-Constraint, without introducing a new Genesis semantic primitive.
-"""
+"""P209 strengthened clean-room decision/selection reduction probe."""
 
 from dataclasses import dataclass, replace
 
 BASIS = {"state", "transition", "capability", "authority", "observation", "evidence", "constraint"}
-
 
 @dataclass(frozen=True)
 class Candidate:
@@ -24,18 +18,25 @@ class Candidate:
 
 
 def admit(c: Candidate) -> Candidate:
-    if not c.authorized or not c.allowed:
+    if not c.name or not c.capability or not c.authorized or not c.allowed:
         raise ValueError("rejected")
     return c
 
 
-def select(candidates):
-    admissible = [c for c in candidates if c.authorized and c.allowed]
+def select(candidates, state, constraint):
+    # Selection is a bounded transition over State; criteria are data in the
+    # constraint/state context, not a Genesis decision primitive.
+    admissible = [
+        c for c in candidates
+        if c.authorized and c.allowed and c.capability in constraint["capabilities"]
+    ]
     if not admissible:
         return None
-    best = max(c.score for c in admissible)
-    winners = [c for c in admissible if c.score == best]
-    return winners[0] if len(winners) == 1 else None
+    preferred = state.get("preferred")
+    ranked = sorted(admissible, key=lambda c: (c.name == preferred, c.score), reverse=True)
+    if len(ranked) > 1 and ranked[0].score == ranked[1].score and ranked[0].name != preferred:
+        return None
+    return ranked[0]
 
 
 def realize(c):
@@ -49,104 +50,95 @@ def verify(c):
 
 
 def test_constructive_selection():
-    c = select([
-        Candidate("A", "write", score=5),
-        Candidate("B", "write", score=3),
-    ])
+    state = {"preferred": None}
+    constraint = {"capabilities": {"write"}}
+    c = select([Candidate("A", "write", score=5), Candidate("B", "write", score=3)], state, constraint)
     c = verify(realize(admit(c)))
     assert c.name == "A" and c.evidenced
 
 
-def test_constraint_changes_choice_without_new_primitive():
+def test_state_preference_changes_selection():
+    candidates = [Candidate("A", "write", score=5), Candidate("B", "write", score=4)]
+    constraint = {"capabilities": {"write"}}
+    assert select(candidates, {"preferred": None}, constraint).name == "A"
+    assert select(candidates, {"preferred": "B"}, constraint).name == "B"
+
+
+def test_constraint_changes_selection():
     candidates = [Candidate("A", "send", score=10), Candidate("B", "draft", score=7)]
-    first = select(candidates)
-    constrained = [replace(candidates[0], allowed=False), candidates[1]]
-    second = select(constrained)
-    assert first.name == "A" and second.name == "B"
+    assert select(candidates, {}, {"capabilities": {"send", "draft"}}).name == "A"
+    assert select(candidates, {}, {"capabilities": {"draft"}}).name == "B"
 
 
-def test_policy_change_is_state_transition():
+def test_unauthorized_candidate_never_wins():
+    candidates = [Candidate("A", "restricted", authorized=False, score=100), Candidate("B", "draft", score=1)]
+    assert select(candidates, {}, {"capabilities": {"restricted", "draft"}}).name == "B"
+
+
+def test_tie_is_ambiguous_not_success():
+    candidates = [Candidate("A", "act", score=5), Candidate("B", "act", score=5)]
+    assert select(candidates, {}, {"capabilities": {"act"}}) is None
+
+
+def test_policy_update_is_state_transition():
     state = {"preferred": "A"}
-    transition = replace(Candidate("B", "act", score=2), score=9)
-    state["preferred"] = transition.name
-    assert state["preferred"] == "B"
+    transition = Candidate("B", "act", score=9)
+    state2 = dict(state)
+    state2["preferred"] = transition.name
+    assert state["preferred"] == "A" and state2["preferred"] == "B"
 
 
-def test_tie_requires_non_success():
-    c = select([Candidate("A", "act", score=5), Candidate("B", "act", score=5)])
-    assert c is None
-
-
-def test_unauthorized_preference_cannot_expand_authority():
-    c = Candidate("A", "restricted", authorized=False, score=99)
-    try:
-        admit(c)
-    except ValueError:
-        return
-    raise AssertionError("unauthorized preference bypassed authority")
-
-
-def test_observation_is_not_decision():
+def test_observation_not_decision():
     c = replace(Candidate("A", "act", score=5), observed=True)
     assert not c.evidenced
 
 
-def test_unknown_is_not_success():
+def test_unknown_not_success():
     c = verify(replace(Candidate("A", "act", score=5), observed=True, unknown=True))
     assert not c.evidenced
 
 
-def test_goal_effect_separation():
+def test_evidence_does_not_expand_authority():
     c = verify(realize(Candidate("A", "act", score=5)))
     assert c.evidenced
-    # Evidence of realization does not confer authority for another action.
     try:
         admit(Candidate("B", "restricted", authorized=False, score=100))
     except ValueError:
         return
-    raise AssertionError("world/evidence result laundered into authority")
+    raise AssertionError("evidence laundered into authority")
 
 
-def test_conflicting_authority_is_not_preference_resolution():
-    c1 = Candidate("A", "act", authorized=True, allowed=True, score=5)
-    c2 = Candidate("B", "act", authorized=False, allowed=True, score=100)
-    winner = select([c1, c2])
-    assert winner.name == "A"
-
-
-def test_malformed_candidate_fails_closed():
+def test_malformed_fails_closed():
     try:
-        admit(Candidate("", "", authorized=False, allowed=True))
+        admit(Candidate("", "", authorized=True, allowed=True))
     except ValueError:
         return
     raise AssertionError("malformed candidate admitted")
 
 
-def test_no_decision_primitive_required():
-    # Decision/selection is a Transition over State constrained by Authority
-    # and Constraint, with Observation/Evidence closing the epistemic loop.
+def test_no_decision_or_preference_primitive_in_basis():
     assert BASIS == {"state", "transition", "capability", "authority", "observation", "evidence", "constraint"}
+    assert "decision" not in BASIS and "preference" not in BASIS and "policy" not in BASIS and "selection" not in BASIS
 
 
 def main():
     tests = [
         test_constructive_selection,
-        test_constraint_changes_choice_without_new_primitive,
-        test_policy_change_is_state_transition,
-        test_tie_requires_non_success,
-        test_unauthorized_preference_cannot_expand_authority,
-        test_observation_is_not_decision,
-        test_unknown_is_not_success,
-        test_goal_effect_separation,
-        test_conflicting_authority_is_not_preference_resolution,
-        test_malformed_candidate_fails_closed,
-        test_no_decision_primitive_required,
+        test_state_preference_changes_selection,
+        test_constraint_changes_selection,
+        test_unauthorized_candidate_never_wins,
+        test_tie_is_ambiguous_not_success,
+        test_policy_update_is_state_transition,
+        test_observation_not_decision,
+        test_unknown_not_success,
+        test_evidence_does_not_expand_authority,
+        test_malformed_fails_closed,
+        test_no_decision_or_preference_primitive_in_basis,
     ]
     for t in tests:
         t()
         print(f"PASS {t.__name__}")
     print(f"P209_DECISION_SELECTION_REDUCTION_PASS; assertions={len(tests)}; basis_size={len(BASIS)}; new_primitive_required=false")
-
 
 if __name__ == "__main__":
     main()
