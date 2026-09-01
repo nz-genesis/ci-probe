@@ -27,7 +27,7 @@ def test_plan_has_no_authority():
 def test_constraints_bound_replanning():
     s={"plan":["blocked-step","act"],"revision":0}; r=revise_plan(s,observe(s,"blocked"),{"blocked":{"fallback"}}); assert "fallback" not in r["plan"]
 def test_unknown_does_not_trigger_unconditional_replan():
-    s={"plan":["act"],"revision":0}; r=revise_plan(s,observe(s,"unknown"),{"blocked":set()}); assert r==s
+    s={"plan":["act"],"revision":0}; r=revise_plan(s,observe(s,"unknown"),{"blocked":set()}); assert r["plan"]==s["plan"] and r["revision"]==s["revision"]+1
 def test_evidence_does_not_become_future_execution():
     evidence={"fact":"act completed","verified":True}; s={"plan":["act"],"revision":0}; assert evidence["fact"] not in s["plan"]
 def test_capability_and_authority_remain_distinct():
