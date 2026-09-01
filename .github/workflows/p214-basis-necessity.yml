@@ -1,0 +1,37 @@
+name: P214 Basis Necessity Reduction
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'basis_necessity_reduction_p214.py'
+      - '.github/workflows/p214-basis-necessity.yml'
+
+jobs:
+  p214:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact workflow SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify exact SHA
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "CHECKED_OUT_SHA=$(git rev-parse HEAD)"
+      - name: Execute P214
+        run: python3 basis_necessity_reduction_p214.py
+      - name: Write execution evidence
+        shell: bash
+        run: |
+          mkdir -p evidence
+          python3 basis_necessity_reduction_p214.py > evidence/p214-execution-evidence.txt
+          printf 'GITHUB_SHA=%s\n' "$GITHUB_SHA" >> evidence/p214-execution-evidence.txt
+      - name: Upload exact execution evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: p214-execution-evidence-${{ github.sha }}
+          path: evidence/p214-execution-evidence.txt
