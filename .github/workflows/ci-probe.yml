@@ -88,6 +88,9 @@ jobs:
       - name: Execute Pass 47 public-safe concurrent kernel probe
         run: go run -race ./probes/pass47_concurrent_kernel.go
 
+      - name: Execute Pass 48 public-safe crash/durable-state probe
+        run: go run -race ./probes/pass48_crash_durable_state.go
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
