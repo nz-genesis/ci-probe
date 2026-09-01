@@ -1,10 +1,10 @@
 """Pass 36 public-safe evidence replay/recovery probe.
 
-Synthetic only. Tests whether stale/compromised evidence can be prevented
-from authorizing a duplicate external effect during recovery using State,
-Transition, Authority, Observation, Evidence, Capability and Constraint,
-without adding Receipt, IdempotencyKey, Transaction, Witness or Trust as
-Genesis primitives.
+Synthetic only. Evidence is kept as observation + authority + completeness;
+admissibility is transition-specific Constraint context. Tests whether stale
+or compromised evidence can be prevented from authorizing a duplicate
+external effect without adding Receipt, IdempotencyKey, Transaction,
+Witness or Trust as Genesis primitives.
 """
 from dataclasses import dataclass
 from enum import Enum
@@ -49,7 +49,6 @@ class Evidence:
     observation: Observation
     authority: Authority
     complete: bool
-    admissible: bool
 
 
 @dataclass(frozen=True)
@@ -61,12 +60,13 @@ class Capability:
 @dataclass(frozen=True)
 class Constraint:
     require_fresh_observation_version: int
+    evidence_admissible: bool
 
 
 def evidence_valid(e: Evidence, t: Transition, c: Constraint) -> bool:
     return (
         e.complete
-        and e.admissible
+        and c.evidence_admissible
         and e.authority.active
         and e.authority.subject == t.authority_subject
         and e.authority.version == t.authority_version
@@ -94,12 +94,12 @@ def base() -> tuple[State, Transition, Authority, Capability, Constraint]:
     transition = Transition("effect-36", 8, "subject-a")
     authority = Authority("subject-a", 8, True)
     capability = Capability("subject-a", "effect-36")
-    constraint = Constraint(8)
+    constraint = Constraint(8, True)
     return state, transition, authority, capability, constraint
 
 
-def evidence(authority: Authority, observed_applied: bool, version: int, admissible: bool = True) -> Evidence:
-    return Evidence(Observation("effect-36", observed_applied, version), authority, True, admissible)
+def evidence(authority: Authority, observed_applied: bool, version: int) -> Evidence:
+    return Evidence(Observation("effect-36", observed_applied, version), authority, True)
 
 
 def test_valid_recovery_can_execute() -> None:
@@ -122,7 +122,7 @@ def test_replayed_evidence_after_application_cannot_reexecute() -> None:
 
 def test_stale_evidence_after_authority_change_is_unknown() -> None:
     s, t, a, cap, _ = base()
-    newer_constraint = Constraint(9)
+    newer_constraint = Constraint(9, True)
     stale = evidence(a, False, 8)
     assert recover(s, t, cap, stale, newer_constraint) is Decision.UNKNOWN
 
@@ -134,8 +134,9 @@ def test_revoked_authority_cannot_drive_recovery() -> None:
 
 
 def test_compromised_evidence_is_unknown() -> None:
-    s, t, a, cap, c = base()
-    assert recover(s, t, cap, evidence(a, False, 8, admissible=False), c) is Decision.UNKNOWN
+    s, t, a, cap, _ = base()
+    compromised_constraint = Constraint(8, False)
+    assert recover(s, t, cap, evidence(a, False, 8), compromised_constraint) is Decision.UNKNOWN
 
 
 def test_evidence_of_existing_effect_rejects_recovery() -> None:
