@@ -123,6 +123,12 @@ jobs:
           set -o pipefail
           python3 probes/p210_adaptive_plan_reduction.py | tee p210-probe-output.txt
 
+      - name: Execute Pass 211 public-safe self-evolution/system-construction reduction probe
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 probes/p211_self_evolution_system_construction_reduction.py | tee p211-probe-output.txt
+
       - name: Upload Pass 49 exact hosted execution evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -141,6 +147,14 @@ jobs:
           path: p210-probe-output.txt
           if-no-files-found: error
 
+      - name: Upload P211 exact hosted execution evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: p211-execution-evidence-${{ github.sha }}
+          path: p211-probe-output.txt
+          if-no-files-found: error
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
@@ -153,4 +167,4 @@ jobs:
           path: ci-probe-result.txt
           if-no-files-found: error
 
-# P210: adaptive planning is tested as State/Transition composition; no Plan primitive is asserted.
+# P211: system construction/self-evolution is tested as governed State/Transition composition; no System/Evolution/Proposal/HITL primitive is asserted.
