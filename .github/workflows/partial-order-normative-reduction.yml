@@ -1,0 +1,35 @@
+name: Partial Order Normative Reduction
+
+on:
+  push:
+    paths:
+      - 'partial_order_normative_reduction.py'
+      - '.github/workflows/partial-order-normative-reduction.yml'
+      - 'research/P213_PARTIAL_ORDER_NORMATIVE_REDUCTION.md'
+  pull_request:
+    paths:
+      - 'partial_order_normative_reduction.py'
+      - '.github/workflows/partial-order-normative-reduction.yml'
+      - 'research/P213_PARTIAL_ORDER_NORMATIVE_REDUCTION.md'
+  workflow_dispatch:
+
+jobs:
+  p213:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact checkout SHA
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "CHECKED_OUT_SHA=$(git rev-parse HEAD)"
+      - name: Run P213 bounded probe
+        run: python3 partial_order_normative_reduction.py | tee p213-result.txt
+      - name: Verify research record exists
+        run: test -f research/P213_PARTIAL_ORDER_NORMATIVE_REDUCTION.md
+      - name: Upload execution evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: p213-execution-evidence-${{ github.sha }}
+          path: p213-result.txt
