@@ -1,0 +1,15 @@
+{
+  "correspondence_version": "P206-v1",
+  "semantic_source": "genesis-lab",
+  "source_path": "AGENTS.md",
+  "source_commit": "08b639a4d423bc5d98660369150f3c06244f2a4a",
+  "source_blob_sha1": "0164e9c15c7b25bb3adeb365184b37dad0efdacf",
+  "predicates": {
+    "purpose_status": "ESTABLISHED / OWNER-APPROVED PURPOSE / OPEN TO FUTURE EVIDENCE-BASED CORRECTION",
+    "purpose_fidelity_invariant": true,
+    "realization_independence": true,
+    "candidate_basis_is_noncanonical": true,
+    "private_semantic_state_exported": false
+  },
+  "envelope_sha256": "068bea44c32890e608f240dbdfedc4b30da0959ac0b3caad33c780651c7b51b3"
+}
