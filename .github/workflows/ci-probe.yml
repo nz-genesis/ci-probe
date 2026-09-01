@@ -79,6 +79,9 @@ jobs:
       - name: Execute Pass 44 public-safe multi-party authority/concurrent-revocation probe
         run: python3 probes/pass44_multiparty_authority_concurrent_revocation.py
 
+      - name: Execute Pass 45 public-safe dynamic-threshold/delegation reduction probe
+        run: python3 probes/pass45_dynamic_threshold_delegation.py
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
