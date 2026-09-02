@@ -1,0 +1,36 @@
+{
+  "schema_version": "2.0.0",
+  "challenge_id": "IR-V2",
+  "status": "FROZEN_NEUTRAL_PUBLIC_CHALLENGE",
+  "instructions": "Independently derive the smallest sufficient semantic basis for all cases. Do not assume any supplied ontology, primitive vocabulary, or category list.",
+  "cases": [
+    {"id":"C01","requirement":"A system moves from one condition to another; the resulting condition and the occurrence that led to it must both be reconstructable."},
+    {"id":"C02","requirement":"One component can technically perform an operation, but a separate rule determines whether performing it is permitted."},
+    {"id":"C03","requirement":"An operation has prerequisites, an attempt can occur, and the attempt may not establish that the intended external result occurred."},
+    {"id":"C04","requirement":"Two changes may occur concurrently and the representation must not invent an ordering that the available information does not justify."},
+    {"id":"C05","requirement":"A system receives a signal about something outside itself; the received signal must remain distinguishable from what actually happened outside the system."},
+    {"id":"C06","requirement":"A process terminates after an external interaction for which the final external result cannot be established; the representation must preserve that unresolved condition."},
+    {"id":"C07","requirement":"A governed modification occurs and later reconstruction must identify the relevant change without requiring an unbounded execution log."},
+    {"id":"C08","requirement":"An input may be received and retained while its source, validity, or permission to direct an operation remains unresolved."},
+    {"id":"C09","requirement":"An entity persists through a transformation even though its observable condition changes."},
+    {"id":"C10","requirement":"Two instances have the same present condition but their preceding circumstances differ; the representation must preserve the distinction when required by the task."},
+    {"id":"C11","requirement":"Whether information or a permission applies depends on time; older information must not silently acquire current validity."},
+    {"id":"C12","requirement":"Multiple operations can be combined without requiring a new irreducible semantic category solely because of the combination."}
+  ],
+  "adversarial_cases": [
+    {"id":"A01","requirement":"Equal present conditions with different preceding circumstances."},
+    {"id":"A02","requirement":"Equal received signals followed by different external results."},
+    {"id":"A03","requirement":"Concurrent independent changes with no justified total ordering."},
+    {"id":"A04","requirement":"Technical possibility differs from permitted performance."},
+    {"id":"A05","requirement":"A recorded signal can be wrong about an external event."},
+    {"id":"A06","requirement":"Process loss leaves the result of an external interaction unresolved."},
+    {"id":"A07","requirement":"Transformation changes observable condition while continuity remains relevant."},
+    {"id":"A08","requirement":"A received input is not automatically permitted to direct a change."}
+  ],
+  "submission_contract": {
+    "required_fields":["basis","case_mappings","deletion_analysis","counterexamples","uncertainty","provenance","candidate_visibility"],
+    "mapping_fields":["case_id","basis_ids","justification"],
+    "deletion_fields":["basis_id","cases_lost_if_removed","justification"],
+    "counterexample_fields":["domain","scenario","failure_if_ignored"]
+  }
+}
