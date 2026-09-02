@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Deterministic structural verifier for the BFV-1 blind submission contract.
+"""Deterministic structural verifier for BFV blind submissions.
 
-This verifier deliberately knows nothing about Genesis primitives or the target
+The verifier deliberately knows nothing about Genesis primitives or target
 factorization. It checks corpus binding, opaque factor identifiers, complete
 coverage, duplicate/conflicting rows, and deterministic canonicalization.
 Semantic adjudication is intentionally outside this public tool.
@@ -15,6 +15,7 @@ import re
 import sys
 from pathlib import Path
 
+SUPPORTED_PROTOCOLS = {"BFV-1", "BFV-2"}
 FACTOR_RE = re.compile(r"^F[0-9]{3}$")
 OBLIGATION_RE = re.compile(r"^O[0-9]{3}$")
 
@@ -43,8 +44,9 @@ def verify(corpus_path: Path, submission_path: Path) -> int:
     except (OSError, json.JSONDecodeError) as exc:
         return fail(f"invalid JSON/input: {exc}")
 
-    if not isinstance(corpus, dict) or corpus.get("protocol_version") != "BFV-1":
-        return fail("corpus protocol_version must be BFV-1")
+    if not isinstance(corpus, dict) or corpus.get("protocol_version") not in SUPPORTED_PROTOCOLS:
+        return fail("corpus protocol_version must be a supported BFV version")
+    protocol_version = corpus["protocol_version"]
     obligations = corpus.get("obligations")
     if not isinstance(obligations, list) or not obligations:
         return fail("corpus must contain a non-empty obligations list")
@@ -64,8 +66,10 @@ def verify(corpus_path: Path, submission_path: Path) -> int:
 
     if not isinstance(submission, dict):
         return fail("submission must be a JSON object")
-    if submission.get("protocol_version") != "BFV-1":
-        return fail("submission protocol_version must be BFV-1")
+    if submission.get("protocol_version") != protocol_version:
+        return fail("submission protocol_version does not match corpus")
+    if submission.get("protocol_version") not in SUPPORTED_PROTOCOLS:
+        return fail("submission protocol_version is not supported")
 
     expected_sha = sha256_file(corpus_path)
     if submission.get("corpus_sha256") != expected_sha:
@@ -84,7 +88,7 @@ def verify(corpus_path: Path, submission_path: Path) -> int:
             return fail("factor entries must contain only factor_id")
         fid = factor["factor_id"]
         if not isinstance(fid, str) or not FACTOR_RE.fullmatch(fid):
-            return fail(f"factor id is not opaque BFV-1 form: {fid!r}")
+            return fail(f"factor id is not opaque BFV form: {fid!r}")
         factor_ids.append(fid)
     if len(set(factor_ids)) != len(factor_ids):
         return fail("duplicate factor ids")
@@ -118,7 +122,7 @@ def verify(corpus_path: Path, submission_path: Path) -> int:
         return fail("missing coverage for: " + ", ".join(missing))
 
     canonical = {
-        "protocol_version": "BFV-1",
+        "protocol_version": protocol_version,
         "corpus_sha256": expected_sha,
         "factors": [{"factor_id": fid} for fid in sorted(factor_set)],
         "coverage": [
@@ -128,6 +132,7 @@ def verify(corpus_path: Path, submission_path: Path) -> int:
     }
     digest = hashlib.sha256(canonical_json(canonical)).hexdigest()
     print("PASS: structural blind-submission contract")
+    print(f"protocol_version={protocol_version}")
     print(f"corpus_sha256={expected_sha}")
     print(f"factor_count={len(factor_set)}")
     print(f"obligation_count={len(obligation_ids)}")
