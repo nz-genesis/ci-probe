@@ -32,7 +32,18 @@ jobs:
       - name: Python syntax
         run: python -m py_compile independent-replication/verify_submission.py tools/verify_commitment.py tools/test_commitment_verifier.py
       - name: Challenge and manifest JSON
-        run: python -c "import json; json.load(open('independent-replication/challenge-v1.json')); json.load(open('independent-replication/manifest-v1.json'))"
+        run: python -c "import json; json.load(open('independent-replication/challenge-v1.json')); json.load(open('independent-replication/challenge-v2.json')); json.load(open('independent-replication/manifest-v1.json'))"
+      - name: Verify frozen IR-V2 content SHA-256
+        run: |
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          expected = '03b25456a1ad0b40272daa1ca633910855433cfdce6ece8d0cf9e3352cd7ef1b'
+          actual = hashlib.sha256(Path('independent-replication/challenge-v2.json').read_bytes()).hexdigest()
+          if actual != expected:
+              raise SystemExit(f'IR-V2 content digest mismatch: {actual} != {expected}')
+          print('PASS IR-V2 content sha256', actual)
+          PY
       - name: Manifest binds exact frozen challenge
         run: |
           python - <<'PY'
