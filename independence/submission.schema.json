@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Blind Factorization Submission",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol_version", "corpus_sha256", "factors", "coverage"],
+  "properties": {
+    "protocol_version": {"const": "BFV-1"},
+    "corpus_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "factors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["factor_id"],
+        "properties": {
+          "factor_id": {"type": "string", "pattern": "^F[0-9]{3}$"}
+        }
+      }
+    },
+    "coverage": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["obligation_id", "factor_ids"],
+        "properties": {
+          "obligation_id": {"type": "string", "pattern": "^O[0-9]{3}$"},
+          "factor_ids": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string", "pattern": "^F[0-9]{3}$"}
+          }
+        }
+      }
+    }
+  }
+}
