@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/nz-genesis/ci-probe/blob/main/independent-replication/execution_attestation_v1.schema.json",
+  "title": "Genesis External Execution Attestation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["attestation_version", "participant_id", "participant_type", "challenge_id", "challenge_sha256", "prompt_contract_sha256", "model_family", "model_version_or_provider_declared_id", "runtime_name", "runtime_version", "solver_artifact_digest", "configuration_digest", "execution_started_at", "execution_finished_at", "raw_result_sha256", "commitment_sha256", "prior_genesis_exposure", "genesis_operator_relationship", "epistemic_status"],
+  "properties": {
+    "attestation_version": {"const": "1"},
+    "participant_id": {"type": "string", "minLength": 1, "maxLength": 256},
+    "participant_type": {"type": "string", "enum": ["external", "affiliated", "unknown"]},
+    "challenge_id": {"type": "string", "minLength": 1, "maxLength": 256},
+    "challenge_sha256": {"$ref": "#/$defs/sha256"},
+    "prompt_contract_sha256": {"$ref": "#/$defs/sha256"},
+    "model_family": {"type": "string", "minLength": 1, "maxLength": 256},
+    "model_version_or_provider_declared_id": {"type": "string", "minLength": 1, "maxLength": 512},
+    "runtime_name": {"type": "string", "minLength": 1, "maxLength": 256},
+    "runtime_version": {"type": "string", "minLength": 1, "maxLength": 256},
+    "solver_artifact_digest": {"$ref": "#/$defs/sha256"},
+    "configuration_digest": {"$ref": "#/$defs/sha256"},
+    "execution_started_at": {"type": "string", "format": "date-time"},
+    "execution_finished_at": {"type": "string", "format": "date-time"},
+    "raw_result_sha256": {"$ref": "#/$defs/sha256"},
+    "commitment_sha256": {"$ref": "#/$defs/sha256"},
+    "prior_genesis_exposure": {"type": "string", "enum": ["yes", "no", "unknown"]},
+    "genesis_operator_relationship": {"type": "string", "enum": ["external", "affiliated", "unknown"]},
+    "epistemic_status": {"type": "string", "enum": ["ATTESTED_EXECUTION", "RAW_BLIND_RUN", "UNKNOWN"]},
+    "independence_level": {"type": "string", "enum": ["L1", "L2", "L3", "L4"]},
+    "notes": {"type": "string", "maxLength": 4096}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
