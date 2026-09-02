@@ -25,16 +25,22 @@ jobs:
       - name: Run deterministic verifier regression
         working-directory: independence
         run: python test_verify_submission.py
-      - name: Verify schema and corpus are present
+      - name: Verify frozen corpora and schema
         run: |
           python - <<'PY'
+          import hashlib
           import json
           from pathlib import Path
           schema = json.loads(Path('independence/submission.schema.json').read_text())
-          corpus = json.loads(Path('independence/neutral_corpus_v1.json').read_text())
-          assert schema['properties']['protocol_version']['const'] == 'BFV-1'
-          assert corpus['protocol_version'] == 'BFV-1'
-          assert len(corpus['obligations']) >= 10
-          assert len({x['obligation_id'] for x in corpus['obligations']}) == len(corpus['obligations'])
-          print('PASS: frozen BFV-1 public contract')
+          assert set(schema['properties']['protocol_version']['enum']) == {'BFV-1', 'BFV-2'}
+          for version in ('v1', 'v2'):
+              corpus = json.loads(Path(f'independence/neutral_corpus_{version}.json').read_text())
+              expected = f'BFV-{version[-1]}'
+              assert corpus['protocol_version'] == expected
+              assert len(corpus['obligations']) >= 10
+              ids = [x['obligation_id'] for x in corpus['obligations']]
+              assert len(set(ids)) == len(ids)
+              assert all(x['text'].strip() for x in corpus['obligations'])
+              digest = hashlib.sha256(Path(f'independence/neutral_corpus_{version}.json').read_bytes()).hexdigest()
+              print(f'PASS: {expected} frozen corpus sha256={digest}')
           PY
