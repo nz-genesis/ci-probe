@@ -2,6 +2,15 @@
 
 This repository hosts a public clean-room challenge for researchers who want to independently reconstruct a minimal semantic basis from a neutral set of obligations.
 
+## Active challenge
+
+Use **IR-V2**: `challenge-v2.json`.
+
+Frozen challenge SHA-256:
+`b8d8aa6c5fdc0fefe36ac308ab32f141073b20df`
+
+IR-V1 remains in the repository as historical research infrastructure. IR-V2 is the active challenge because its contract removes the explicit target-category list that was present in V1.
+
 ## What is being tested
 
 The task is **not** to reproduce a supplied ontology. The participant receives a frozen challenge containing bounded obligations and adversarial cases, then derives their own semantic factorization.
@@ -37,7 +46,7 @@ Submit:
 
 ## Evaluation
 
-The structural verifier checks reproducibility and schema integrity. It intentionally does not contain a target ontology and does not decide semantic adequacy.
+The structural verifier checks reproducibility and schema integrity. It intentionally does not contain a target ontology, a target category list, or a required semantic vocabulary, and it does not decide semantic adequacy.
 
 After reveal, the reconstruction can be compared with other hypotheses. Agreement is not required for a valid result. Disagreement is first-class evidence and should be accompanied by an explicit explanation of the disputed obligation or distinction.
 
