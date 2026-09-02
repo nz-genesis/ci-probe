@@ -1,0 +1,20 @@
+name: Independent Replication Verifier
+on:
+  push:
+    paths:
+      - 'independent-replication/**'
+  workflow_dispatch:
+jobs:
+  structural-verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Python syntax
+        run: python -m py_compile independent-replication/verify_submission.py
+      - name: Challenge JSON
+        run: python -c "import json; json.load(open('independent-replication/challenge-v1.json'))"
+      - name: Synthetic contract test
+        run: python independent-replication/verify_submission.py independent-replication/selftest-submission.json
