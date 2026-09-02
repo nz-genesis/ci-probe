@@ -7,7 +7,9 @@ This repository hosts a public clean-room challenge for researchers who want to 
 Use **IR-V2**: `challenge-v2.json`.
 
 Frozen challenge SHA-256:
-`b8d8aa6c5fdc0fefe36ac308ab32f141073b20df`
+`03b25456a1ad0b40272daa1ca633910855433cfdce6ece8d0cf9e3352cd7ef1b`
+
+This is the SHA-256 of the exact challenge-v2.json bytes. The earlier 40-hex value was a Git blob SHA-1 and was incorrectly labelled as SHA-256; it has been corrected. Do not substitute a Git blob SHA-1 or commit SHA where the protocol requires the content SHA-256.
 
 IR-V1 remains in the repository as historical research infrastructure. IR-V2 is the active challenge because its contract removes the explicit target-category list that was present in V1.
 
