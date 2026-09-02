@@ -48,6 +48,14 @@ Counterexamples are checked as structured records, not as keywords. Each record 
 
 This prevents a submission from passing merely by listing required words without supplying an adversarial case. The verifier still does not judge whether the scenario is semantically correct; that remains independent research/adjudication.
 
+## Blind execution boundary
+
+`run_blind_solver.py` provides the execution boundary for a blind participant process. It passes the frozen challenge to a separately invoked solver process, captures the raw result, records challenge/result digests and redacted provenance, and refuses to publish a frozen bundle when the solver fails. Its regression suite covers failure secrecy and non-publication of solver invocation details.
+
+This process boundary is necessary but is **not sufficient for material external independence**. A solver running in a separate process can still share the same model lineage, operator, credentials, hidden context, or research incentives. Therefore a run through this harness is classified as `RAW_BLIND_RUN; NOT_EXTERNAL_INDEPENDENCE_BY_ITSELF` until the participant/runtime provenance establishes the stronger independence claim required by the applicable protocol.
+
+For a high-strength blind run, the participant must receive only the frozen challenge and minimal contract, must not receive private Genesis material or prior target hypotheses, and must freeze the raw output before any target comparison. The review actor must not receive Genesis interpretation before attacking the frozen result.
+
 ## Procedure
 
 1. Freeze the exact challenge revision you received and record its commit/revision plus the SHA-256 above.
