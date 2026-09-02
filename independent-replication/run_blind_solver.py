@@ -48,6 +48,11 @@ def commitment(raw: bytes, nonce: str) -> str:
     return sha256(raw + b"\n" + nonce.encode("utf-8"))
 
 
+def invocation_digest(command: list[str]) -> str:
+    # Bind provenance to the invocation without publishing potentially secret args.
+    return sha256(b"\0".join(part.encode("utf-8") for part in command))
+
+
 def prompt_bytes(challenge_bytes: bytes) -> bytes:
     return (
         ROLE_CONTRACT.encode("utf-8")
@@ -92,16 +97,17 @@ def main() -> int:
     raw_path = output_dir / "raw_result.bin"
     raw_path.write_bytes(proc.stdout)
 
-    stderr_path = output_dir / "solver_stderr.bin"
+    stderr_path = output_dir / "solver_stderr.private.bin"
     stderr_path.write_bytes(proc.stderr)
 
     nonce = secrets.token_urlsafe(32)
-    nonce_path = output_dir / "nonce.txt"
+    nonce_path = output_dir / "nonce.private.txt"
     nonce_path.write_text(nonce, encoding="utf-8")
-    try:
-        os.chmod(nonce_path, 0o600)
-    except OSError:
-        pass
+    for private_path in (nonce_path, stderr_path):
+        try:
+            os.chmod(private_path, 0o600)
+        except OSError:
+            pass
 
     commitment_record = {
         "protocol": PROTOCOL,
@@ -119,11 +125,16 @@ def main() -> int:
         "provenance_note": args.provenance_note,
         "challenge_path": str(args.challenge),
         "challenge_sha256": challenge_sha,
-        "command": command,
+        "solver_executable": Path(command[0]).name,
+        "solver_argument_count": max(len(command) - 1, 0),
+        "solver_invocation_sha256": invocation_digest(command),
+        "solver_command_arguments_published": False,
         "started_at_utc": started,
         "finished_at_utc": finished,
         "exit_code": proc.returncode,
         "raw_result_sha256": sha256(proc.stdout),
+        "stderr_sha256": sha256(proc.stderr),
+        "private_files": ["nonce.private.txt", "solver_stderr.private.bin"],
         "candidate_visibility": "NOT_ASSERTED_BY_RUNNER; MUST_BE DECLARED/ADJUDICATED SEPARATELY",
         "epistemic_status": "RAW_BLIND_RUN; NOT_EXTERNAL_INDEPENDENCE_BY_ITSELF",
     }
@@ -135,7 +146,8 @@ def main() -> int:
     print(f"challenge_sha256={challenge_sha}")
     print(f"raw_result_sha256={provenance['raw_result_sha256']}")
     print(f"submission_commitment={commitment_record['submission_sha256']}")
-    print("PUBLISH commitment.json before revealing raw_result.bin and nonce.txt")
+    print("PUBLISH commitment.json before revealing raw_result.bin and nonce.private.txt")
+    print("DO NOT PUBLISH files marked private before the reveal stage")
     return 0
 
 
