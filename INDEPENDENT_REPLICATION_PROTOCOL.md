@@ -11,9 +11,28 @@ This repository provides a public, clean-room channel for independent verificati
 3. Do not inspect or request Genesis private repositories, private mappings, unpublished expected results, or private adjudication.
 4. Independently derive the factorization, assumptions, counterexamples, and negative results required by the challenge.
 5. Produce the raw submission package, including method and execution provenance.
-6. Freeze the raw submission before reading Genesis commentary on the substantive result.
-7. Publish or deposit the frozen submission with its challenge hash.
-8. Only after freeze may Genesis perform adjudication.
+6. Before revealing the substantive result, create a random nonce and compute the commitment specified below.
+7. Publish the commitment with the exact frozen challenge hash. This is the public freeze point.
+8. Keep the raw submission and nonce private until the reveal stage; do not alter the committed bytes.
+9. After the commitment is public, reveal the exact raw submission bytes and nonce. The public verifier must reproduce the commitment exactly.
+10. Only after the reveal may Genesis perform substantive adjudication.
+
+## Commit-reveal rule
+
+The commitment is:
+
+`SHA256(raw_submission_bytes + UTF-8 newline byte + nonce_UTF8)`
+
+The commitment record must contain:
+
+- `protocol = genesis-independent-replication-v1`
+- `challenge_sha256`
+- `submission_sha256`
+- `hash_algorithm = SHA-256(raw_submission_bytes + newline + nonce_utf8)`
+
+Use `tools/verify_commitment.py` to verify a reveal. The verifier checks integrity and challenge binding only; it does not inspect or judge semantic content.
+
+The nonce must be generated independently and kept secret until reveal. A commitment without a later exact reveal is a commitment, not evidence of a substantive result.
 
 ## Required submission fields
 
@@ -36,7 +55,7 @@ The verifier may establish schema validity, integrity hashes, deterministic stru
 
 ## Contamination
 
-Do not alter a substantive result after seeing another participant's result or Genesis adjudication without recording the event. If expected semantics were disclosed before freeze, mark the submission contaminated and do not present it as materially independent evidence.
+Do not alter a substantive result after seeing another participant's result or Genesis adjudication without recording the event. If expected semantics were disclosed before commitment or reveal, mark the submission contaminated and do not present it as materially independent evidence.
 
 ## Independence is not implied
 
