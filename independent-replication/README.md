@@ -1,6 +1,15 @@
 # Independent Reconstruction Challenge
 
-This public directory provides a clean-room mechanism for independent reconstruction of a minimal semantic basis.
+This public directory provides a clean-room mechanism for materially independent reconstruction of a minimal semantic basis.
+
+## Active challenge
+
+Use **IR-V2**: `challenge-v2.json`.
+
+Frozen challenge SHA-256:
+`b8d8aa6c5fdc0fefe36ac308ab32f141073b20df`
+
+IR-V1 remains in the repository as historical research infrastructure. IR-V2 is the active challenge because its contract removes the explicit target-category list that was present in V1.
 
 ## Independence boundary
 
@@ -12,7 +21,7 @@ The challenge is not a test of agreement with a pre-existing answer. A materiall
 
 Every submission MUST include `challenge_sha256`, the SHA-256 of the exact frozen challenge file used for the reconstruction. The verifier recomputes that digest from the supplied challenge path and fails closed on mismatch.
 
-This binds the submission to a concrete challenge revision rather than silently accepting the current file as equivalent. Published challenge V1 is immutable for a replication run; semantic changes require a new challenge version rather than rewriting V1 after results are observed.
+This binds the submission to a concrete challenge revision rather than silently accepting the current file as equivalent. Published challenge V2 is immutable for a replication run; semantic changes require a new challenge version rather than rewriting V2 after results are observed.
 
 ## Challenge-incompleteness is valid evidence
 
@@ -27,13 +36,13 @@ Such findings are first-class research evidence. They must not be rejected merel
 
 ## Structured counterexamples
 
-The six anti-laundering topics (`authority`, `evidence`, `identity`, `provenance`, `execution`, `relation`) are checked as structured records, not as keywords. Each record must contain:
+Counterexamples are checked as structured records, not as keywords. Each record must contain:
 
-- `topic` — the attacked semantic distinction;
+- `domain` — the relevant domain or context;
 - `scenario` — an actual counterexample scenario;
 - `failure_if_ignored` — the concrete semantic loss if the distinction is ignored.
 
-This prevents a submission from passing merely by listing the required words without supplying an adversarial case. The verifier still does not judge whether the scenario is semantically correct; that remains independent research/adjudication.
+This prevents a submission from passing merely by listing required words without supplying an adversarial case. The verifier still does not judge whether the scenario is semantically correct; that remains independent research/adjudication.
 
 ## Procedure
 
@@ -52,7 +61,7 @@ It does not contain or test a target ontology. Passing it does not prove semanti
 
 ## Blindness warning
 
-Git history of this public repository may reveal prior generic experiments. For strong R3/R4 blindness, use a separately published challenge snapshot whose provenance predates the reconstruction and whose delivery path does not expose the target hypothesis.
+Git history of this public repository may reveal prior generic experiments. For strong R3/R4 blindness, use the frozen IR-V2 challenge snapshot without exposure to the target hypothesis and preserve the delivery/provenance path used by the independent participant.
 
 ## Security boundary
 
