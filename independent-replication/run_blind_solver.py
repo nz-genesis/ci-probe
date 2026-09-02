@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Run a blind solver through a separate local process and freeze the raw result.
+"""Run a blind solver through a separate process and freeze the raw result.
 
-This runner is provider-agnostic. It passes a minimal clean-room prompt plus the
-exact frozen challenge to an arbitrary solver command over stdin, captures stdout
+This provider-agnostic runner passes a minimal clean-room prompt plus the exact
+frozen challenge to an arbitrary solver command over stdin, captures stdout
 verbatim, and writes a local commitment bundle.
 
 The runner does not establish material independence by itself. Independence must
@@ -17,7 +17,6 @@ import json
 import os
 import secrets
 import subprocess
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -48,11 +47,6 @@ def commitment(raw: bytes, nonce: str) -> str:
     return sha256(raw + b"\n" + nonce.encode("utf-8"))
 
 
-def invocation_digest(command: list[str]) -> str:
-    # Bind provenance to the invocation without publishing potentially secret args.
-    return sha256(b"\0".join(part.encode("utf-8") for part in command))
-
-
 def prompt_bytes(challenge_bytes: bytes) -> bytes:
     return (
         ROLE_CONTRACT.encode("utf-8")
@@ -68,7 +62,11 @@ def main() -> int:
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--participant-id", required=True)
     parser.add_argument("--participant-type", required=True)
-    parser.add_argument("--provenance-note", default="")
+    parser.add_argument(
+        "--public-provenance-note",
+        default="",
+        help="optional PUBLIC metadata only; never place credentials, tokens, or secrets here",
+    )
     parser.add_argument("command", nargs=argparse.REMAINDER, help="solver command after --")
     args = parser.parse_args()
 
@@ -86,8 +84,11 @@ def main() -> int:
     proc = subprocess.run(command, input=prompt, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
     finished = datetime.now(timezone.utc).isoformat()
     if proc.returncode != 0:
-        sys.stderr.buffer.write(proc.stderr)
-        raise SystemExit(f"solver command failed with exit code {proc.returncode}")
+        # Raw stderr may contain provider diagnostics or secrets; never echo it.
+        raise SystemExit(
+            f"solver command failed with exit code {proc.returncode}; "
+            f"stderr_sha256={sha256(proc.stderr)}"
+        )
     if not proc.stdout:
         raise SystemExit("solver produced empty stdout")
 
@@ -122,12 +123,11 @@ def main() -> int:
     provenance = {
         "participant_id": args.participant_id,
         "participant_type": args.participant_type,
-        "provenance_note": args.provenance_note,
+        "public_provenance_note": args.public_provenance_note,
         "challenge_path": str(args.challenge),
         "challenge_sha256": challenge_sha,
         "solver_executable": Path(command[0]).name,
         "solver_argument_count": max(len(command) - 1, 0),
-        "solver_invocation_sha256": invocation_digest(command),
         "solver_command_arguments_published": False,
         "started_at_utc": started,
         "finished_at_utc": finished,
