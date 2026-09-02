@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: test "$GITHUB_SHA" = "$(git rev-parse HEAD)"
       - name: Python syntax
-        run: python -m py_compile independent-replication/verify_submission.py tools/verify_commitment.py tools/test_commitment_verifier.py
+        run: python -m py_compile independent-replication/verify_submission.py independent-replication/run_blind_solver.py independent-replication/test_run_blind_solver.py tools/verify_commitment.py tools/test_commitment_verifier.py
       - name: Challenge and manifest JSON
         run: python -c "import json; json.load(open('independent-replication/challenge-v1.json')); json.load(open('independent-replication/challenge-v2.json')); json.load(open('independent-replication/manifest-v1.json'))"
       - name: Verify frozen IR-V2 content SHA-256
@@ -78,3 +78,5 @@ jobs:
           echo 'PASS substitution rejection'
       - name: Commit-reveal verifier tests
         run: python tools/test_commitment_verifier.py
+      - name: Blind solver runner tests
+        run: python independent-replication/test_run_blind_solver.py
