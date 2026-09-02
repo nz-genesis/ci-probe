@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Small deterministic regression suite for the public BFV-1 verifier."""
+"""Deterministic regression suite for the public BFV verifier."""
 from __future__ import annotations
 
 import hashlib
@@ -14,9 +14,9 @@ def write_json(path: Path, value: object) -> None:
     path.write_text(json.dumps(value, separators=(",", ":")) + "\n", encoding="utf-8")
 
 
-def main() -> int:
+def run_case(protocol_version: str) -> None:
     corpus = {
-        "protocol_version": "BFV-1",
+        "protocol_version": protocol_version,
         "corpus_id": "selftest",
         "obligations": [
             {"obligation_id": "O001", "text": "A condition changes after an operation."},
@@ -31,7 +31,7 @@ def main() -> int:
         write_json(corpus_path, corpus)
         digest = hashlib.sha256(corpus_path.read_bytes()).hexdigest()
         valid = {
-            "protocol_version": "BFV-1",
+            "protocol_version": protocol_version,
             "corpus_sha256": digest,
             "factors": [{"factor_id": "F001"}, {"factor_id": "F002"}],
             "coverage": [
@@ -45,7 +45,12 @@ def main() -> int:
         write_json(invalid_path, invalid)
         assert verify(corpus_path, valid_path) == 0
         assert verify(corpus_path, invalid_path) == 1
-    print("PASS: BFV-1 verifier self-test")
+
+
+def main() -> int:
+    run_case("BFV-1")
+    run_case("BFV-2")
+    print("PASS: BFV-1/BFV-2 verifier self-test")
     return 0
 
 
