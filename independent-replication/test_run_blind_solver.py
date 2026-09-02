@@ -40,6 +40,7 @@ def main() -> None:
         )
 
         out = tmp / "bundle"
+        secret_arg = "SECRET_ARGUMENT_MUST_NOT_BE_PUBLISHED"
         result = subprocess.run(
             [
                 sys.executable,
@@ -52,10 +53,12 @@ def main() -> None:
                 "test-solver",
                 "--participant-type",
                 "separate-process-control",
+                "--public-provenance-note",
+                "public test metadata",
                 "--",
                 sys.executable,
                 str(solver),
-                "SECRET_ARGUMENT_MUST_NOT_BE_PUBLISHED",
+                secret_arg,
             ],
             capture_output=True,
             text=True,
@@ -70,7 +73,9 @@ def main() -> None:
         expect(provenance["raw_result_sha256"] == sha256(b"blind-result-v1\n"), "raw digest mismatch")
         expect(provenance["epistemic_status"] == "RAW_BLIND_RUN; NOT_EXTERNAL_INDEPENDENCE_BY_ITSELF", "status laundering")
         expect(provenance["solver_command_arguments_published"] is False, "command publication flag incorrect")
-        expect("SECRET_ARGUMENT_MUST_NOT_BE_PUBLISHED" not in provenance_text, "secret-like command argument leaked")
+        expect(secret_arg not in provenance_text, "secret-like command argument leaked")
+        expect("solver_invocation_sha256" not in provenance, "raw command digest retained")
+        expect(provenance["public_provenance_note"] == "public test metadata", "public provenance note lost")
         expect((out / "nonce.private.txt").exists(), "private nonce missing")
         expect((out / "solver_stderr.private.bin").exists(), "private stderr file missing")
 
@@ -113,7 +118,41 @@ def main() -> None:
         )
         expect(reused.returncode != 0, "runner silently overwrote an existing frozen bundle")
 
-    print("BLIND SOLVER RUNNER TESTS: 11/11 PASS")
+        failing_solver = tmp / "failing_solver.py"
+        failing_secret = "SECRET_FROM_SOLVER_STDERR"
+        failing_solver.write_text(
+            "import sys\n"
+            f"sys.stderr.write('{failing_secret}\\n')\n"
+            "raise SystemExit(23)\n",
+            encoding="utf-8",
+        )
+        failed_out = tmp / "failed-bundle"
+        failed = subprocess.run(
+            [
+                sys.executable,
+                str(RUNNER),
+                "--challenge",
+                str(challenge),
+                "--output-dir",
+                str(failed_out),
+                "--participant-id",
+                "failing-solver",
+                "--participant-type",
+                "separate-process-control",
+                "--",
+                sys.executable,
+                str(failing_solver),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        expect(failed.returncode != 0, "failing solver was accepted")
+        expect(failing_secret not in failed.stderr and failing_secret not in failed.stdout, "solver stderr secret leaked")
+        expect("stderr_sha256=" in failed.stderr, "failure stderr digest not reported")
+        expect(not failed_out.exists(), "failed run created a misleading frozen bundle")
+
+    print("BLIND SOLVER RUNNER TESTS: 17/17 PASS")
 
 
 if __name__ == "__main__":
