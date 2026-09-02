@@ -26,6 +26,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run adversarial validator tests
-        run: python -m pytest -q independent-replication/test_validate_attestation.py
+        run: python -m unittest -v independent-replication/test_validate_attestation.py
       - name: Validate schema is JSON
         run: python -m json.tool independent-replication/execution_attestation_v1.schema.json >/dev/null
