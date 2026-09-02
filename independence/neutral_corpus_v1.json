@@ -1,0 +1,18 @@
+{
+  "protocol_version": "BFV-1",
+  "corpus_id": "neutral-v1",
+  "obligations": [
+    {"obligation_id": "O001", "text": "A warehouse scanner reports that a pallet was moved from bay A to bay B."},
+    {"obligation_id": "O002", "text": "A later record states that the same pallet is now assigned to a different storage zone."},
+    {"obligation_id": "O003", "text": "A supervisor may authorize a worker to release a shipment, while the worker may lack authority to change the release policy."},
+    {"obligation_id": "O004", "text": "A sensor reading is collected, but another record is required before the reading is treated as reliable evidence."},
+    {"obligation_id": "O005", "text": "A safety rule prevents a machine from entering a specified operating condition."},
+    {"obligation_id": "O006", "text": "A tool is available to perform an operation even when no operation is currently being performed."},
+    {"obligation_id": "O007", "text": "A request can be accepted, executed, and later produce a changed condition in an external system."},
+    {"obligation_id": "O008", "text": "Two observers can report different accounts of the same situation before additional records reconcile the accounts."},
+    {"obligation_id": "O009", "text": "A previously issued permission can be withdrawn before a pending operation completes."},
+    {"obligation_id": "O010", "text": "A completed external operation may remain effective even after a local acknowledgement is lost."},
+    {"obligation_id": "O011", "text": "A plan may intentionally keep several alternatives open because available information does not justify choosing one."},
+    {"obligation_id": "O012", "text": "Changing the software used to perform an operation does not by itself imply that the resulting external condition is a different condition."}
+  ]
+}
