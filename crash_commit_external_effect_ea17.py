@@ -81,7 +81,7 @@ def run() -> None:
     assert durable_store[commit.commit_id].authority_version == 4
 
     print("EA17_CLEAN_ROOM_PASS")
-    print("assertions=9")
+    print("assertions=14")
     print("exactly_once_requires_external_sink_contract=true")
 
 
