@@ -113,7 +113,7 @@ def main() -> None:
         )
         expect(reused.returncode != 0, "runner silently overwrote an existing frozen bundle")
 
-    print("BLIND SOLVER RUNNER TESTS: 9/9 PASS")
+    print("BLIND SOLVER RUNNER TESTS: 11/11 PASS")
 
 
 if __name__ == "__main__":
