@@ -1,11 +1,13 @@
+import hashlib
 import json
 import subprocess
 import sys
+import tempfile
+import unittest
 from pathlib import Path
 
 ROOT=Path(__file__).parent
 VALIDATOR=ROOT/"validate_attestation.py"
-CHALLENGE=ROOT/"challenge-v2.json"
 
 def base():
     return {
@@ -20,46 +22,56 @@ def base():
     }
 
 def run(obj, challenge=None):
-    import tempfile
     with tempfile.TemporaryDirectory() as d:
-        p=Path(d)/"a.json"; p.write_text(json.dumps(obj))
+        p=Path(d)/"a.json"; p.write_text(json.dumps(obj), encoding="utf-8")
         cmd=[sys.executable,str(VALIDATOR),str(p)]
         if challenge: cmd += ["--challenge",str(challenge)]
         return subprocess.run(cmd,capture_output=True,text=True)
 
-def test_valid_structure():
-    r=run(base())
-    assert r.returncode==0, r.stderr
+class AttestationValidatorTests(unittest.TestCase):
+    def test_valid_structure(self):
+        r=run(base()); self.assertEqual(r.returncode,0,r.stderr)
 
-def test_missing_field_fails_closed():
-    a=base(); del a["raw_result_sha256"]
-    assert run(a).returncode != 0
+    def test_missing_field_fails_closed(self):
+        a=base(); del a["raw_result_sha256"]
+        self.assertNotEqual(run(a).returncode,0)
 
-def test_malformed_hash_fails():
-    a=base(); a["raw_result_sha256"]="not-a-hash"
-    assert run(a).returncode != 0
+    def test_malformed_hash_fails(self):
+        a=base(); a["raw_result_sha256"]="not-a-hash"
+        self.assertNotEqual(run(a).returncode,0)
 
-def test_unknown_field_fails():
-    a=base(); a["secret_dump"]="should-not-be-accepted"
-    assert run(a).returncode != 0
+    def test_unknown_field_fails(self):
+        a=base(); a["secret_dump"]="should-not-be-accepted"
+        self.assertNotEqual(run(a).returncode,0)
 
-def test_l4_requires_external_participant():
-    a=base(); a["independence_level"]="L4"; a["participant_type"]="affiliated"
-    assert run(a).returncode != 0
+    def test_l4_requires_external_participant(self):
+        a=base(); a["independence_level"]="L4"; a["participant_type"]="affiliated"
+        self.assertNotEqual(run(a).returncode,0)
 
-def test_l4_requires_no_prior_exposure():
-    a=base(); a["independence_level"]="L4"; a["prior_genesis_exposure"]="unknown"
-    assert run(a).returncode != 0
+    def test_l4_requires_no_prior_exposure(self):
+        a=base(); a["independence_level"]="L4"; a["prior_genesis_exposure"]="unknown"
+        self.assertNotEqual(run(a).returncode,0)
 
-def test_l4_requires_external_relationship():
-    a=base(); a["independence_level"]="L4"; a["genesis_operator_relationship"]="unknown"
-    assert run(a).returncode != 0
+    def test_l4_requires_external_relationship(self):
+        a=base(); a["independence_level"]="L4"; a["genesis_operator_relationship"]="unknown"
+        self.assertNotEqual(run(a).returncode,0)
 
-def test_challenge_digest_is_checked_when_file_supplied(tmp_path):
-    challenge=tmp_path/"challenge.bin"; challenge.write_bytes(b"frozen")
-    a=base(); import hashlib; a["challenge_sha256"]=hashlib.sha256(b"wrong").hexdigest()
-    assert run(a,challenge).returncode != 0
+    def test_challenge_digest_is_checked_when_file_supplied(self):
+        with tempfile.TemporaryDirectory() as d:
+            challenge=Path(d)/"challenge.bin"; challenge.write_bytes(b"frozen")
+            a=base(); a["challenge_sha256"]=hashlib.sha256(b"wrong").hexdigest()
+            self.assertNotEqual(run(a,challenge).returncode,0)
 
-def test_unknown_is_not_upgraded_to_l4():
-    a=base(); a["independence_level"]="L3"; a["participant_type"]="unknown"; a["prior_genesis_exposure"]="unknown"; a["genesis_operator_relationship"]="unknown"
-    assert run(a).returncode==0
+    def test_missing_challenge_file_fails_closed(self):
+        with tempfile.TemporaryDirectory() as d:
+            a=base(); self.assertNotEqual(run(a,Path(d)/"missing.bin").returncode,0)
+
+    def test_invalid_datetime_fails(self):
+        a=base(); a["execution_started_at"]="tomorrow"
+        self.assertNotEqual(run(a).returncode,0)
+
+    def test_unknown_is_not_upgraded_to_l4(self):
+        a=base(); a["independence_level"]="L3"; a["participant_type"]="unknown"; a["prior_genesis_exposure"]="unknown"; a["genesis_operator_relationship"]="unknown"
+        self.assertEqual(run(a).returncode,0)
+
+if __name__ == "__main__": unittest.main(verbosity=2)
