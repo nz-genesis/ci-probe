@@ -1,0 +1,25 @@
+name: Crash Commit External Effect EA17
+
+on:
+  push:
+    paths:
+      - 'crash_commit_external_effect_ea17.py'
+      - '.github/workflows/crash-commit-external-effect-ea17.yml'
+  pull_request:
+    paths:
+      - 'crash_commit_external_effect_ea17.py'
+      - '.github/workflows/crash-commit-external-effect-ea17.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  ea17:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run clean-room probe
+        run: python crash_commit_external_effect_ea17.py
