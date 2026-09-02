@@ -1,0 +1,40 @@
+name: Blind Factorization Structural Verification
+
+on:
+  push:
+    paths:
+      - 'independence/**'
+      - '.github/workflows/blind-factorization.yml'
+  pull_request:
+    paths:
+      - 'independence/**'
+      - '.github/workflows/blind-factorization.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  structural-verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Python syntax check
+        run: python -m py_compile independence/verify_submission.py independence/test_verify_submission.py
+      - name: Run deterministic verifier regression
+        working-directory: independence
+        run: python test_verify_submission.py
+      - name: Verify schema and corpus are present
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          schema = json.loads(Path('independence/submission.schema.json').read_text())
+          corpus = json.loads(Path('independence/neutral_corpus_v1.json').read_text())
+          assert schema['properties']['protocol_version']['const'] == 'BFV-1'
+          assert corpus['protocol_version'] == 'BFV-1'
+          assert len(corpus['obligations']) >= 10
+          assert len({x['obligation_id'] for x in corpus['obligations']}) == len(corpus['obligations'])
+          print('PASS: frozen BFV-1 public contract')
+          PY
