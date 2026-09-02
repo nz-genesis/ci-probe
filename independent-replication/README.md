@@ -8,15 +8,21 @@ This package is intentionally independent of the private research repository. It
 
 The challenge is not a test of agreement with a pre-existing answer. A materially different basis is a valid research outcome.
 
+## Frozen challenge contract
+
+Every submission MUST include `challenge_sha256`, the SHA-256 of the exact frozen challenge file used for the reconstruction. The verifier recomputes that digest from the supplied challenge path and fails closed on mismatch.
+
+This binds the submission to a concrete challenge revision rather than silently accepting the current file as equivalent.
+
 ## Procedure
 
 1. Freeze the challenge revision you received.
 2. Work from the challenge only; do not inspect private research or a current candidate basis before commitment.
-3. Produce a raw submission containing your basis, case mappings, deletion analysis, counterexamples, uncertainty, and provenance.
-4. Compute SHA-256 of the exact raw submission and publish the commitment with an observable timestamp.
+3. Produce a raw submission containing your basis, case mappings, deletion analysis, counterexamples, uncertainty, provenance, candidate visibility, and `challenge_sha256`.
+4. Compute SHA-256 of the exact raw result and publish the commitment with an observable timestamp.
 5. After the agreed comparison window, reveal the raw submission.
-6. Run `python independent-replication/verify_submission.py submission.json`.
-7. Publish verifier output, challenge commit, submission hash, environment, candidate-visibility status, and deviations.
+6. Run `python independent-replication/verify_submission.py submission.json` against the exact frozen challenge.
+7. Publish verifier output, challenge commit, challenge SHA-256, submission hash, environment, candidate-visibility status, and deviations.
 8. Only after reveal compare the reconstruction with any target hypothesis.
 
 ## What the verifier does not do
