@@ -18,3 +18,20 @@ jobs:
         run: python -c "import json; json.load(open('independent-replication/challenge-v1.json'))"
       - name: Synthetic contract test
         run: python independent-replication/verify_submission.py independent-replication/selftest-submission.json
+      - name: Frozen challenge substitution must fail closed
+        shell: bash
+        run: |
+          cp independent-replication/challenge-v1.json /tmp/substituted-challenge.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('/tmp/substituted-challenge.json')
+          data = json.loads(p.read_text())
+          data['instructions'] = data['instructions'] + ' substituted'
+          p.write_text(json.dumps(data, separators=(',', ':')))
+          PY
+          if python independent-replication/verify_submission.py independent-replication/selftest-submission.json --challenge /tmp/substituted-challenge.json; then
+            echo 'Verifier accepted a substituted challenge; fail-closed contract is broken.'
+            exit 1
+          fi
+          echo 'PASS substitution rejection'
