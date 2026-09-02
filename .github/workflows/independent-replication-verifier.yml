@@ -1,10 +1,23 @@
 name: Independent Replication Verifier
+
 on:
   push:
     paths:
       - 'independent-replication/**'
+      - 'tools/verify_commitment.py'
+      - 'tools/test_commitment_verifier.py'
+      - '.github/workflows/independent-replication-verifier.yml'
+  pull_request:
+    paths:
+      - 'independent-replication/**'
+      - 'tools/verify_commitment.py'
+      - 'tools/test_commitment_verifier.py'
       - '.github/workflows/independent-replication-verifier.yml'
   workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
   structural-verifier:
     runs-on: ubuntu-latest
@@ -13,8 +26,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Verify checkout identity
+        shell: bash
+        run: test "$GITHUB_SHA" = "$(git rev-parse HEAD)"
       - name: Python syntax
-        run: python -m py_compile independent-replication/verify_submission.py
+        run: python -m py_compile independent-replication/verify_submission.py tools/verify_commitment.py tools/test_commitment_verifier.py
       - name: Challenge and manifest JSON
         run: python -c "import json; json.load(open('independent-replication/challenge-v1.json')); json.load(open('independent-replication/manifest-v1.json'))"
       - name: Manifest binds exact frozen challenge
@@ -49,3 +65,5 @@ jobs:
             exit 1
           fi
           echo 'PASS substitution rejection'
+      - name: Commit-reveal verifier tests
+        run: python tools/test_commitment_verifier.py
