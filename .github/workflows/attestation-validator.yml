@@ -1,0 +1,31 @@
+name: Attestation Validator
+
+on:
+  push:
+    paths:
+      - 'independent-replication/execution_attestation_v1.schema.json'
+      - 'independent-replication/validate_attestation.py'
+      - 'independent-replication/test_validate_attestation.py'
+      - '.github/workflows/attestation-validator.yml'
+  pull_request:
+    paths:
+      - 'independent-replication/execution_attestation_v1.schema.json'
+      - 'independent-replication/validate_attestation.py'
+      - 'independent-replication/test_validate_attestation.py'
+      - '.github/workflows/attestation-validator.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run adversarial validator tests
+        run: python -m pytest -q independent-replication/test_validate_attestation.py
+      - name: Validate schema is JSON
+        run: python -m json.tool independent-replication/execution_attestation_v1.schema.json >/dev/null
