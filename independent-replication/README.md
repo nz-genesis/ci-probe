@@ -7,7 +7,9 @@ This public directory provides a clean-room mechanism for materially independent
 Use **IR-V2**: `challenge-v2.json`.
 
 Frozen challenge SHA-256:
-`b8d8aa6c5fdc0fefe36ac308ab32f141073b20df`
+`03b25456a1ad0b40272daa1ca633910855433cfdce6ece8d0cf9e3352cd7ef1b`
+
+The value above is the SHA-256 of the exact file bytes. The previous 40-hex value was a Git blob SHA-1 and was incorrectly labelled as SHA-256; that documentation error is corrected here. The two hashes must never be conflated.
 
 IR-V1 remains in the repository as historical research infrastructure. IR-V2 is the active challenge because its contract removes the explicit target-category list that was present in V1.
 
@@ -20,6 +22,8 @@ The challenge is not a test of agreement with a pre-existing answer. A materiall
 ## Frozen challenge contract
 
 Every submission MUST include `challenge_sha256`, the SHA-256 of the exact frozen challenge file used for the reconstruction. The verifier recomputes that digest from the supplied challenge path and fails closed on mismatch.
+
+A replication run MUST record both the exact challenge commit/revision and the SHA-256 of the challenge bytes. A Git blob SHA-1, commit SHA, or any other repository identifier is not a substitute for the declared content SHA-256.
 
 This binds the submission to a concrete challenge revision rather than silently accepting the current file as equivalent. Published challenge V2 is immutable for a replication run; semantic changes require a new challenge version rather than rewriting V2 after results are observed.
 
@@ -46,13 +50,13 @@ This prevents a submission from passing merely by listing required words without
 
 ## Procedure
 
-1. Freeze the challenge revision you received.
+1. Freeze the exact challenge revision you received and record its commit/revision plus the SHA-256 above.
 2. Work from the challenge only; do not inspect private research or a current candidate basis before commitment.
 3. Produce a raw submission containing your basis, case mappings, deletion analysis, structured counterexamples, uncertainty, provenance, candidate visibility, and `challenge_sha256`. Preserve any out-of-challenge obligations or challenge criticisms in the raw result as additional fields or an accompanying report.
-4. Compute SHA-256 of the exact raw result and publish the commitment with an observable timestamp.
-5. After the agreed comparison window, reveal the raw submission.
-6. Run `python independent-replication/verify_submission.py submission.json` against the exact frozen challenge.
-7. Publish verifier output, challenge commit, challenge SHA-256, submission hash, environment, candidate-visibility status, and deviations.
+4. Compute the commitment over the exact raw result bytes using the declared commit-reveal protocol and publish the commitment with an observable timestamp.
+5. After the agreed comparison window, reveal the raw submission and nonce.
+6. Run the structural verifier against the exact frozen challenge.
+7. Verify the commitment against the exact raw bytes and nonce; publish verifier output, challenge revision, challenge SHA-256, submission commitment, environment, candidate-visibility status, and deviations.
 8. Only after reveal compare the reconstruction with any target hypothesis. Adjudication must consider out-of-challenge findings before evaluating agreement.
 
 ## What the verifier does not do
