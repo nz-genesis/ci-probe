@@ -1,0 +1,19 @@
+{
+  "protocol_version": "BFV-2",
+  "corpus_id": "neutral-v2",
+  "provenance": "public operational scenarios; semantic target mapping withheld from public corpus",
+  "obligations": [
+    {"obligation_id": "O001", "text": "At 09:10 terminal T-17 records pallet P42 at bay A. At 09:18 terminal T-17 records pallet P42 at bay B."},
+    {"obligation_id": "O002", "text": "At 11:02 zone ledger Z-4 lists pallet P42 under row R7. At 11:27 the ledger lists pallet P42 under row R9."},
+    {"obligation_id": "O003", "text": "Supervisor S1 signs form F8 for worker W3. Form F8 permits shipment Q9 to proceed. Policy P4 remains unchanged in the archive."},
+    {"obligation_id": "O004", "text": "Sensor S9 emits value 73 at 14:03. Record R12 contains a second entry at 14:05 and is later used by the operator when reviewing the event."},
+    {"obligation_id": "O005", "text": "Controller C2 rejects command X7 whenever condition K3 is present. The rejection occurs even when the command is otherwise well-formed."},
+    {"obligation_id": "O006", "text": "Package M6 has adapter A2 installed and available at 08:40. No operation involving A2 is recorded during that interval."},
+    {"obligation_id": "O007", "text": "Ticket T31 is accepted at 16:00. An operation starts at 16:04. At 16:12 system S5 shows a new value in field F2."},
+    {"obligation_id": "O008", "text": "Observer D1 records room state R at 10:00. Observer D2 records a different description at 10:01. A later log entry contains information used to reconcile the two records."},
+    {"obligation_id": "O009", "text": "Entry E4 appears in the access table at 12:00. At 12:06 a new table version no longer contains E4. An operation associated with E4 had not yet finished at 12:06."},
+    {"obligation_id": "O010", "text": "Remote system S8 changes field F9 at 17:22. The local client loses its acknowledgement channel at 17:23. A later read from S8 still returns the changed value."},
+    {"obligation_id": "O011", "text": "At 15:00 the planner records alternatives A, B, and C. At 15:05 the planner still records all three. No later record selects one of them."},
+    {"obligation_id": "O012", "text": "Operation Y5 is performed with software build 41. A later instance of Y5 uses build 44. The external record for the affected item contains the same resulting value."}
+  ]
+}
