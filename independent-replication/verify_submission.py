@@ -24,6 +24,10 @@ def fail(msg):
     return 1
 
 
+def nonempty_text(value):
+    return isinstance(value, str) and bool(value.strip())
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("submission")
@@ -56,31 +60,62 @@ def main():
     basis = submission["basis"]
     if not isinstance(basis, list) or not basis:
         return fail("basis must be non-empty list")
-    ids = [item.get("id") for item in basis if isinstance(item, dict)]
-    if len(ids) != len(basis) or len(set(ids)) != len(ids) or any(not item for item in ids):
-        return fail("basis ids must be unique")
+    if any(not isinstance(item, dict) for item in basis):
+        return fail("basis entries must be objects")
+    ids = [item.get("id") for item in basis]
+    if any(not nonempty_text(item_id) for item_id in ids) or len(set(ids)) != len(ids):
+        return fail("basis ids must be unique non-empty strings")
+    if any(not nonempty_text(item.get("description")) for item in basis):
+        return fail("basis descriptions must be non-empty strings")
 
     cases = {item["id"] for item in challenge["cases"]}
+    mappings = submission["case_mappings"]
+    if not isinstance(mappings, list):
+        return fail("case_mappings must be a list")
     mapped = set()
-    for mapping in submission["case_mappings"]:
-        if not all(key in mapping for key in ("case_id", "basis_ids", "justification")):
+    for mapping in mappings:
+        if not isinstance(mapping, dict) or not all(
+            key in mapping for key in ("case_id", "basis_ids", "justification")
+        ):
             return fail("invalid case mapping")
-        if mapping["case_id"] not in cases:
+        case_id = mapping["case_id"]
+        basis_ids = mapping["basis_ids"]
+        if case_id not in cases:
             return fail("unknown case id")
-        if not mapping["basis_ids"] or not set(mapping["basis_ids"]).issubset(ids):
+        if case_id in mapped:
+            return fail("duplicate case mapping")
+        if not isinstance(basis_ids, list) or not basis_ids:
+            return fail("case mapping basis_ids must be non-empty list")
+        if not set(basis_ids).issubset(ids):
             return fail("mapping references unknown basis")
-        if not str(mapping["justification"]).strip():
+        if not nonempty_text(mapping["justification"]):
             return fail("empty justification")
-        mapped.add(mapping["case_id"])
+        mapped.add(case_id)
     if mapped != cases:
         return fail("not all cases mapped")
 
     deletions = submission["deletion_analysis"]
-    deletion_ids = {item.get("basis_id") for item in deletions if isinstance(item, dict)}
+    if not isinstance(deletions, list):
+        return fail("deletion_analysis must be a list")
+    deletion_ids = set()
+    for item in deletions:
+        if not isinstance(item, dict) or not all(
+            key in item for key in ("basis_id", "cases_lost_if_removed", "justification")
+        ):
+            return fail("invalid deletion analysis")
+        basis_id = item["basis_id"]
+        lost_cases = item["cases_lost_if_removed"]
+        if basis_id not in ids:
+            return fail("deletion analysis references unknown basis")
+        if basis_id in deletion_ids:
+            return fail("duplicate deletion analysis")
+        if not isinstance(lost_cases, list) or any(case_id not in cases for case_id in lost_cases):
+            return fail("cases_lost_if_removed must be a list of known case ids")
+        if not nonempty_text(item["justification"]):
+            return fail("empty deletion justification")
+        deletion_ids.add(basis_id)
     if deletion_ids != set(ids):
-        return fail("deletion analysis must cover every basis item")
-    if any(not str(item.get("justification", "")).strip() for item in deletions):
-        return fail("empty deletion justification")
+        return fail("deletion analysis must cover every basis item exactly once")
 
     counterexamples = submission["counterexamples"]
     if not isinstance(counterexamples, list):
@@ -94,13 +129,13 @@ def main():
         topic = str(item["topic"]).strip().lower()
         if topic in TOPICS:
             seen_topics.add(topic)
-        if not str(item["scenario"]).strip() or not str(item["failure_if_ignored"]).strip():
+        if not nonempty_text(item["scenario"]) or not nonempty_text(item["failure_if_ignored"]):
             return fail("counterexample scenario/failure cannot be empty")
     missing_topics = set(TOPICS) - seen_topics
     if missing_topics:
         return fail("counterexample coverage missing: " + ", ".join(sorted(missing_topics)))
 
-    if not str(submission["uncertainty"]).strip() or not str(submission["provenance"]).strip():
+    if not nonempty_text(submission["uncertainty"]) or not nonempty_text(submission["provenance"]):
         return fail("uncertainty/provenance required")
     if not isinstance(submission["candidate_visibility"], (str, bool)):
         return fail("candidate_visibility must be explicit")
