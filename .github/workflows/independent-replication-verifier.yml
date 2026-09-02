@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - 'independent-replication/**'
+      - '.github/workflows/independent-replication-verifier.yml'
   workflow_dispatch:
 jobs:
   structural-verifier:
