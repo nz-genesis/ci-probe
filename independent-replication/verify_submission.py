@@ -82,10 +82,23 @@ def main():
     if any(not str(item.get("justification", "")).strip() for item in deletions):
         return fail("empty deletion justification")
 
-    text = " ".join(map(str, submission["counterexamples"])).lower()
-    for topic in TOPICS:
-        if topic not in text:
-            return fail("counterexample coverage missing: " + topic)
+    counterexamples = submission["counterexamples"]
+    if not isinstance(counterexamples, list):
+        return fail("counterexamples must be a list")
+    seen_topics = set()
+    for item in counterexamples:
+        if not isinstance(item, dict):
+            return fail("counterexamples must use structured records")
+        if not all(key in item for key in ("topic", "scenario", "failure_if_ignored")):
+            return fail("counterexample requires topic, scenario, failure_if_ignored")
+        topic = str(item["topic"]).strip().lower()
+        if topic in TOPICS:
+            seen_topics.add(topic)
+        if not str(item["scenario"]).strip() or not str(item["failure_if_ignored"]).strip():
+            return fail("counterexample scenario/failure cannot be empty")
+    missing_topics = set(TOPICS) - seen_topics
+    if missing_topics:
+        return fail("counterexample coverage missing: " + ", ".join(sorted(missing_topics)))
 
     if not str(submission["uncertainty"]).strip() or not str(submission["provenance"]).strip():
         return fail("uncertainty/provenance required")
@@ -96,7 +109,7 @@ def main():
     print("PASS frozen_challenge_sha256=" + challenge_sha)
     print(f"PASS case_coverage={len(cases)}/{len(cases)}")
     print(f"PASS deletion_coverage={len(ids)}/{len(ids)}")
-    print("PASS anti_laundering_topics")
+    print("PASS structured_counterexamples")
     print("PASS uncertainty_provenance")
     print("PASS candidate_visibility")
     print("NOTE semantic adequacy and agreement with any target hypothesis are not judged")
