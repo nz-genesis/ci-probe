@@ -6,10 +6,9 @@ This public directory provides a clean-room mechanism for materially independent
 
 Use **IR-V2**: `challenge-v2.json`.
 
-Frozen challenge SHA-256:
-`03b25456a1ad0b40272daa1ca633910855433cfdce6ece8d0cf9e3352cd7ef1b`
+The exact challenge bytes are the sole authority for `challenge_sha256`. The verifier computes SHA-256 directly from the supplied frozen challenge file and rejects a submission whose declared digest does not match. **Do not copy a digest from Git history, a Git blob SHA, or stale documentation.**
 
-The value above is the SHA-256 of the exact file bytes. The previous 40-hex value was a Git blob SHA-1 and was incorrectly labelled as SHA-256; that documentation error is corrected here. The two hashes must never be conflated.
+A previous version of this README incorrectly published a value as the SHA-256 of IR-V2. That value was not independently verified against the current challenge bytes and is removed here. The Git blob identifier shown by repository tooling is SHA-1 and must never be labelled SHA-256.
 
 IR-V1 remains in the repository as historical research infrastructure. IR-V2 is the active challenge because its contract removes the explicit target-category list that was present in V1.
 
@@ -23,7 +22,7 @@ The challenge is not a test of agreement with a pre-existing answer. A materiall
 
 Every submission MUST include `challenge_sha256`, the SHA-256 of the exact frozen challenge file used for the reconstruction. The verifier recomputes that digest from the supplied challenge path and fails closed on mismatch.
 
-A replication run MUST record both the exact challenge commit/revision and the SHA-256 of the challenge bytes. A Git blob SHA-1, commit SHA, or any other repository identifier is not a substitute for the declared content SHA-256.
+A replication run MUST record both the exact challenge commit/revision and the SHA-256 computed from the challenge bytes. A Git blob SHA-1, commit SHA, or any other repository identifier is not a substitute for the declared content SHA-256.
 
 This binds the submission to a concrete challenge revision rather than silently accepting the current file as equivalent. Published challenge V2 is immutable for a replication run; semantic changes require a new challenge version rather than rewriting V2 after results are observed.
 
@@ -58,14 +57,15 @@ For a high-strength blind run, the participant must receive only the frozen chal
 
 ## Procedure
 
-1. Freeze the exact challenge revision you received and record its commit/revision plus the SHA-256 above.
-2. Work from the challenge only; do not inspect private research or a current candidate basis before commitment.
-3. Produce a raw submission containing your basis, case mappings, deletion analysis, structured counterexamples, uncertainty, provenance, candidate visibility, and `challenge_sha256`. Preserve any out-of-challenge obligations or challenge criticisms in the raw result as additional fields or an accompanying report.
-4. Compute the commitment over the exact raw result bytes using the declared commit-reveal protocol and publish the commitment with an observable timestamp.
-5. After the agreed comparison window, reveal the raw submission and nonce.
-6. Run the structural verifier against the exact frozen challenge.
-7. Verify the commitment against the exact raw bytes and nonce; publish verifier output, challenge revision, challenge SHA-256, submission commitment, environment, candidate-visibility status, and deviations.
-8. Only after reveal compare the reconstruction with any target hypothesis. Adjudication must consider out-of-challenge findings before evaluating agreement.
+1. Freeze the exact challenge revision you received and record its commit/revision.
+2. Compute and record SHA-256 from those exact challenge bytes; do not substitute a Git blob SHA-1.
+3. Work from the challenge only; do not inspect private research or a current candidate basis before commitment.
+4. Produce a raw submission containing your basis, case mappings, deletion analysis, structured counterexamples, uncertainty, provenance, candidate visibility, and `challenge_sha256`. Preserve any out-of-challenge obligations or challenge criticisms in the raw result as additional fields or an accompanying report.
+5. Compute the commitment over the exact raw result bytes using the declared commit-reveal protocol and publish the commitment with an observable timestamp.
+6. After the agreed comparison window, reveal the raw submission and nonce.
+7. Run the structural verifier against the exact frozen challenge.
+8. Verify the commitment against the exact raw bytes and nonce; publish verifier output, challenge revision, challenge SHA-256, submission commitment, environment, candidate-visibility status, and deviations.
+9. Only after reveal compare the reconstruction with any target hypothesis. Adjudication must consider out-of-challenge findings before evaluating agreement.
 
 ## What the verifier does not do
 
