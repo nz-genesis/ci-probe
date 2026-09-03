@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -17,3 +18,5 @@ jobs:
         uses: actions/checkout@v4
       - name: Run reduction probe
         run: python3 probes/relational-substrate-reduction/test_relational_substrate.py
+      - name: Run adversarial v2 probe
+        run: python3 probes/relational-substrate-reduction/test_adversarial_v2.py
