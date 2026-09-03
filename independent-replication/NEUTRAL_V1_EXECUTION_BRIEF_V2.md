@@ -41,13 +41,13 @@ If any expected input is missing or its bytes differ from the frozen revision yo
 
 Do not inspect or use:
 
-- private Genesis repositories or documents;
-- Genesis candidate primitive lists;
-- prior Genesis primitive-reduction conclusions;
-- BIR/IR/BFV participant results;
-- other participants' answers;
+- private material belonging to the corpus owner;
+- any candidate ontology or primitive list from the corpus owner;
+- prior participant results;
+- prior interpretations of this challenge;
 - hidden evaluator labels;
-- target-vocabulary lists supplied after execution begins.
+- target-vocabulary lists supplied after execution begins;
+- any unpublished decision criteria intended to favor a particular answer.
 
 If you already know material information that could bias the reconstruction, declare the exposure before analysis. Do not attempt to compensate by guessing.
 
@@ -71,7 +71,7 @@ M. explicit counterexamples against your own basis;
 N. omitted-domain / corpus-limit analysis;
 O. final bounded verdict and unresolved questions.
 
-Do not compare your result with any other participant or with Genesis before freezing this raw report.
+Do not compare your result with any other participant, private material, or target ontology before freezing this raw report.
 
 ## 5. Freeze and provenance
 
@@ -92,7 +92,7 @@ If repository write access is available, publish the exact frozen artifact in a 
 
 ## 6. Semantic comparison timing
 
-Do not perform comparative adjudication against Genesis, previous participants, or any target basis before the raw report is frozen and its digest recorded.
+Do not perform comparative adjudication against prior participants or any target basis before the raw report is frozen and its digest recorded.
 
 After freeze, comparison may be performed only as a separate clearly labelled adjudication artifact. The raw report must remain unchanged.
 
