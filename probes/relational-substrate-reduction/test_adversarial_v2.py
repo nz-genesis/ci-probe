@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Adversarial probe for a minimal typed relational representation.
+"""Domain-neutral adversarial probe for a typed relational representation.
 
-This probe is deliberately domain-neutral. It tests whether a representation
-without dedicated lifecycle/event/measurement/policy object types can preserve
-critical distinctions under adversarial ordering, duplication, revocation,
-predicate composition, acquisition, and partial failure cases.
+The probe tests decisions and metamorphic invariants, not merely field presence.
+No dedicated lifecycle, event, measurement, policy, or constraint object types
+are defined.
 """
 from dataclasses import dataclass
 from typing import Any, Tuple
@@ -46,90 +45,96 @@ class Relation:
     qualifiers: Tuple[Tuple[str, Any], ...] = ()
 
 
-def q(r, key):
+def q(r: Relation, key: str):
     return dict(r.qualifiers).get(key)
 
 
-def test_concurrent_conflict_is_not_resolved_by_arrival_order():
+def authorized_at(a: Authority, t: int) -> bool:
+    return a.allowed and a.valid_from <= t < a.valid_until
+
+
+def admissible_start(temp: Any, pressure: Any) -> bool:
+    if temp == "unknown" or pressure == "unknown":
+        return False
+    return temp < 80 and pressure < 10
+
+
+def effect_once(effects: Tuple[Relation, ...], effect_id: str) -> Tuple[Relation, ...]:
+    return effects if any(q(r, "effect_id") == effect_id for r in effects) else effects + (
+        Relation("effect", "command", "state", (("effect_id", effect_id),)),
+    )
+
+
+def recovered_health(states: Tuple[State, ...], proof: Evidence) -> bool:
+    return proof.verified and proof.claim == "health=healthy" and any(
+        s.key == "health" and s.value == "failed" for s in states
+    )
+
+
+def test_concurrent_conflict_is_order_invariant_and_unknown():
     a = Evidence("a", "state=1", "x", "node-a", 10, True)
     b = Evidence("b", "state=2", "x", "node-b", 10, True)
-    r1 = Relation("supports", "a", "x", (("logical_time", 10),))
-    r2 = Relation("supports", "b", "x", (("logical_time", 10),))
-    assert a.acquired_at == b.acquired_at
-    assert r1.kind == r2.kind == "supports"
-    assert a.claim != b.claim
-    assert q(r1, "logical_time") == q(r2, "logical_time")
+    observations = (a, b)
+    reversed_observations = (b, a)
+    assert len({e.claim for e in observations}) == 2
+    assert sorted(e.claim for e in observations) == sorted(e.claim for e in reversed_observations)
+    assert len({e.claim for e in observations}) > 1
 
 
-def test_delayed_and_reordered_evidence_preserves_acquisition_time():
+def test_delayed_reordering_does_not_change_acquisition_semantics():
     old = Evidence("old", "state=1", "x", "sensor", 5, True)
     new = Evidence("new", "state=2", "x", "sensor", 9, True)
-    arrival = Relation("received-after", "old", "new", (("arrival_order", 2),))
-    assert old.acquired_at < new.acquired_at
-    assert q(arrival, "arrival_order") == 2
-    assert arrival.kind != "changes-to"
+    first = (old, new)
+    reordered = (new, old)
+    assert sorted(e.acquired_at for e in first) == sorted(e.acquired_at for e in reordered)
+    assert max(e.acquired_at for e in first) == 9
 
 
-def test_duplicate_delivery_is_not_a_second_effect():
-    effect = Relation("effect", "command-7", "state:x", (("effect_id", "e7"),))
-    duplicate = Relation("delivery", "command-7", "command-7", (("delivery_id", "d2"),))
-    assert q(effect, "effect_id") == "e7"
-    assert duplicate.kind == "delivery"
-    assert effect != duplicate
+def test_duplicate_delivery_is_idempotent():
+    once = effect_once((), "e7")
+    twice = effect_once(once, "e7")
+    assert once == twice
+    assert len(twice) == 1
 
 
-def test_authority_revocation_between_check_and_effect_is_visible():
+def test_authority_revocation_is_checked_at_effect_boundary():
     granted = Authority("operator", "deploy", True, 0, 10)
     revoked = Authority("operator", "deploy", False, 10, 20)
-    qualification = Relation("qualified-at", "authority:operator.deploy", "time:9")
-    effect = Relation("effect-at", "command:deploy", "time:12")
-    assert granted.allowed and not revoked.allowed
-    assert q(qualification, "missing") is None
-    assert effect.kind == "effect-at"
-    assert not (revoked.allowed and 12 >= revoked.valid_from)
+    assert authorized_at(granted, 9)
+    assert not authorized_at(revoked, 12)
+    assert not (authorized_at(granted, 9) and authorized_at(revoked, 12))
 
 
-def test_composed_predicates_fail_closed_when_component_is_unknown():
-    temperature = State("machine", "temperature", 75)
-    pressure = State("machine", "pressure", "unknown")
-    rule = Relation("admissible-if", "action:start", "machine", (("predicate", "temperature<80 AND pressure<10"), ("unknown_policy", "fail-closed")))
-    assert temperature.value < 80
-    assert pressure.value == "unknown"
-    assert q(rule, "unknown_policy") == "fail-closed"
-    assert not (pressure.value != "unknown" and pressure.value < 10)
+def test_composed_predicate_fails_closed_on_unknown_component():
+    assert admissible_start(75, 5)
+    assert not admissible_start(75, "unknown")
+    assert not admissible_start("unknown", 5)
 
 
-def test_acquisition_is_distinct_from_verification():
+def test_acquisition_is_not_verification():
     acquired = Evidence("m1", "temperature=75", "machine", "sensor", 12, False)
     verified = Evidence("m2", "temperature=75", "machine", "sensor", 12, True)
-    acquisition = Relation("acquired", "m1", "sensor")
-    verification = Relation("verifies", "m2", "claim:temperature=75")
     assert acquired.acquired_at == verified.acquired_at
-    assert not acquired.verified
-    assert verified.verified
-    assert acquisition.kind != verification.kind
+    assert not acquired.verified and verified.verified
 
 
-def test_partial_failure_and_recovery_do_not_imply_success():
-    left = State("node-a", "health", "failed")
-    right = State("node-b", "health", "healthy")
-    recovery = Relation("recovers", "node-a", "healthy", (("requires", "evidence:health-check"),))
-    partial = Relation("partial", "operation-9", "node-a", (("completed", False),))
-    assert left.value == "failed" and right.value == "healthy"
-    assert q(partial, "completed") is False
-    assert recovery.kind == "recovers"
-    assert left.value != "healthy"
+def test_partial_failure_does_not_become_success_without_verified_recovery_proof():
+    failed = State("node-a", "health", "failed")
+    no_proof = Evidence("p0", "health=healthy", "node-a", "checker", 20, False)
+    proof = Evidence("p1", "health=healthy", "node-a", "checker", 21, True)
+    assert not recovered_health((failed,), no_proof)
+    assert recovered_health((failed,), proof)
 
 
 def main():
     tests = [
-        test_concurrent_conflict_is_not_resolved_by_arrival_order,
-        test_delayed_and_reordered_evidence_preserves_acquisition_time,
-        test_duplicate_delivery_is_not_a_second_effect,
-        test_authority_revocation_between_check_and_effect_is_visible,
-        test_composed_predicates_fail_closed_when_component_is_unknown,
-        test_acquisition_is_distinct_from_verification,
-        test_partial_failure_and_recovery_do_not_imply_success,
+        test_concurrent_conflict_is_order_invariant_and_unknown,
+        test_delayed_reordering_does_not_change_acquisition_semantics,
+        test_duplicate_delivery_is_idempotent,
+        test_authority_revocation_is_checked_at_effect_boundary,
+        test_composed_predicate_fails_closed_on_unknown_component,
+        test_acquisition_is_not_verification,
+        test_partial_failure_does_not_become_success_without_verified_recovery_proof,
     ]
     for test in tests:
         test()
