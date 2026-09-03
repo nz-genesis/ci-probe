@@ -6,9 +6,9 @@ This directory is the participant-facing measurement package for independent sem
 
 `challenge.json`
 
-Expected SHA-256: `5c3c5c3c0b42fe600f71879c1b78227c023fc140e98966845b1edc79160dcb7a`
+Expected SHA-256: `5ba2c945176d248797739890694c35f41fb9085d977f6a5e30f696054851cd85`
 
-Expected byte count: `6675`
+Expected byte count: `6879`
 
 ## Frozen representation contract
 
