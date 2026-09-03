@@ -1,0 +1,19 @@
+name: Relational Substrate Reduction
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run reduction probe
+        run: python3 probes/relational-substrate-reduction/test_relational_substrate.py
