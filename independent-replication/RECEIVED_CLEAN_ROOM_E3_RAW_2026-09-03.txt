@@ -1,0 +1,377 @@
+GENESIS CLEAN-ROOM SEMANTIC BASIS RESEARCH
+Neutral Minimality Measurement - Independent Execution
+
+1. Scope and assumptions
+
+This is a clean-room analysis of the declared 36 A/B pairs in challenge.json,
+under representation-contract-v2.md. The conclusion is bounded to that corpus,
+its required properties, and the contract. It is not a claim about a globally
+minimal ontology. “Element” means an independently accountable semantic
+coordinate; ordinary notation, storage fields, and carrier machinery are not
+counted unless they perform domain-specific work. No target vocabulary was used.
+
+2. Input integrity
+
+Checked commit: 5bc7dc6dcf437e4d0b424b1d1c6202fbfafe2036
+challenge.json: 6879 bytes; SHA-256
+5ba2c945176d248797739890694c35f41fb9085d977f6a5e30f696054851cd85
+representation-contract-v2.md: 7853 bytes; SHA-256
+fea3bce98a2eddf0e22f6b0129e679cd1ad77489bf2cc10732b38d33c4b71ec3
+The integrity gate passed. Only those two files were used as semantic inputs.
+
+3. Independently derived semantic distinctions
+
+The pairs require these independently variable coordinates:
+(D1) continuity of the same referent versus a distinct referent;
+(D2) a referent's present condition/state;
+(D3) technical enabling conditions and possibility;
+(D4) normative permission/legitimacy or rejection;
+(D5) temporal applicability/validity interval;
+(D6) occurrence/action attempt, including issuance;
+(D7) externally realized effect, which may diverge from an attempt;
+(D8) external fact versus an observation/report about it;
+(D9) provenance/evidential support and verification;
+(D10) unresolved result versus confirmed success or failure;
+(D11) temporal order and partial/concurrent order;
+(D12) retained causal/history structure.
+D11 and D12 are structural coordinates and can be carried by generic relations
+only if the relation type and its semantics are explicit and bounded.
+
+4. Candidate basis
+
+The smallest defensible factorisation I find is:
+S1 referent continuity (a generic carrier binding/equality operator);
+S2 state/condition;
+S3 technical enablement/possibility;
+S4 normative permission/legitimacy;
+S5 temporal validity;
+S6 attempt/occurrence;
+S7 realized external effect;
+S8 information assertion/observation;
+S9 provenance/evidential support;
+S10 outcome resolution (unknown, confirmed success, confirmed failure);
+plus three structural operators: ST carrier association, SO temporal/causal
+ordering (including partial order/concurrency), and SH retained history.
+
+S1, ST, SO, and SH are generic structural operators, not domain primitives,
+provided they do not encode hidden domain predicates. S2-S10 are semantic
+coordinates. S8 and S9 are deliberately separate: identical content may have
+different provenance, and provenance can change while content is fixed.
+S10 is not a generic “status” bucket: its permitted values have bounded
+semantics and must not absorb attempt, effect, or evidence.
+
+5. Basis definitions
+
+S1: the criterion that two mentions bind to one continuing referent, rather than
+merely sharing an observable value. It does not assert any state or outcome.
+S2: the condition of a referent at a time (open/closed, running/stopped,
+usable/unusable, active/suspended, or analogous domain condition).
+S3: whether technical prerequisites and resources hold, so an operation is
+technically possible. It is not permission.
+S4: whether a rule or authority permits, rejects, or legitimates the operation.
+S5: an interval or temporal applicability validity attached to a rule,
+authorization, or approval.
+S6: an occurrence/attempt/issued instruction, independent of its result.
+S7: a change or non-change actually realized in the external world, including
+confirmed absence of the intended effect. It is not an observation of that fact.
+S8: a received statement, measurement, signal, inspection, or record directed
+at a proposition. It can be wrong or incomplete.
+S9: the source/provenance and evidential support status of S8 (verified,
+unverified, direct, or otherwise materially differentiated). This is not the
+proposition's truth.
+S10: epistemically resolved outcome: unresolved/unknown, confirmed success, or
+confirmed failure. Confirmation requires evidence represented through S8/S9.
+ST associates a record with a referent; SO represents before/after or a
+partial/concurrent order; SH retains a path/history graph. These operators are
+generic and inspectable, not opaque interpreter conventions.
+
+6. Corpus reconstruction mapping
+
+Q01,Q13,Q25: S1/ST distinguishes same continuing service, machine, or contract
+from distinct referents while S2/status and readings remain identical. PASS.
+Q02,Q14,Q26: S1 + ST + S2 + SO distinguish state at t1 from state at t2 and
+whether it changes. PASS.
+Q03,Q15,Q27: S3 (can execute/perform/issue) and S4 (rule allows/rejects) vary
+independently. PASS.
+Q04,Q16,Q28: S4 remains fixed while S3 changes (prerequisite, usability, or
+resource availability). PASS.
+Q10,Q22,Q34: S5 changes while the rule/approval/authorization content remains
+fixed. PASS.
+Q18,Q30: S8 content is fixed while S9 changes from calibrated/verified to
+unverified. PASS.
+Q05,Q17,Q29: S2/external fact is fixed while S8 (received signal/notice/
+inspection) changes. PASS.
+Q06: S8 content is fixed and S9 provenance changes materially. PASS.
+Q07,Q24,Q31,Q36: S6 can time out; S10 changes from unresolved to confirmed
+failure, without conflating timeout with failure. PASS.
+Q08,Q20,Q32: S2 is fixed while SH retained history differs. PASS.
+Q21,Q09,Q33: SO distinguishes total sequence from partial/concurrent order.
+PASS.
+Q12: S6 is present, S10 is unknown or confirmed failure; later resolution can
+make retry safe. PASS.
+Q19: S6/command and S7's confirmed non-movement are distinct; S8/S9 can
+support the later resolution. PASS.
+Q23,Q11,Q35: S6 is fixed while S7 changes between realized effect and no
+effect. PASS.
+All required properties (concurrency, external effect, uncertainty, temporal
+validity, heterogeneous domains) are covered. PASS.
+
+7. Removal analysis
+
+Remove S1/ST: Q01, Q13, and Q25 collapse same referent into coincidental equal
+conditions. No concrete generic field can restore continuity without becoming
+an identity primitive. FALSIFIED.
+Remove S2: Q02, Q14, Q26 and the usable/unusable/resource cases lose condition
+variation. Recasting condition as arbitrary metadata is laundering. FALSIFIED.
+Remove S3: Q04,Q16,Q28 cannot distinguish technical impossibility from allowed
+operation. S4 cannot absorb it without becoming composite. FALSIFIED.
+Remove S4: Q03,Q15,Q27 lose permission/rejection while technical possibility
+is fixed. S3 cannot reconstruct authority. FALSIFIED.
+Remove S5: Q10,Q22,Q34 lose interval variation. A timestamp field with interval
+semantics is the same accountable coordinate, not a reduction. FALSIFIED.
+Remove S6: Q07,Q12,Q19,Q23,Q35 lose the fact that an attempt/command occurred.
+An effect or report cannot reconstruct an attempt that had no effect. FALSIFIED.
+Remove S7: Q11,Q23,Q35 collapse attempted action and external realization.
+S6 is insufficient. FALSIFIED.
+Remove S8: Q05,Q17,Q18,Q29,Q30 and later signals lose receipt/observation.
+External fact alone cannot say what was known. FALSIFIED.
+Remove S9: Q06,Q18,Q30 lose verified versus unverified support with fixed
+content. S8 would have to absorb provenance. FALSIFIED.
+Remove S10: Q07,Q12,Q24,Q31,Q36 collapse unknown and confirmed failure; later
+evidence cannot change a representation with no resolution coordinate.
+FALSIFIED.
+Remove SO: sequence and concurrency in Q09,Q21,Q33 become indistinguishable.
+FALSIFIED. Remove SH: Q08,Q20,Q32 lose retained path/amendment/maintenance
+history while current state is fixed. FALSIFIED.
+
+8. Merge analysis
+
+S3+S4 cannot merge: Q03/Q04 hold one fixed while varying the other. A single
+“constraint” becomes a case-dependent catch-all. FALSIFIED.
+S6+S7 cannot merge: Q11,Q23,Q35 explicitly diverge. FALSIFIED.
+S8+S9 cannot merge without an inspectable product type containing both
+independent coordinates; that is a bundle, not one primitive. Raw merge
+FALSIFIED; a typed pair is an equivalent factorisation.
+S8+S10 cannot merge: a report can exist while result is unknown, and a later
+report can resolve it. FALSIFIED.
+S2+S7 cannot merge: a present condition can be observed, or an effect can occur
+without the same representational role. FALSIFIED.
+S1+S2 cannot merge: same condition with different referent identity occurs in
+Q01/Q13/Q25. FALSIFIED.
+S5+S4 cannot merge: the same permission has different validity intervals.
+FALSIFIED.
+SO+SH cannot merge generally: order is a relation over occurrences, whereas
+retained path/history can differ with the same current order. FALSIFIED.
+S9+S10 cannot merge: evidence quality and resolved outcome vary independently.
+FALSIFIED.
+
+9. Split analysis
+
+“Constraint” splits into S3 and S4 because Q03/Q04 provide independent
+variation. “Status” splits into S2, S10, and (where present) S8/S9; current
+condition, epistemic resolution, and evidence are independently variable.
+“Action result” splits into S6 and S7 by Q11/Q23/Q35. “Claim” splits into S8,
+S9, and S10 because content, support, and resolution are not interchangeable.
+“History” splits into SO and SH when order can remain fixed while retained path
+changes. S1 is not split merely because identity has labels: no supplied pair
+requires two independent identity coordinates. PASS for these justified splits;
+further splitting is EXPLICITLY UNRESOLVED WITH BOUNDED REASON because the
+finite corpus supplies no independent counterexample.
+
+10. Anti-laundering analysis
+
+Attributes, fields, tags, arbitrary JSON, opaque tokens, unrestricted strings,
+or prose could encode every S1-S10, but each would carry the corresponding
+independent semantic force and therefore be a hidden primitive/bundle. A
+relation is acceptable only when its domain, range, direction, and bounded
+meaning are explicit. “metadata=failed”, “status=whatever”, or an unrestricted
+predicate is not a reduction. Generic carrier identity, order, and history
+relations carry structural force but no domain-specific interpretation; if a
+relation's meaning changes per case, the reduction is FALSIFIED.
+
+11. Generic carrier analysis
+
+Variables, equality, membership, tuples, and ordinary composition are carriers.
+S1 is counted only for the semantic obligation of continuity and referent
+binding; an implementation may satisfy it with ordinary identity/equality.
+This is an implementation-independent representation requirement, not a
+database object requirement. A carrier that merely groups two equal readings
+cannot satisfy Q01/Q13/Q25. PASS for generic-carrier sufficiency with explicit
+identity binding; otherwise FALSIFIED.
+
+12. Identity / continuity analysis
+
+Q01,Q13,Q25 are minimal counterexamples to inferring identity from equal
+observable conditions. Persistence through t1/t2 requires ST plus S1. S1 does
+not assert semantic sameness of condition, and S2 does not imply continuity.
+Carrier identity is sufficient if it is stable across time and not a disguised
+domain predicate. PASS.
+
+13. Temporal analysis
+
+S5 preserves applicability intervals; SO preserves order. An interval is not
+merely an implementation timestamp because its bounded meaning is “valid
+during”. Q10,Q22,Q34 independently vary it. Present state and historical
+interval are not interchangeable. PASS for S5; global temporal ontology beyond
+interval validity is EXPLICITLY UNRESOLVED WITH BOUNDED REASON.
+
+14. Causal / concurrency analysis
+
+SO represents before/after and partial/concurrent order without assuming a
+total order. Q09,Q21,Q33 require preserving the possibility of concurrency.
+SH retains a causal/maintenance/amendment path; it is a generic history graph,
+not a domain primitive, but removal loses retained history. Causal direction
+stronger than recorded order is not established by this corpus:
+EXPLICITLY UNRESOLVED WITH BOUNDED REASON.
+
+15. Normative / technical analysis
+
+Q03,Q15,Q27 separate permission from possibility; Q04,Q16,Q28 separate
+technical prerequisites/resources from permission. S3 and S4 therefore pass
+the normative/technical criterion. “Allowed” is not a synonym for “can”.
+Applicability in S5 is a temporal modifier, not permission itself. PASS.
+
+16. Epistemic / provenance analysis
+
+S8 records receipt/observation/report, while S9 records support/provenance.
+External truth is represented by S2/S7 or another fact-bearing statement, not
+by receipt alone. Q05,Q17,Q29 distinguish unobserved fact from received signal;
+Q06,Q18,Q30 distinguish provenance with fixed content. S10 preserves the
+resolution of an external result. PASS.
+
+17. External-effect analysis
+
+S6 records an attempt or issued command. S7 records realized movement,
+completion, state change, or confirmed non-effect. Q11,Q23,Q35 and Q19 prevent
+“attempt = effect”. A timeout alone does not establish S7 or S10 failure.
+PASS.
+
+18. Unknown / failure analysis
+
+Unknown means no reliable resolution is represented; confirmed failure means a
+reliable later signal establishes non-success. Confirmed success is likewise
+distinct. Q07,Q12,Q24,Q31,Q36 require this transition to remain visible. S10
+must not be inferred from absence of a signal. PASS.
+
+19. Heterogeneous counterexamples
+
+Physical: a valve command is issued, the valve remains closed, and telemetry is
+absent; later a calibrated inspection confirms non-movement. Transaction: a
+payment is technically issuable and permitted, but funds are unavailable.
+Contract: an authorization is valid only in a stated interval; a later
+authorization has the same text but another interval. Document: two identical
+signed PDFs have different verified provenance. Service: two replicas report
+the same health but are distinct instances and have different restart paths.
+Distributed system: two messages are delivered with no justified total order.
+Approval: an approval is sent, processing times out, and a later trusted record
+confirms rejection. Machine: identical current condition follows different
+retained maintenance paths. These adversarial cases preserve the same
+distinctions and do not require domain-specific names. PASS.
+
+20. Alternative bases
+
+Alternative A: one universal “constraint/status/claim/action” element plus
+fields. It covers by arbitrary field conventions but fails atomicity,
+anti-laundering, merge, and removal: independently variable coordinates are
+hidden. FALSIFIED.
+Alternative B: fact, event, relation, and evidence, with no separate
+technical/normative or unknown/result coordinates. It loses Q03/Q04 and
+Q07/Q12 unless those coordinates are hidden in composites. FALSIFIED.
+Alternative C: the present factorisation with S8+S9 represented as a typed
+evidence pair and ST/SO/SH as generic relations. It is bidirectionally
+reconstructible with the listed basis and is materially equivalent. PASS.
+Alternative D: split every label into domain-specific primitives (payment,
+machine, contract, etc.). It generalizes poorly and adds no independent force.
+FALSIFIED as a smaller-defensibility candidate.
+No finite-corpus proof distinguishes all possible equivalent notations:
+EXPLICITLY UNRESOLVED WITH BOUNDED REASON.
+
+21. Strongest arguments against own basis
+
+The strongest objection is that S10 may be derived from S8+S9 plus a
+domain-independent rule for entailment. That works only if “reliable later
+signal establishes failure” is itself a bounded semantic operator; otherwise
+the entailment convention hides S10. I retain S10 because Q07/Q12 require a
+state transition from unresolved to confirmed failure and the contract
+prohibits opaque interpreter conventions.
+S7 may be reducible to S2 plus SO if every effect is defined as a state change,
+but Q23/Q35 distinguish an attempted external act from its result and do not
+require the result to be represented as merely the next sampled condition.
+S8 and S9 may be bundled as one evidence object, but that is composite, not
+atomic. Identity may be generic equality rather than S1; this changes the
+counting layer, not the obligation. Hidden assumptions remain around truth
+conditions of reports and the granularity of history. PASS for bounded basis;
+global minimality EXPLICITLY UNRESOLVED WITH BOUNDED REASON.
+
+22. Finite-corpus / generalization risk
+
+Apparent minimality can be an artifact: the corpus has no independent examples
+of revocation versus expiry, graded confidence, conflicting reports, identity
+merger, branching causality, or effect magnitude. A new case with same outcome
+but different confidence could split S9/S10; a case with two simultaneous
+effects could split S7. Additional evidence needed is a frozen heterogeneous
+corpus varying each proposed coordinate while holding the others fixed, plus
+conflict, branching, and persistence cases. No global minimum is claimed.
+EXPLICITLY UNRESOLVED WITH BOUNDED REASON.
+
+23. Implementation-independence analysis
+
+The basis does not depend on databases, event loops, queues, APIs, agent
+frameworks, object models, or execution engines. Those can implement carriers,
+relations, and records. Their presence does not prove semantic primitiveness.
+Conversely, replacing S3/S4/S7/S10 with software fields does not remove their
+semantic obligations. PASS.
+
+24. Unresolved questions
+
+The corpus does not settle whether truth, reliability, and confirmation should
+be separate beyond S8/S9/S10; whether causal order must be stronger than
+recorded order; whether history is a first-class graph or a reconstructible
+closure; or whether interval endpoints need open/closed boundary semantics.
+These are explicitly bounded unresolved questions, not missing closure states.
+
+25. Bounded conclusion
+
+For the declared corpus and contract, S1-S10 plus generic carrier, ordering,
+and retained-history operators are the smallest defensible factorisation I can
+justify. The result passes coverage, removal, merge/split, anti-laundering,
+temporal/concurrency, epistemic, normative, external-effect, identity, and
+implementation-independence checks. Atomicity is PASS for the stated
+coordinates, with S8+S9 and structural operators treated as typed/composite
+where appropriate. Corpus-generalization risk is EXPLICITLY UNRESOLVED WITH
+BOUNDED REASON. This is not a globally minimal ontology claim.
+
+Adjudication labels:
+coverage PASS
+atomicity PASS (typed evidence pair and structural operators not falsely counted as one)
+removal PASS (each removal has a counterexample)
+merge PASS (invalid merges falsified)
+split PASS (independent splits shown)
+anti-laundering PASS
+temporal/concurrency preservation PASS
+epistemic preservation PASS
+normative preservation PASS
+external-effect preservation PASS
+identity preservation PASS
+implementation independence PASS
+corpus-generalization risk EXPLICITLY UNRESOLVED WITH BOUNDED REASON
+
+26. Provenance / execution metadata
+
+Execution type: independent clean-room execution.
+Execution start: 2026-09-03T12:12:18.3Z.
+Execution end: 2026-09-03T12:21:59.3Z.
+Model: unknown.
+Provider: unknown.
+Runtime: Copilot SDK in VS Code.
+Runtime version: unknown.
+Challenge commit: 5bc7dc6dcf437e4d0b424b1d1c6202fbfafe2036.
+Challenge SHA-256: 5ba2c945176d248797739890694c35f41fb9085d977f6a5e30f696054851cd85.
+Challenge size: 6879 bytes.
+Representation-contract SHA-256: fea3bce98a2eddf0e22f6b0129e679cd1ad77489bf2cc10732b38d33c4b71ec3.
+Representation-contract size: 7853 bytes.
+Prior exposure to this research: yes (a prior integrity-aborted execution was
+seen in the conversation); prior semantic result was not used as an input.
+Relationship to operator: unknown.
+Commitment/reveal availability: commitment unavailable.
+Raw report status: FROZEN. No post-freeze edits or comparison performed.
