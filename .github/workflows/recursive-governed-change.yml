@@ -1,0 +1,20 @@
+name: Recursive Governed Change
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recursive-governed-change:
+    name: recursive-self-change-falsification
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute recursive governed-change experiment
+        run: python3 recursive_governed_change_test.py
