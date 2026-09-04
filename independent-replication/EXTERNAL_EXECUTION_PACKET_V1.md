@@ -1,12 +1,12 @@
-# BIR-1A External Execution Packet v1
+# External Execution Packet v1
 
-Status: `PUBLIC CLEAN-ROOM EXECUTION CONTRACT — NOT EVIDENCE`
+**Status:** `ACTIVE PUBLIC CLEAN-ROOM EXECUTION CONTRACT / IR-V2 COMPATIBLE`
 
 ## Purpose
 
-This packet is the minimum public material required for an external participant to execute the active independent reconstruction challenge without receiving Genesis private research, target hypotheses, adjudication, or candidate basis.
+This packet is the public material required for an external participant to execute the active independent-reconstruction challenge without receiving private target context.
 
-This packet deliberately does **not** contain an answer, target ontology, Genesis reduction map, private research, or scoring rubric for agreement with Genesis.
+The participant is not asked to agree with any target hypothesis. The participant is asked to produce an independently generated raw result and provenance sufficient for later independence adjudication.
 
 ## Active frozen challenge
 
@@ -17,135 +17,87 @@ Challenge file: `independent-replication/challenge-v2.json`
 Challenge SHA-256 (exact file bytes):
 `03b25456a1ad0b40272daa1ca633910855433cfdce6ece8d0cf9e3352cd7ef1b`
 
-The participant MUST verify this SHA-256 before execution. A Git commit SHA or Git blob SHA-1 is not a substitute.
+The participant MUST recompute this digest from the exact challenge bytes actually received. A Git commit SHA or Git blob SHA-1 is not a substitute.
 
-The participant SHOULD record the exact repository commit/revision from which the challenge bytes were obtained.
+The participant SHOULD record the exact repository revision from which the challenge bytes were obtained.
 
 ## Blindness contract
 
 Before freezing the raw result, the participant MUST NOT:
 
-- inspect Genesis private repositories or private research;
+- inspect private Genesis repositories or private research;
 - inspect a Genesis candidate basis or target hypothesis;
-- receive Genesis adjudication or comparison results;
+- receive private adjudication or comparison results;
 - receive private prompts or unpublished authority material;
-- ask the Genesis operator to interpret the challenge for them beyond this public contract.
+- ask the operator to interpret the challenge beyond this public contract.
 
-If prior exposure exists, declare it. If contamination occurs after challenge receipt and before raw-result freeze, classify the run as `CONTAMINATED` rather than silently continuing.
+If prior exposure exists, declare it. If contamination occurs before raw-result freeze, classify the run as `CONTAMINATED` rather than silently continuing.
 
 ## Required execution
 
-1. Obtain `challenge-v2.json` from the public repository.
-2. Verify the exact challenge SHA-256 above.
-3. Read the challenge and this packet only, plus ordinary documentation required to operate the participant's own runtime.
+1. Obtain the exact frozen IR-V2 challenge snapshot.
+2. Verify the exact challenge SHA-256.
+3. Read the challenge and this public contract only, plus ordinary documentation needed to operate the participant's own runtime.
 4. Independently choose and control the model/provider/runtime/solver/configuration.
-5. Produce the raw reconstruction.
-6. Freeze the raw result before discussing its interpretation with Genesis.
+5. Produce the raw reconstruction and required supporting artifacts.
+6. Freeze the raw result before target comparison or interpretation.
 7. Compute SHA-256 over the exact frozen raw-result bytes.
-8. Create a commitment according to the applicable BIR-1 protocol.
-9. Create `execution_attestation.json` using `execution_attestation_v1.schema.json`.
-10. Preserve sufficient provenance to reproduce or audit the execution without publishing secrets.
+8. Create the commitment required by the active replication protocol.
+9. Preserve the exact raw bytes, nonce and provenance needed for reveal.
+10. Run the public structural verifier against the exact frozen challenge.
+11. Reveal only after the agreed commitment window.
+12. Submit raw result, commitment/reveal evidence, verifier output and provenance through the agreed channel.
 
-## Required submission fields
+## Required submission contract
 
-The attestation MUST conform to:
+The raw submission MUST include at least:
 
-`independent-replication/execution_attestation_v1.schema.json`
-
-At minimum, the participant declares:
-
-- participant identifier/type;
-- challenge identifier and challenge SHA-256;
-- prompt-contract SHA-256;
-- model family and declared model/provider identifier;
-- runtime and version;
-- solver artifact digest;
-- configuration digest;
-- execution start/end timestamps;
-- raw-result SHA-256;
-- commitment SHA-256;
-- prior Genesis exposure;
-- relationship to Genesis operator;
-- epistemic status.
+- independently derived basis/factorization;
+- case-by-case mapping to the frozen challenge;
+- removal/reduction analysis;
+- structured counterexamples;
+- uncertainty and limitations;
+- provenance;
+- candidate-visibility statement;
+- exact `challenge_sha256`;
+- timestamp/environment data needed for reproduction.
 
 ## Independence rule
 
-A participant MUST NOT claim L4 merely because a different process, machine, model, account, repository, or API key was used.
+A participant MUST NOT claim material independence merely because a different process, machine, model, account, repository or API key was used.
 
-Material external independence requires independently controlled execution plus corroborating provenance and adversarial review.
-
-Self-attestation is evidence about the participant's declaration; it is not by itself proof of independence.
+Material external independence requires independently controlled execution plus corroborating provenance and adversarial review. Self-attestation alone is not sufficient.
 
 ## Transfer sequence
 
-The coordinator MUST accept the raw result in a way that preserves the blind boundary:
-
 ```text
 participant
-    -> commitment + attestation
-    -> raw result held/frozen
+    -> commitment + provenance
+    -> raw result frozen
     -> reveal
     -> public structural verification
     -> adversarial review
-    -> Genesis interpretation/adjudication LAST
+    -> private interpretation/adjudication LAST
 ```
 
-Genesis interpretation MUST NOT be supplied before the participant's raw result is frozen.
+Private interpretation MUST NOT be supplied before raw-result freeze.
 
-## Public verification
+## Public verification boundary
 
-After reveal, the public verifier SHOULD establish at least:
+The public verifier may establish schema validity, challenge binding, hashes, deterministic structural checks and executable consistency where applicable.
 
-- challenge SHA-256 matches the frozen challenge bytes;
-- attestation schema validates;
-- raw-result SHA-256 matches exact revealed bytes;
-- commitment/reveal verifies;
-- provenance fields are internally consistent;
-- declared independence level does not exceed the evidence available.
-
-The verifier does not determine semantic correctness and does not prove that the challenge is complete.
-
-## Adversarial review
-
-The reviewer MUST use `BIR-1A_REVIEW_CHECKLIST.md` and explicitly test:
-
-- context contamination;
-- hidden operator control;
-- provenance weakness;
-- omitted distinctions;
-- counterexamples;
-- minimality claims;
-- completeness assumptions;
-- disagreement with Genesis as a potentially informative result.
-
-Claims must be classified as `OBSERVED`, `DERIVED`, `HYPOTHESIS`, `UNKNOWN`, or `CONTRADICTED` where applicable.
+It does not establish semantic correctness, global minimality, universality, uniqueness or agreement with a private hypothesis.
 
 ## Security boundary
 
-Never publish:
+Never publish credentials, access tokens, private nonces before reveal, private prompts, hidden system instructions, private research or confidential participant data.
 
-- API keys;
-- access tokens;
-- private nonces before the agreed reveal point;
-- private Genesis source;
-- private prompts;
-- confidential participant information;
-- unpublished credentials or datasets.
+## Historical lineage
 
-## Acceptance states
+This file retains the `v1` filename because it is a versioned public execution packet lineage. Earlier BIR-1A wording has been generalized to the active IR-V2 challenge without changing the frozen challenge itself.
 
-`RAW_BLIND_RUN` -> raw result frozen.
+Future substantive changes require a new packet version rather than silently changing this contract after a participant has committed to it.
 
-`ATTESTED_EXECUTION` -> attestation/provenance checks pass.
+## Non-claim
 
-`MATERIAL_EXTERNAL_INDEPENDENCE` -> L4 evidence survives adversarial review.
-
-`CONTAMINATED` -> blindness boundary breached.
-
-`UNKNOWN` -> evidence insufficient for a stronger claim.
-
-## Important non-claim
-
-Publication of this packet, a participant declaration, a successful validator run, or agreement with a Genesis hypothesis does **not** by itself establish correctness or independence.
-
-This file is an execution contract, not evidence that an external participant has executed the challenge.
+This packet defines a procedure. It is not evidence that an external participant has executed the challenge.
