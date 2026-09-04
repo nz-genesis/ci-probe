@@ -1,9 +1,9 @@
 """Executable falsification harness for recursive governed self-change.
 
 This is a semantic probe, not a Genesis implementation. It checks that a system
-can change a capability and even propose a change to its change mechanism
-without allowing the changed mechanism to self-authorize privilege escalation,
-weaken verification, or alter constitutional invariants.
+can change a capability and propose a change to its change mechanism without
+allowing the changed mechanism to self-authorize privilege escalation or weaken
+its protected governance/verifier boundaries.
 """
 
 from dataclasses import dataclass, replace
@@ -30,6 +30,7 @@ class State:
     capability_version: int
     mechanism_version: int
     authority_version: int
+    verifier_version: int
     constitution: Constitution
 
 
@@ -40,7 +41,10 @@ class Candidate:
     requested_capability_version: int | None = None
     requested_mechanism_version: int | None = None
     requested_authority_version: int | None = None
+    requested_verifier_version: int | None = None
     requested_purpose_hash: str | None = None
+    disable_authority_guard: bool = False
+    disable_verifier_guard: bool = False
     evidence_fresh: bool = True
     verifier_independent: bool = True
     human_approved: bool = False
@@ -52,13 +56,20 @@ def qualify(candidate: Candidate, state: State) -> bool:
     if not candidate.evidence_fresh or not candidate.verifier_independent:
         return False
 
-    # Constitutional targets cannot be self-authorized.
-    if candidate.target in {Target.AUTHORITY, Target.PURPOSE}:
-        return candidate.human_approved
+    # Constitutional targets and change-mechanism mutation require governance
+    # outside the mechanism being changed.
+    if candidate.target in {
+        Target.AUTHORITY,
+        Target.PURPOSE,
+        Target.CHANGE_MECHANISM,
+    }:
+        if not candidate.human_approved:
+            return False
 
-    # A change to the change mechanism may not disable its own guardrails.
+    # A mechanism change may not use approval to remove the protected guards.
     if candidate.target is Target.CHANGE_MECHANISM:
-        return candidate.human_approved
+        if candidate.disable_authority_guard or candidate.disable_verifier_guard:
+            return False
 
     return True
 
@@ -70,25 +81,39 @@ def apply(candidate: Candidate, state: State) -> State:
         return replace(
             state,
             generation=state.generation + 1,
-            capability_version=candidate.requested_capability_version
-            or state.capability_version + 1,
+            capability_version=(
+                candidate.requested_capability_version
+                if candidate.requested_capability_version is not None
+                else state.capability_version + 1
+            ),
         )
 
     if candidate.target is Target.CHANGE_MECHANISM:
-        # Even an approved change cannot silently mutate constitutional guards.
+        # The candidate cannot mutate the protected governance/verifier guards.
         return replace(
             state,
             generation=state.generation + 1,
-            mechanism_version=candidate.requested_mechanism_version
-            or state.mechanism_version + 1,
+            mechanism_version=(
+                candidate.requested_mechanism_version
+                if candidate.requested_mechanism_version is not None
+                else state.mechanism_version + 1
+            ),
+            verifier_version=(
+                candidate.requested_verifier_version
+                if candidate.requested_verifier_version is not None
+                else state.verifier_version
+            ),
         )
 
     if candidate.target is Target.AUTHORITY:
         return replace(
             state,
             generation=state.generation + 1,
-            authority_version=candidate.requested_authority_version
-            or state.authority_version + 1,
+            authority_version=(
+                candidate.requested_authority_version
+                if candidate.requested_authority_version is not None
+                else state.authority_version + 1
+            ),
         )
 
     return replace(
@@ -96,8 +121,11 @@ def apply(candidate: Candidate, state: State) -> State:
         generation=state.generation + 1,
         constitution=replace(
             state.constitution,
-            purpose_hash=candidate.requested_purpose_hash
-            or state.constitution.purpose_hash,
+            purpose_hash=(
+                candidate.requested_purpose_hash
+                if candidate.requested_purpose_hash is not None
+                else state.constitution.purpose_hash
+            ),
         ),
     )
 
@@ -118,6 +146,20 @@ def test_change_mechanism_requires_external_governance() -> None:
     s1 = apply(c_approved, s0)
     assert s1.mechanism_version == 2
     assert s1.constitution == s0.constitution
+    assert s1.verifier_version == s0.verifier_version
+
+
+def test_approved_mechanism_change_cannot_remove_guards() -> None:
+    s0 = initial_state()
+    malicious = Candidate(
+        Target.CHANGE_MECHANISM,
+        s0.generation,
+        requested_mechanism_version=2,
+        disable_authority_guard=True,
+        disable_verifier_guard=True,
+        human_approved=True,
+    )
+    assert not qualify(malicious, s0)
 
 
 def test_recursive_escalation_cannot_authorize_itself() -> None:
@@ -128,7 +170,6 @@ def test_recursive_escalation_cannot_authorize_itself() -> None:
     )
     s1 = apply(c1, s0)
 
-    # The new mechanism cannot use its own new generation to bypass approval.
     c2 = Candidate(Target.AUTHORITY, s1.generation, requested_authority_version=2)
     assert not qualify(c2, s1)
 
@@ -158,6 +199,7 @@ def initial_state() -> State:
         capability_version=1,
         mechanism_version=1,
         authority_version=1,
+        verifier_version=1,
         constitution=Constitution(purpose_hash="genesis-purpose-v1"),
     )
 
@@ -165,6 +207,7 @@ def initial_state() -> State:
 def run() -> None:
     test_capability_self_evolution_is_expressible()
     test_change_mechanism_requires_external_governance()
+    test_approved_mechanism_change_cannot_remove_guards()
     test_recursive_escalation_cannot_authorize_itself()
     test_stale_evidence_cannot_authorize_recursive_change()
     print("recursive governed change: PASS")
