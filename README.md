@@ -8,6 +8,8 @@ This repository contains only deliberately public, generic experiments and infra
 
 ## Repository map
 
+See [`REPOSITORY_MAP.md`](REPOSITORY_MAP.md) for ownership, active/historical boundaries and evidence-counting rules.
+
 ```text
 ROOT
 ├── probes/                     generic executable probes
@@ -50,6 +52,8 @@ No automatic write-back to `nz-genesis/genesis-lab` is permitted.
 The repository contains bounded probes for execution, authority/revocation, recovery, idempotency, concurrency, external-effect reconciliation, adversarial evidence and related generic substrate behavior. These are historical or generic execution artifacts, not a single cumulative semantic proof.
 
 ## Continuous integration
+
+See [`ROOT_WORKFLOW_POLICY.md`](ROOT_WORKFLOW_POLICY.md).
 
 `.github/workflows/ci-probe.yml` is the generic repository smoke/substrate workflow. It must not be interpreted as a universal semantic test suite. Experiment-specific workflows remain separately scoped and their individual run conclusions must be reported from their exact workflow run, job and logs.
 
