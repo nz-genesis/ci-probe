@@ -1,50 +1,58 @@
 # CI Probe
 
-Minimal, Genesis-agnostic control repository for executable GitHub Actions experiments.
+Public, Genesis-agnostic execution and independent-replication substrate.
 
 ## Purpose
 
-This repository exists only for generic executable experiments that can be run on public GitHub-hosted Actions runners.
+This repository contains only deliberately public, generic experiments and infrastructure that can run on public GitHub-hosted Actions runners. It must not contain private Genesis source, private research corpus, private prompts/fixtures, unpublished hypotheses, canonical decisions, credentials, private datasets, or internal endpoints.
 
-It contains no Genesis source, private research corpus, private fixtures, hypotheses, architecture, unpublished findings, credentials, internal endpoints, datasets, or canonical decisions.
+## Repository map
 
-## Interpretation boundary
+```text
+ROOT
+├── probes/                     generic executable probes
+├── tools/                      generic verification utilities
+├── independence/               historical/control factorization surface
+├── independent-replication/    ACTIVE clean-room replication surface
+└── .github/workflows/          public CI workflows
+```
 
-A successful run establishes only that the checked-out generic probe executes successfully on the selected runner and that its bounded assertions pass. It does **not** constitute Genesis evidence by itself and does not promote or modify any state in `nz-genesis/genesis-lab`.
+### Active clean-room replication
 
-A failed pre-step or substrate-related run is evidence about the execution environment and must not be interpreted as a Genesis test failure without further investigation.
+The **only active entrypoint for materially independent reconstruction is**:
+
+`independent-replication/`
+
+Use its current frozen challenge and runbook. The active public call is the IR-V2 challenge described in `independent-replication/INDEPENDENT_REPLICATION_CALL.md`.
+
+The older `independence/` directory is retained as a historical/control surface. It is not a second independent evidence lineage and must not be treated as the current replication entrypoint.
+
+## Evidence boundary
+
+A successful public run establishes only the behavior checked by that public artifact. It does not establish any private Genesis semantic claim by itself. Public execution evidence may be reviewed and, when warranted, imported into the private Genesis research corpus with explicit provenance and epistemic scope.
+
+The intended flow is:
+
+```text
+public generic artifact
+        ↓
+public execution / raw evidence
+        ↓
+private review + adjudication
+        ↓
+Genesis Lab evidence record
+```
+
+No automatic write-back to `nz-genesis/genesis-lab` is permitted.
 
 ## Current generic probes
 
-The repository includes independent, bounded experiments covering:
+The repository contains bounded probes for execution, authority/revocation, recovery, idempotency, concurrency, external-effect reconciliation, adversarial evidence and related generic substrate behavior. These are historical or generic execution artifacts, not a single cumulative semantic proof.
 
-- execution scenario outcomes;
-- authority/revocation lifecycle;
-- recovery after lost acknowledgement;
-- idempotency-claim verification;
-- concurrent/cross-realizer duplicate-effect risk;
-- differential atomicity/coordination;
-- adversarial contract/effect verification;
-- HITL authority/risk/irreversibility boundaries;
-- HITL approval × recovery composition.
+## Continuous integration
 
-The probes intentionally model semantic distinctions without introducing Genesis-specific engines or primitives.
+`.github/workflows/ci-probe.yml` is the generic repository smoke/substrate workflow. It must not be interpreted as a universal semantic test suite. Experiment-specific workflows remain separately scoped and their individual run conclusions must be reported from their exact workflow run, job and logs.
 
-## Blind factorization verification
+## Security
 
-`independence/` contains a Genesis-agnostic protocol for materially independent semantic factorization. The frozen neutral corpus exposes obligations but no Genesis primitive labels or target mapping. An external solver must submit anonymous factors (`F001`, `F002`, ...) and obligation coverage before private adjudication.
-
-The public verifier checks only deterministic structural properties: corpus binding, opaque identifiers, complete coverage, duplicate/conflicting rows, and canonical submission hashing. It intentionally performs **no semantic adjudication**.
-
-- Contract: `independence/README.md`
-- Frozen corpus: `independence/neutral_corpus_v1.json`
-- Submission schema: `independence/submission.schema.json`
-- Structural verifier: `independence/verify_submission.py`
-
-The public corpus is infrastructure, not Genesis evidence. A semantic result becomes evidence only after a genuinely independent solver/reviewer produces an immutable raw submission and the private Genesis repository performs the declared adjudication without leaking the target factorization beforehand.
-
-## CI contract
-
-Workflows perform only generic repository checkout and deterministic probe execution/regression. No external services or repository-specific secrets are required.
-
-Results from this repository must be interpreted and, if warranted, canonicalized only in the private `nz-genesis/genesis-lab` repository.
+See `PUBLIC_SCOPE.md` and `SECURITY.md` for the public/private boundary and execution safety rules.
