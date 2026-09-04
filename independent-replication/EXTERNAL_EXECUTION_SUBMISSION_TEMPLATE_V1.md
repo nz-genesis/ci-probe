@@ -1,4 +1,4 @@
-# BIR-1A External Execution Submission Template v1
+# IR-V2 External Execution Submission Template v1
 
 Status: `TEMPLATE — NOT EVIDENCE`
 
@@ -42,8 +42,12 @@ Attach or publish the exact frozen raw result bytes according to the agreed tran
 
 ## Deviations / contamination
 
-State any deviation from the packet or any exposure to Genesis material before raw-result freeze. If contamination occurred, use acceptance state `CONTAMINATED` and do not claim L4.
+State any deviation from the packet or any exposure to private target material before raw-result freeze. If contamination occurred, use acceptance state `CONTAMINATED` and do not claim L4.
 
 ## Participant notes
 
-Record uncertainty, challenge criticism, missing obligations, counterexamples, and alternative interpretations. These are valid research outputs even when they disagree with Genesis.
+Record uncertainty, challenge criticism, missing obligations, counterexamples, and alternative interpretations. These are valid research outputs even when they disagree with any target hypothesis.
+
+## Version note
+
+This filename is retained as V1 for repository lineage compatibility. It is the submission template for the active **IR-V2** challenge. It does not define a separate BIR-1A challenge.
