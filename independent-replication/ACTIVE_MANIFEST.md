@@ -13,12 +13,12 @@ This manifest is the single navigation point for the active public clean-room re
 | `INDEPENDENT_REPLICATION_CALL.md` | public invitation and submission requirements | ACTIVE |
 | `README.md` | active replication surface documentation | ACTIVE |
 | `EXTERNAL_PARTICIPANT_RUNBOOK_V1.md` | participant operational procedure | ACTIVE unless superseded by a later runbook explicitly linked here |
-| `EXTERNAL_EXECUTION_PACKET_V1.md` | execution/evidence packet contract | ACTIVE unless superseded by a later packet explicitly linked here |
+| `EXTERNAL_EXECUTION_PACKET_V1.md` | execution/evidence packet contract | ACTIVE unless superseded explicitly |
 | `EXTERNAL_EXECUTION_AUDIT_PACKET_V1.md` | audit contract | ACTIVE unless superseded explicitly |
-| `EXECUTION_ATTESTATION_V1.md` | execution attestation contract | ACTIVE unless superseded explicitly |
 
-## Not active
+## Historical / design records
 
+- `EXECUTION_ATTESTATION_V1.md` — `HISTORICAL PROTOCOL DRAFT / NOT ACTIVE / NOT EVIDENCE`.
 - `IR-V3_MINIMALITY_CHALLENGE_PROPOSAL.md` — `SUPERSEDED / DESIGN NOTE / NOT ACTIVE / NOT EVIDENCE`.
 - IR-V1 challenge/protocol artifacts — historical only.
 - Files outside `independent-replication/` are not part of the active IR-V2 challenge unless this manifest explicitly says so.
