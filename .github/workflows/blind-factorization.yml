@@ -1,32 +1,31 @@
-name: Blind Factorization Structural Verification
+name: Historical Control — Blind Factorization
+
+# HISTORICAL / CONTROL WORKFLOW
+# The active materially independent reconstruction surface is
+# independent-replication/ and uses IR-V2. This workflow remains in the
+# repository only for historical provenance and is intentionally not triggered
+# by normal push/pull_request events.
 
 on:
-  push:
-    paths:
-      - 'independence/**'
-      - '.github/workflows/blind-factorization.yml'
-  pull_request:
-    paths:
-      - 'independence/**'
-      - '.github/workflows/blind-factorization.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  structural-verifier:
+  historical-control:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Python syntax check
-        run: python -m py_compile independence/verify_submission.py independence/test_verify_submission.py
-      - name: Run deterministic verifier regression
-        working-directory: independence
-        run: python test_verify_submission.py
-      - name: Verify frozen corpora and schema
+        with:
+          fetch-depth: 1
+      - name: Historical control regression
         run: |
+          set -euo pipefail
+          python -m py_compile independence/verify_submission.py independence/test_verify_submission.py
+          (cd independence && python test_verify_submission.py)
           python - <<'PY'
           import hashlib
           import json
