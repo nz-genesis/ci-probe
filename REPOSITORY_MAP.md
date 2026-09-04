@@ -1,7 +1,7 @@
 # CI Probe — Repository Map
 
 **Status:** ACTIVE GOVERNANCE / PUBLIC SUBSTRATE
-**Date:** 2026-09-04
+**Date:** 2026-09-05
 
 ## Purpose
 
@@ -11,7 +11,7 @@ This file is the navigation and ownership map for the public repository. It prev
 
 | Path | Status | Role | Evidence boundary |
 |---|---|---|---|
-| `independent-replication/` | **ACTIVE** | current clean-room reconstruction surface; IR-V2 | may generate candidate-independent raw evidence; semantic adjudication occurs outside this repo |
+| `independent-replication/` | **ACTIVE** | current clean-room reconstruction surface; IR-V2 plus experimental measurement protocols | may generate candidate-independent raw evidence; semantic adjudication occurs outside this repo |
 | `independence/` | **HISTORICAL / CONTROL** | earlier factorization verification surface | not a second independent evidence lineage |
 | `probes/` | **GENERIC / HISTORICAL-MIXED** | public executable experiments | each probe has its own bounded scope; not automatically part of IR-V2 |
 | `.github/workflows/` | **EXECUTION** | hosted CI definitions | a workflow run proves only the steps it executes; individual runs must be referenced for execution claims |
@@ -20,6 +20,7 @@ This file is the navigation and ownership map for the public repository. It prev
 | `ACTION_PROBE_SCOPE.md` | **ACTIVE GENERIC SCOPE** | boundary for generic consequential-action probe | generic execution substrate only |
 | `PUBLIC_SCOPE.md` | **ACTIVE POLICY** | public/private boundary | controls what may be published |
 | `SECURITY.md` | **ACTIVE POLICY** | security/confidentiality boundary | controls secrets/private material |
+| `independent-replication/RESOURCE_ENVELOPE_BENCHMARK_PROTOCOL.md` | **ACTIVE EXPERIMENTAL** | public resource-envelope measurement contract | generic measurements only; not semantic Genesis evidence by itself |
 
 ## Active entrypoint
 
@@ -28,6 +29,8 @@ For independent reconstruction work, use only:
 `independent-replication/INDEPENDENT_REPLICATION_CALL.md`
 
 and the exact frozen IR-V2 challenge revision specified there.
+
+For resource-envelope economics, use the separately scoped `independent-replication/RESOURCE_ENVELOPE_BENCHMARK_PROTOCOL.md`. It must not modify or be counted as a second IR-V2 semantic challenge.
 
 Do not infer active protocol state from directory names, filenames containing `V1`/`V2`, Git history or old root README references.
 
