@@ -1,0 +1,23 @@
+name: P314 External Effect Recovery
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p314:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Verify exact triggering commit
+        run: test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run P314 bounded recovery probe
+        run: python p314_external_effect_recovery.py
