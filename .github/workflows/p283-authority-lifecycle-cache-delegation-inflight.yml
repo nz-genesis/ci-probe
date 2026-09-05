@@ -1,0 +1,20 @@
+name: P283 Authority Lifecycle Cache Delegation In-Flight
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  p283:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+      - name: Run P283
+        run: python3 p283_authority_lifecycle_cache_delegation_inflight_test.py
