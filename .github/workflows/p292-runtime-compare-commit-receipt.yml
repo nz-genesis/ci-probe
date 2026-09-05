@@ -1,0 +1,17 @@
+name: P292 Runtime Compare-and-Commit Receipt
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  p292:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Verify exact triggering commit
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run P292
+        run: python3 p292_runtime_compare_commit_receipt_test.py
