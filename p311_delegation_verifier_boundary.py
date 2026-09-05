@@ -51,8 +51,8 @@ def main() -> None:
             unsafe += 1
     assert checked == 288
     assert unsafe == 0
-    assert allowed == 48
-    assert blocked == 240
+    assert allowed == 16
+    assert blocked == 272
     print(f"P311 delegation/verifier boundary matrix: {checked}/{checked} PASS")
     print(f"allowed={allowed}; blocked={blocked}; unsafe={unsafe}")
     print("approval is non-authoritative; weak cognition cannot bypass protected boundary")
