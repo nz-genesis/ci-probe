@@ -4,9 +4,6 @@ from dataclasses import dataclass
 from itertools import permutations
 
 
-# P313 bounded discriminator: stale qualification must never become current authority.
-# The workflow is now present on main; this source update intentionally triggers it.
-
 @dataclass(frozen=True)
 class State:
     epoch: int
@@ -44,13 +41,7 @@ def qualify(replica: Replica, credential: Credential) -> bool:
     )
 
 
-def commit_boundary(
-    authority: State,
-    replica: Replica,
-    credential: Credential,
-    qualified: bool,
-) -> bool:
-    """Consequential transition: cached qualification is never authority by itself."""
+def commit_boundary(authority: State, replica: Replica, credential: Credential, qualified: bool) -> bool:
     fresh = replica.state == authority
     credential_current = (
         credential.signature_valid
@@ -61,17 +52,10 @@ def commit_boundary(
     return qualified and fresh and credential_current
 
 
-def run_schedule(
-    order: tuple[str, ...],
-    qualification_replica: int,
-    commit_replica: int,
-    credential: Credential,
-) -> tuple[bool, bool, bool]:
+def run_schedule(order: tuple[str, ...], qualification_replica: int, commit_replica: int, credential: Credential):
     authority = INITIAL
     replicas = [Replica(INITIAL), Replica(INITIAL)]
     qualified = False
-    committed = False
-
     for event in order:
         if event == "rotate":
             authority = ROTATED
@@ -82,47 +66,29 @@ def run_schedule(
         elif event == "qualify":
             qualified = qualify(replicas[qualification_replica], credential)
         elif event == "commit":
-            committed = commit_boundary(
-                authority,
-                replicas[commit_replica],
-                credential,
-                qualified,
-            )
-            return committed, qualified, authority.epoch == credential.epoch
+            return commit_boundary(authority, replicas[commit_replica], credential, qualified), qualified, authority.epoch == credential.epoch
         else:
             raise AssertionError(event)
-
     raise AssertionError("schedule did not commit")
 
 
 def all_schedules():
-    # Every ordering of rotation, two independent propagation events,
-    # qualification and consequential commit is exercised.
     return permutations(("rotate", "prop0", "prop1", "qualify", "commit"))
 
 
 def test_temporal_matrix() -> None:
-    total = 0
-    safe_allowed = 0
-    blocked = 0
-    unsafe = 0
-    old_after_rotation = 0
-
+    total = safe_allowed = blocked = unsafe = old_after_rotation = 0
     for order in all_schedules():
         for q in (0, 1):
             for c in (0, 1):
                 for credential in (OLD_CREDENTIAL, NEW_CREDENTIAL):
                     allowed, qualified, current = run_schedule(order, q, c, credential)
                     total += 1
-
                     rotation_index = order.index("rotate")
                     commit_index = order.index("commit")
-                    expected_old_allowed = (
-                        credential == OLD_CREDENTIAL and commit_index < rotation_index
-                    )
+                    expected_old_allowed = credential == OLD_CREDENTIAL and commit_index < rotation_index
                     expected_new_allowed = credential == NEW_CREDENTIAL and commit_index > rotation_index
                     expected_allowed = expected_old_allowed or expected_new_allowed
-
                     if allowed:
                         if not expected_allowed:
                             unsafe += 1
@@ -130,18 +96,12 @@ def test_temporal_matrix() -> None:
                             safe_allowed += 1
                     else:
                         blocked += 1
-
-                    if (
-                        credential == OLD_CREDENTIAL
-                        and commit_index > rotation_index
-                    ):
+                    if credential == OLD_CREDENTIAL and commit_index > rotation_index:
                         old_after_rotation += 1
                         assert not allowed, (order, q, c, qualified, current)
-
-    # 120 event orders × 2 qualification replicas × 2 commit replicas × 2 credentials.
     assert total == 960, total
     assert unsafe == 0, unsafe
-    assert old_after_rotation == 480, old_after_rotation
+    assert old_after_rotation == 240, old_after_rotation
     assert safe_allowed > 0
     assert blocked > 0
 
@@ -174,7 +134,7 @@ def main() -> None:
     test_fresh_current_credential_can_commit()
     test_qualification_cache_is_not_authority()
     print("P313 distributed freshness/verifier disagreement: 963/963 PASS")
-    print("old-generation commits after rotation blocked=480; unsafe=0")
+    print("old-generation commits after rotation blocked=240; unsafe=0")
 
 
 if __name__ == "__main__":
