@@ -35,6 +35,8 @@ PROTECTED_ROOT = "R1"
 
 
 def qualifies(current: State, t: Transition, receipt: Receipt | None) -> bool:
+    if current.authority_root != PROTECTED_ROOT:
+        return False
     if t.state != current:
         return False
     if receipt is None:
@@ -95,10 +97,7 @@ def main():
     # 9. Unprotected authority root cannot qualify a recovery commit.
     t_bad_root = Transition("T3", s_bad_root, "K3")
     r_bad_root = Receipt("K3", "T3", Outcome.COMMITTED, s_bad_root)
-    assert recover(s_bad_root, t_bad_root, r_bad_root) is Outcome.COMMITTED
-    # The semantic protected-root gate is checked independently before commit.
-    assert s_bad_root.authority_root != PROTECTED_ROOT
-    assert s_bad_root.authority_root not in {PROTECTED_ROOT}
+    assert recover(s_bad_root, t_bad_root, r_bad_root) is Outcome.UNKNOWN
 
     # 10. A fresh, correctly bound committed receipt may recover normally.
     t4 = Transition("T4", s2, "K4")
