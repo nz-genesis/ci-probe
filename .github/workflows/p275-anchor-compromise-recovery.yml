@@ -1,0 +1,18 @@
+name: P275 Anchor Compromise Recovery
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p275:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run bounded P275 probe
+        run: python3 p275_anchor_compromise_recovery_test.py
