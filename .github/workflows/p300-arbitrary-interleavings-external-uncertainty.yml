@@ -1,0 +1,17 @@
+name: P300 Arbitrary Interleavings External Uncertainty
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  p300:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Verify exact triggering commit
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run P300
+        run: python3 p300_arbitrary_interleavings_external_uncertainty_cache_test.py
