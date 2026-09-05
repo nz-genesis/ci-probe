@@ -21,6 +21,8 @@ The participant MUST control the execution environment and SHOULD disclose, at t
 - relationship to the operator/coordinator;
 - execution timestamps.
 
+The participant MAY remain publicly pseudonymous when sufficient non-sensitive provenance can still establish independent execution control. Public anonymity alone is not evidence of independence.
+
 The participant MUST NOT receive private research, unpublished expected conclusions, private prompts, private reduction maps, or adjudication context outside the frozen public challenge.
 
 ## Exact active challenge
@@ -67,8 +69,7 @@ Where publication is appropriate, preserve at least:
 - execution environment and model/runtime provenance at the declared granularity;
 - candidate-visibility and contamination status;
 - verifier result;
-- deviations or failures;
-- adversarial review status where performed.
+- deviations or failures.
 
 Do not publish credentials, private nonces before reveal, API keys, private prompts, hidden system instructions, or sensitive participant data.
 
