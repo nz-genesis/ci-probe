@@ -63,7 +63,8 @@ def verify_chain(root_public, owner_cred, child_cred, required_scope, epoch, pol
         return False
     if not set(child["scope"]).issubset(set(owner["scope"])):
         return False
-    if not set(required_scope).issubset(set(child["scope"])):
+    required = {required_scope} if isinstance(required_scope, str) else set(required_scope)
+    if not required.issubset(set(child["scope"])):
         return False
     try:
         root_public.verify(base64.b64decode(owner_cred["sig"]), canonical(owner))
