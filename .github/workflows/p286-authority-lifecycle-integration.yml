@@ -1,0 +1,20 @@
+name: P286 authority lifecycle integration
+
+on:
+  push:
+    paths:
+      - 'p286_authority_lifecycle_integration_test.py'
+      - '.github/workflows/p286-authority-lifecycle-integration.yml'
+  workflow_dispatch:
+
+jobs:
+  p286:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact triggering checkout
+        shell: bash
+        run: |
+          test "$GITHUB_SHA" = "$(git rev-parse HEAD)"
+      - name: Run P286
+        run: python3 p286_authority_lifecycle_integration_test.py
