@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/nz-genesis/ci-probe/blob/main/independent-replication/execution_attestation_v2.schema.json",
+  "title": "Genesis External Execution Attestation v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "attestation_version","participant_id","participant_type","challenge_id","challenge_sha256",
+    "model_family","model_version_or_provider_declared_id","runtime_name","runtime_version",
+    "execution_control_declaration","execution_started_at","execution_finished_at","raw_result_sha256",
+    "commitment_sha256","commitment_created_at","raw_frozen_before_target_comparison","prior_genesis_exposure",
+    "genesis_operator_relationship","contamination_status","epistemic_status"
+  ],
+  "properties": {
+    "attestation_version":{"const":"2"},
+    "participant_id":{"type":"string","minLength":1,"maxLength":256},
+    "participant_type":{"type":"string","enum":["external","affiliated","unknown"]},
+    "challenge_id":{"type":"string","minLength":1,"maxLength":256},
+    "challenge_sha256":{"$ref":"#/$defs/sha256"},
+    "model_family":{"type":"string","minLength":1,"maxLength":256},
+    "model_version_or_provider_declared_id":{"type":"string","minLength":1,"maxLength":512},
+    "runtime_name":{"type":"string","minLength":1,"maxLength":256},
+    "runtime_version":{"type":"string","minLength":1,"maxLength":256},
+    "execution_control_declaration":{"type":"string","minLength":1,"maxLength":4096},
+    "solver_artifact_digest":{"$ref":"#/$defs/sha256"},
+    "configuration_digest":{"$ref":"#/$defs/sha256"},
+    "execution_started_at":{"type":"string","format":"date-time"},
+    "execution_finished_at":{"type":"string","format":"date-time"},
+    "raw_result_sha256":{"$ref":"#/$defs/sha256"},
+    "commitment_sha256":{"$ref":"#/$defs/sha256"},
+    "commitment_created_at":{"type":"string","format":"date-time"},
+    "raw_frozen_before_target_comparison":{"type":"boolean"},
+    "prior_genesis_exposure":{"type":"string","enum":["yes","no","unknown"]},
+    "genesis_operator_relationship":{"type":"string","enum":["external","affiliated","unknown"]},
+    "contamination_status":{"type":"string","enum":["clean","contaminated","unknown"]},
+    "epistemic_status":{"type":"string","enum":["RAW_BLIND_RUN","ATTESTED_EXECUTION","UNKNOWN"]},
+    "notes":{"type":"string","maxLength":4096}
+  },
+  "$defs":{"sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"}}
+}
