@@ -12,8 +12,7 @@ class Transition:
 
 
 def db():
-    c = sqlite3.connect("file:p293?mode=memory&cache=shared", isolation_level=None)
-    return c
+    return sqlite3.connect("file:p293?mode=memory&cache=shared", isolation_level=None)
 
 
 def cas_commit(c, t):
@@ -52,51 +51,48 @@ def main():
     assert receipt_matches(c, t1)
     assert cas_commit(c, t1)
 
-    # 2. Reconciliation after the local commit sees the same receipt and does not duplicate.
+    # 2. Reconciliation after the local commit does not duplicate the effect.
     assert external_effect(c, t1) == ('T1', 'APPLIED')
     assert c.execute("SELECT COUNT(*) FROM effects WHERE key='K1'").fetchone() == (1,)
 
-    # Reset state for crash scenarios.
     keeper.execute("UPDATE state SET revision=41, epoch=7, boundary='B1' WHERE id=1")
     keeper.execute("DELETE FROM effects")
 
     t2 = Transition('T2', 7, 'B1', 41, 'K2')
     # 3. External effect occurs, then local process crashes before CAS.
     assert external_effect(c, t2) == ('T2', 'APPLIED')
-    # 4. Recovery can establish effect existence but must not claim local commit yet.
+    # 4. Recovery observes the effect while local state is still uncommitted.
     assert receipt_matches(c, t2)
     assert keeper.execute("SELECT revision FROM state WHERE id=1").fetchone() == (41,)
 
-    # 5. If the authoritative state is still current, a receipt-bound recovery may safely
-    # complete the local commit exactly once.
+    # 5. If authoritative state is still current, receipt-bound recovery can complete once.
     assert cas_commit(c, t2)
     assert keeper.execute("SELECT revision FROM state WHERE id=1").fetchone() == (42,)
     assert not cas_commit(c, t2)
 
-    # Reset for stale-state recovery.
     keeper.execute("UPDATE state SET revision=41, epoch=7, boundary='B1' WHERE id=1")
     keeper.execute("DELETE FROM effects")
 
     t3 = Transition('T3', 7, 'B1', 41, 'K3')
     assert external_effect(c, t3) == ('T3', 'APPLIED')
-    # 6. A concurrent state transition makes T3 stale before recovery.
+    # 6. Concurrent state transition makes T3 stale before recovery.
     keeper.execute("UPDATE state SET revision=42, epoch=8, boundary='B2' WHERE id=1")
     assert receipt_matches(c, t3)
     assert not cas_commit(c, t3)
 
-    # 7. Stale receipt evidence cannot authorize a different current transition.
+    # 7. Stale receipt cannot authorize a different current transition.
     t4 = Transition('T4', 8, 'B2', 42, 'K4')
     assert receipt_matches(c, t3)
     assert not receipt_matches(c, t4)
     assert cas_commit(c, t4)
 
-    # 8. A receipt bound to another transition/key is not sufficient evidence for T4.
+    # 8. Re-observing T3's receipt does not make it evidence for T4.
     assert external_effect(c, t3) == ('T3', 'APPLIED')
     assert not receipt_matches(c, t4)
 
-    # 9. A new transition with a fresh key produces exactly one new external effect record.
+    # 9. T4 can have its own distinct effect identity after its state transition.
     assert external_effect(c, t4) == ('T4', 'APPLIED')
-    assert c.execute("SELECT COUNT(*) FROM effects").fetchone() == (3,)
+    assert c.execute("SELECT COUNT(*) FROM effects").fetchone() == (2,)
 
     # 10. Final state and effect identities remain independently auditable.
     assert keeper.execute("SELECT epoch,boundary,revision FROM state WHERE id=1").fetchone() == (8, 'B2', 43)
