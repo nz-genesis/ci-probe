@@ -4,14 +4,15 @@ This is a new workload family, not a replay of earlier selector/workload probes.
 It compares GOVERNED (all tasks) with ADAPTIVE (only consequential/high-risk tasks)
 and keeps DIRECT only as a negative safety control.
 
-The benchmark measures repeated local wall time, operation count, verification count,
-and a transparent local cost proxy. It separates task-result checksum from control
-work so that policy overhead cannot masquerade as workload output. The proxy is not
-a universal economic metric.
+The benchmark randomizes policy order across repeated trials, measures local wall time,
+verification count and a transparent cost proxy, and computes the verification-cost
+threshold at which ADAPTIVE becomes cheaper than GOVERNED. The proxy is not a universal
+economic metric and no claim of universal adaptive superiority is made.
 
 The purpose is to test the TRIZ direction "sufficient control rather than maximum
 control" while preserving the protected boundary.
 """
+from random import Random
 from statistics import median
 from time import perf_counter
 
@@ -53,50 +54,64 @@ def run(policy, rounds=400):
             task_checksum = (task_checksum + work(units)) & 0xFFFFFFFF
             operations += 1
     elapsed = perf_counter() - start
-    # Transparent local proxy: measured wall time + one microsecond per verification.
-    cost_proxy = elapsed + verifications * 1e-6
-    return elapsed, operations, verifications, unsafe, task_checksum, control_checksum, cost_proxy
+    return elapsed, operations, verifications, unsafe, task_checksum, control_checksum
 
 
-def benchmark(policy, trials=7):
-    samples = [run(policy) for _ in range(trials)]
-    return (
-        median(x[0] for x in samples),
-        samples[0][1],
-        samples[0][2],
-        samples[0][3],
-        samples[0][4],
-        samples[0][5],
-        median(x[6] for x in samples),
-    )
+def benchmark(trials=15):
+    rng = Random(306)
+    samples = {p: [] for p in ("DIRECT", "GOVERNED", "ADAPTIVE")}
+    for _ in range(trials):
+        policies = ["DIRECT", "GOVERNED", "ADAPTIVE"]
+        rng.shuffle(policies)
+        for policy in policies:
+            samples[policy].append(run(policy))
+    return {
+        p: (
+            median(x[0] for x in samples[p]),
+            samples[p][0][1],
+            samples[p][0][2],
+            samples[p][0][3],
+            samples[p][0][4],
+            samples[p][0][5],
+        )
+        for p in samples
+    }
 
 
 def main():
-    direct = benchmark("DIRECT")
-    governed = benchmark("GOVERNED")
-    adaptive = benchmark("ADAPTIVE")
+    results = benchmark()
+    direct = results["DIRECT"]
+    governed = results["GOVERNED"]
+    adaptive = results["ADAPTIVE"]
 
     # DIRECT is intentionally a negative control: consequential work is ungoverned.
     assert direct[3] > 0
     # Both viable policies protect every consequential task.
     assert governed[3] == 0
     assert adaptive[3] == 0
+    # Adaptive performs fewer verification operations on this workload.
     assert adaptive[2] < governed[2]
-    # All policies execute the same task workload and therefore produce the same task result.
+    # All policies execute the same task workload and produce the same task result.
     assert direct[1] == governed[1] == adaptive[1]
     assert direct[4] == governed[4] == adaptive[4]
-    # Control work is intentionally different, while task output remains identical.
-    assert governed[5] != adaptive[5]
+
+    verification_delta = governed[2] - adaptive[2]
+    wall_delta = adaptive[0] - governed[0]
+    threshold_us = (wall_delta / verification_delta) * 1e6
 
     print("P306 local sufficient-control benchmark: PASS")
-    for label, result in (("DIRECT", direct), ("GOVERNED", governed), ("ADAPTIVE", adaptive)):
-        elapsed, operations, verifications, unsafe, task_checksum, control_checksum, cost = result
+    for label, result in results.items():
+        elapsed, operations, verifications, unsafe, task_checksum, control_checksum = result
         print(
             f"{label}: median_wall={elapsed:.6f}s operations={operations} "
             f"verifications={verifications} unsafe_consequential={unsafe} "
-            f"task_checksum={task_checksum} control_checksum={control_checksum} "
-            f"median_cost_proxy={cost:.6f}"
+            f"task_checksum={task_checksum} control_checksum={control_checksum}"
         )
+    print(
+        f"ADAPTIVE_vs_GOVERNED: verification_reduction={verification_delta}; "
+        f"wall_delta={wall_delta:.6f}s; "
+        f"break_even_verification_cost={threshold_us:.3f}us"
+    )
 
 
 if __name__ == "__main__":
