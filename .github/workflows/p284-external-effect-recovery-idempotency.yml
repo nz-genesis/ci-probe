@@ -1,0 +1,20 @@
+name: P284 External Effect Recovery Idempotency
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  p284:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+      - name: Run P284
+        run: python3 p284_external_effect_recovery_idempotency_test.py
