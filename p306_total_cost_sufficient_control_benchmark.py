@@ -4,10 +4,10 @@ This is a new workload family, not a replay of earlier selector/workload probes.
 It compares GOVERNED (all tasks) with ADAPTIVE (only consequential/high-risk tasks)
 and keeps DIRECT only as a negative safety control.
 
-The benchmark measures repeated local wall time, operation count, verification count
-and a transparent local cost proxy. It does not claim that the proxy is a universal
-economic metric. It asserts the safety/admissibility invariant that every consequential
-operation is governed by ADAPTIVE and GOVERNED.
+The benchmark measures repeated local wall time, operation count, verification count,
+and a transparent local cost proxy. It separates task-result checksum from control
+work so that policy overhead cannot masquerade as workload output. The proxy is not
+a universal economic metric.
 
 The purpose is to test the TRIZ direction "sufficient control rather than maximum
 control" while preserving the protected boundary.
@@ -40,7 +40,8 @@ def run(policy, rounds=400):
     operations = 0
     verifications = 0
     unsafe = 0
-    checksum = 0
+    task_checksum = 0
+    control_checksum = 0
     for _ in range(rounds):
         for name, units, consequential, risk in WORKLOADS:
             governed = policy == "GOVERNED" or (policy == "ADAPTIVE" and consequential)
@@ -48,13 +49,13 @@ def run(policy, rounds=400):
                 unsafe += 1
             if governed:
                 verifications += 1
-                checksum = (checksum + work(20 + risk * 3)) & 0xFFFFFFFF
-            checksum = (checksum + work(units)) & 0xFFFFFFFF
+                control_checksum = (control_checksum + work(20 + risk * 3)) & 0xFFFFFFFF
+            task_checksum = (task_checksum + work(units)) & 0xFFFFFFFF
             operations += 1
     elapsed = perf_counter() - start
     # Transparent local proxy: measured wall time + one microsecond per verification.
     cost_proxy = elapsed + verifications * 1e-6
-    return elapsed, operations, verifications, unsafe, checksum, cost_proxy
+    return elapsed, operations, verifications, unsafe, task_checksum, control_checksum, cost_proxy
 
 
 def benchmark(policy, trials=7):
@@ -65,7 +66,8 @@ def benchmark(policy, trials=7):
         samples[0][2],
         samples[0][3],
         samples[0][4],
-        median(x[5] for x in samples),
+        samples[0][5],
+        median(x[6] for x in samples),
     )
 
 
@@ -79,19 +81,21 @@ def main():
     # Both viable policies protect every consequential task.
     assert governed[3] == 0
     assert adaptive[3] == 0
-    # Adaptive control is strictly smaller on this workload family.
     assert adaptive[2] < governed[2]
-    # Comparability and deterministic workload result are preserved.
+    # All policies execute the same task workload and therefore produce the same task result.
     assert direct[1] == governed[1] == adaptive[1]
-    assert len({direct[4], governed[4], adaptive[4]}) == 3
+    assert direct[4] == governed[4] == adaptive[4]
+    # Control work is intentionally different, while task output remains identical.
+    assert governed[5] != adaptive[5]
 
     print("P306 local sufficient-control benchmark: PASS")
     for label, result in (("DIRECT", direct), ("GOVERNED", governed), ("ADAPTIVE", adaptive)):
-        elapsed, operations, verifications, unsafe, checksum, cost = result
+        elapsed, operations, verifications, unsafe, task_checksum, control_checksum, cost = result
         print(
             f"{label}: median_wall={elapsed:.6f}s operations={operations} "
             f"verifications={verifications} unsafe_consequential={unsafe} "
-            f"checksum={checksum} median_cost_proxy={cost:.6f}"
+            f"task_checksum={task_checksum} control_checksum={control_checksum} "
+            f"median_cost_proxy={cost:.6f}"
         )
 
 
