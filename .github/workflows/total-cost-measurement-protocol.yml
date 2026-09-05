@@ -1,0 +1,26 @@
+name: Total Cost Measurement Protocol
+
+on:
+  push:
+    paths:
+      - 'total_cost_measurement_protocol.py'
+      - '.github/workflows/total-cost-measurement-protocol.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  measurement-protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify checkout
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+      - name: Run protocol self-test
+        run: python3 total_cost_measurement_protocol.py
