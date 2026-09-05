@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from itertools import permutations
 
 
+# P313 bounded discriminator: stale qualification must never become current authority.
+
 @dataclass(frozen=True)
 class State:
     epoch: int
