@@ -1,0 +1,27 @@
+name: P278 Recovery Authority Rotation
+
+on:
+  push:
+    paths:
+      - 'p278_recovery_authority_rotation_test.py'
+      - '.github/workflows/p278-recovery-authority-rotation.yml'
+  pull_request:
+    paths:
+      - 'p278_recovery_authority_rotation_test.py'
+      - '.github/workflows/p278-recovery-authority-rotation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  p278:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify checked-out commit
+        run: |
+          echo "EXPECTED_SHA=${GITHUB_SHA}"
+          echo "CHECKED_OUT_SHA=$(git rev-parse HEAD)"
+          test "${GITHUB_SHA}" = "$(git rev-parse HEAD)"
+      - name: Run P278 bounded probe
+        run: python3 p278_recovery_authority_rotation_test.py
