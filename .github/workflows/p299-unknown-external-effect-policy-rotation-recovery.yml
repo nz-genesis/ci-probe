@@ -1,0 +1,17 @@
+name: P299 Unknown External Effect Policy Rotation Recovery
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  p299:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Verify exact triggering commit
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run P299
+        run: python3 p299_unknown_external_effect_policy_rotation_recovery_test.py
