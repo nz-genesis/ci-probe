@@ -2,6 +2,7 @@ name: P267 Recursive State Machine
 
 on:
   push:
+  pull_request:
   workflow_dispatch:
 
 permissions:
