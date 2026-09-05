@@ -48,7 +48,7 @@ def issue(signer, subject, subject_pub, scope, epoch, parent_subject=None, paren
 
 
 def verify_chain(root_public, owner_cred, child_cred, required_scope, epoch, policy, cache, expected_cache):
-    if cache != expected_cache:
+    if epoch != CURRENT_EPOCH or cache != expected_cache:
         return False
     owner = owner_cred["payload"]
     child = child_cred["payload"]
