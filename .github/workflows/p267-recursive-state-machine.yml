@@ -1,0 +1,20 @@
+name: P267 Recursive State Machine
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p267:
+    name: p267-recursive-state-machine
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute bounded P267 probe
+        run: python3 recursive_governed_change_p267_test.py
