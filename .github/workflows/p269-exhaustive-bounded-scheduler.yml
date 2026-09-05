@@ -1,0 +1,30 @@
+name: P269 Exhaustive Bounded Scheduler
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p269:
+    name: p269-exhaustive-bounded-scheduler
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact triggering revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+      - name: Verify checkout identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          expected="${{ github.event.pull_request.head.sha || github.sha }}"
+          test "$actual" = "$expected"
+      - name: Execute exhaustive bounded scheduler
+        run: python3 recursive_exhaustive_scheduler_p269_test.py
