@@ -2,9 +2,6 @@ name: P313 Distributed Freshness
 
 on:
   push:
-    paths:
-      - 'p313_distributed_freshness_verifier_disagreement.py'
-      - '.github/workflows/p313-distributed-freshness.yml'
   workflow_dispatch:
 
 jobs:
