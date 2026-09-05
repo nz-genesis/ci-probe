@@ -115,9 +115,9 @@ def main():
     }
     assert authorized_sets == {frozenset({a, b}), frozenset({a, b, c})}
 
-    # 12. Conflicting principal paths cannot create a synthetic root not present in the protected policy.
+    # 12. A synthetic root cannot replace a named required principal.
     synthetic = Credential("SYNTHETIC", "R-SYNTH", PROTECTED_EPOCH, SCOPE)
-    assert not authorized_quorum({a, b, synthetic}, roots | {Root("R-SYNTH", PROTECTED_EPOCH)}, delegations)
+    assert not authorized_quorum({a, synthetic}, roots | {Root("R-SYNTH", PROTECTED_EPOCH)}, delegations)
 
     # 13. Root rotation requires the new protected epoch/root set; old credentials do not carry forward.
     new_roots = {Root("R1", PROTECTED_EPOCH + 1), Root("R2", PROTECTED_EPOCH + 1)}
