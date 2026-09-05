@@ -1,0 +1,17 @@
+name: P294 Trust Root Verifier Dependency Substitution
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  p294:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Verify exact triggering commit
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run P294
+        run: python3 p294_trust_root_verifier_dependency_substitution_test.py
