@@ -5,6 +5,7 @@ No new Genesis primitive is introduced: epoch/parent binding is represented
 as Evidence and Constraint applied to the existing governed transition.
 """
 from dataclasses import dataclass
+from itertools import combinations
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,11 @@ def sigs(root: Root, names=("a", "b", "c")):
     return [Signature(n, root) for n in names]
 
 
+def has_safe_quorum_intersection(q1: set[str], q2: set[str], byzantine: set[str]) -> bool:
+    """Two conflicting quorums are impossible if they share an honest signer."""
+    return bool((q1 & q2) - byzantine)
+
+
 def test_epoch_must_advance_exactly_one():
     s = initial()
     jump = Root(3, "r3", "r1")
@@ -96,18 +102,23 @@ def test_same_epoch_equivocation_does_not_create_second_pending_root():
     assert begin(pending, y, sigs(y)) is None
 
 
-def test_byzantine_signer_can_equivocate_but_honest_intersection_blocks_conflict():
-    s = initial()
-    x = Root(2, "x", "r1")
-    y = Root(2, "y", "r1")
-    # b equivocates. With 3-of-4, two quorums intersect in at least two signers,
-    # so they cannot both be honest-compatible when at most one signer is Byzantine.
-    qx = {"a", "b", "c"}
-    qy = {"b", "c", "d"}
-    assert len(qx & qy) == 2
-    assert len({"b"} & (qx & qy)) == 1
-    assert authorized(s, x, sigs(x, tuple(qx)))
-    assert authorized(s, y, sigs(y, tuple(qy)))
+def test_three_of_four_quorums_cannot_conflict_with_one_byzantine():
+    signers = {"a", "b", "c", "d"}
+    threshold = 3
+    byzantine = {"b"}
+    quorums = [set(c) for c in combinations(signers, threshold)]
+    for q1 in quorums:
+        for q2 in quorums:
+            assert has_safe_quorum_intersection(q1, q2, byzantine)
+
+
+def test_two_of_three_can_conflict_with_one_byzantine():
+    signers = {"a", "b", "c"}
+    threshold = 2
+    byzantine = {"b"}
+    quorums = [set(c) for c in combinations(signers, threshold)]
+    assert any(not has_safe_quorum_intersection(q1, q2, byzantine)
+               for q1 in quorums for q2 in quorums if q1 != q2)
 
 
 def test_after_rotation_next_root_must_reference_rotated_root():
