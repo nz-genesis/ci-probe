@@ -1,0 +1,22 @@
+name: P305 Provider Contract Reconciliation
+
+on:
+  push:
+    paths:
+      - 'p305_provider_contract_reconciliation_test.py'
+      - '.github/workflows/p305-provider-contract-reconciliation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p305:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact triggering commit
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run P305
+        run: python3 p305_provider_contract_reconciliation_test.py
