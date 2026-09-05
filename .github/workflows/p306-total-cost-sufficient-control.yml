@@ -1,0 +1,22 @@
+name: P306 Total Cost Sufficient Control
+
+on:
+  push:
+    paths:
+      - 'p306_total_cost_sufficient_control_benchmark.py'
+      - '.github/workflows/p306-total-cost-sufficient-control.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p306:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact triggering commit
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run P306
+        run: python3 p306_total_cost_sufficient_control_benchmark.py
