@@ -73,15 +73,17 @@ def worker(path: str, contract: str, phase: str) -> int:
     return 12
 
 
-def observer(path: str) -> int:
+def observer(path: str, expected_rotated: bool) -> int:
     db = db_open(path)
     epoch = int(db.execute("SELECT v FROM state WHERE k='authority_epoch'").fetchone()[0])
     status = db.execute("SELECT status FROM ops WHERE operation_id='op-1'").fetchone()[0]
     db.close()
-    return 0 if (epoch == 2 and status == "IN_FLIGHT") else 20
+    if expected_rotated:
+        return 0 if (epoch == 2 and status == "IN_FLIGHT") else 20
+    return 0 if (epoch == 1 and status in ("IN_FLIGHT", "COMMITTED")) else 21
 
 
-def run_scenario(contract: str) -> None:
+def run_scenario(contract: str, rotate: bool) -> str:
     with tempfile.TemporaryDirectory(prefix="p309-") as td:
         path = str(Path(td) / "state.db")
         db = db_open(path)
@@ -92,11 +94,12 @@ def run_scenario(contract: str) -> None:
         crashed = subprocess.run([sys.executable, __file__, "worker", path, contract, "CRASH_AFTER_EFFECT"], check=False)
         assert crashed.returncode == 91
 
-        db = db_open(path)
-        db.execute("UPDATE state SET v='2' WHERE k='authority_epoch'")
-        db.close()
+        if rotate:
+            db = db_open(path)
+            db.execute("UPDATE state SET v='2' WHERE k='authority_epoch'")
+            db.close()
 
-        observer_process = subprocess.Popen([sys.executable, __file__, "observer", path])
+        observer_process = subprocess.Popen([sys.executable, __file__, "observer", path, "1" if rotate else "0"])
         recovered = subprocess.run([sys.executable, __file__, "worker", path, contract, "RECOVER"], check=False)
         assert recovered.returncode == 0
         assert observer_process.wait() == 0
@@ -104,21 +107,30 @@ def run_scenario(contract: str) -> None:
         db = db_open(path)
         count = db.execute("SELECT count FROM effects WHERE effect_id='effect-1'").fetchone()[0]
         status = db.execute("SELECT status FROM ops WHERE operation_id='op-1'").fetchone()[0]
-        assert count == 1, (contract, count)
-        assert status == "IN_FLIGHT", (contract, status)
+        assert count == 1, (contract, rotate, count)
+        expected = "IN_FLIGHT" if rotate or contract == "NON_IDEMPOTENT" else "COMMITTED"
+        assert status == expected, (contract, rotate, status, expected)
         db.close()
+        return status
 
 
 def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "worker":
         raise SystemExit(worker(sys.argv[2], sys.argv[3], sys.argv[4]))
     if len(sys.argv) > 1 and sys.argv[1] == "observer":
-        raise SystemExit(observer(sys.argv[2]))
+        raise SystemExit(observer(sys.argv[2], bool(int(sys.argv[3]))))
+    outcomes = {}
     for contract in SCENARIOS:
-        run_scenario(contract)
-    print("P309 durable runtime realization: 3/3 PASS")
-    print("crash/restart: PASS; concurrent observer process: PASS; stable effect identity: PASS")
-    print("authority rotation blocks stale adoption: PASS; duplicate external effect: 0")
+        outcomes[(contract, "ROTATED")] = run_scenario(contract, True)
+        outcomes[(contract, "CURRENT")] = run_scenario(contract, False)
+    assert outcomes[("NON_IDEMPOTENT", "CURRENT")] == "IN_FLIGHT"
+    assert outcomes[("IDEMPOTENT", "CURRENT")] == "COMMITTED"
+    assert outcomes[("RECONCILIABLE", "CURRENT")] == "COMMITTED"
+    assert all(outcomes[(c, "ROTATED")] == "IN_FLIGHT" for c in SCENARIOS)
+    print("P309 durable runtime realization: 6/6 PASS")
+    print("crash/restart: PASS; independent observer process: PASS; stable effect identity: PASS")
+    print("rotated authority blocks stale adoption: PASS; duplicate external effect: 0")
+    print("current authority + observable provider contract: PASS")
 
 
 if __name__ == "__main__":
