@@ -1,0 +1,25 @@
+name: P282 Numeric Boundary Runtime Differential
+
+on:
+  push:
+    paths:
+      - 'p282_numeric_boundary_runtime_differential_test.py'
+      - '.github/workflows/p282-numeric-boundary-runtime-differential.yml'
+  pull_request:
+    paths:
+      - 'p282_numeric_boundary_runtime_differential_test.py'
+      - '.github/workflows/p282-numeric-boundary-runtime-differential.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  p282:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify checked-out commit
+        run: |
+          test "${GITHUB_SHA}" = "$(git rev-parse HEAD)"
+      - name: Run P282 bounded probe
+        run: python3 p282_numeric_boundary_runtime_differential_test.py
