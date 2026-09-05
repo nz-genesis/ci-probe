@@ -45,6 +45,8 @@ def initial() -> AnchorState:
 
 
 def begin_rotation(s: AnchorState, new: Root, signatures: list[Signed]) -> AnchorState | None:
+    if s.pending is not None:
+        return None
     if new.epoch != s.current.epoch + 1:
         return None
     if not authorized(signatures, new, set(s.trusted_signers), s.threshold):
@@ -70,7 +72,6 @@ def test_insufficient_quorum_is_unsafe_under_one_byzantine_signer():
 def test_3_of_4_prevents_two_conflicting_quorums_with_one_byzantine():
     signers = {"a", "b", "c", "d"}
     threshold = 3
-    x, y = Root(2, "x"), Root(2, "y")
     all_sets = [set(c) for c in combinations(signers, threshold)]
     conflicting = []
     for q1 in all_sets:
@@ -117,9 +118,16 @@ def test_stale_old_epoch_cannot_start_second_rotation():
     new = Root(2, "r2")
     s1 = begin_rotation(s, new, [Signed("a", new), Signed("b", new), Signed("c", new)])
     assert s1 is not None
-    assert begin_rotation(s1, Root(2, "evil"), [Signed("a", Root(2, "evil")),
-                                                  Signed("b", Root(2, "evil")),
-                                                  Signed("c", Root(2, "evil"))]) is None
+    evil = Root(2, "evil")
+    assert begin_rotation(s1, evil, [Signed("a", evil), Signed("b", evil), Signed("c", evil)]) is None
+
+
+def test_concurrent_rotation_is_blocked_while_one_is_pending():
+    s = initial()
+    x, y = Root(2, "x"), Root(2, "y")
+    s1 = begin_rotation(s, x, [Signed("a", x), Signed("b", x), Signed("c", x)])
+    assert s1 is not None
+    assert begin_rotation(s1, y, [Signed("a", y), Signed("b", y), Signed("c", y)]) is None
 
 
 def test_rotation_recovery_does_not_depend_on_mutable_pending_root():
