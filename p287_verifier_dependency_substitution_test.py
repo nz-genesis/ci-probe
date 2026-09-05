@@ -2,24 +2,17 @@
 """P287 — bounded verifier/dependency substitution probe.
 
 Research status: executable model, not a production security proof.
-The probe tests that a mutable target cannot redefine the rules that
-qualify its own consequential self-change by substituting a verifier,
-trust-root interpretation, or verifier dependency without a protected
-current-state authority boundary.
 """
-
 from dataclasses import dataclass, replace
-from typing import FrozenSet, Optional, Tuple
-
+from typing import FrozenSet, Optional
 
 @dataclass(frozen=True)
 class Verifier:
     name: str
     version: int
     trusted_roots: FrozenSet[str]
-    accepts_weak_constraints: bool = False
     dependency: Optional[str] = None
-
+    accepts_weak_constraints: bool = False
 
 @dataclass(frozen=True)
 class Transition:
@@ -28,9 +21,9 @@ class Transition:
     authority_root: str
     verifier_name: str
     verifier_version: int
+    dependency: str
     target: str
     operation: str
-
 
 @dataclass(frozen=True)
 class AuthorityState:
@@ -38,98 +31,88 @@ class AuthorityState:
     active_root: str
     verifier_name: str
     verifier_version: int
+    dependency: str
     allowed_verifier_versions: FrozenSet[int]
     constitutional_guard: bool = True
 
-
-def qualify(transition: Transition, state: AuthorityState, verifier: Verifier) -> bool:
-    """Protected qualification boundary; mutable verifier cannot rewrite it."""
+def qualify(t: Transition, s: AuthorityState, v: Verifier) -> bool:
     return (
-        state.constitutional_guard
-        and transition.epoch == state.epoch
-        and transition.authority_root == state.active_root
-        and transition.verifier_name == state.verifier_name
-        and transition.verifier_version == state.verifier_version
-        and transition.verifier_version in state.allowed_verifier_versions
-        and transition.authority_root in verifier.trusted_roots
-        and not verifier.accepts_weak_constraints
+        s.constitutional_guard
+        and t.epoch == s.epoch
+        and t.authority_root == s.active_root
+        and t.verifier_name == s.verifier_name
+        and t.verifier_version == s.verifier_version
+        and t.verifier_version in s.allowed_verifier_versions
+        and t.dependency == s.dependency
+        and v.name == s.verifier_name
+        and v.version == s.verifier_version
+        and v.dependency == s.dependency
+        and t.authority_root in v.trusted_roots
+        and not v.accepts_weak_constraints
     )
 
-
 def main() -> None:
-    roots = frozenset({"ROOT-A"})
-    v1 = Verifier("V", 1, roots)
-    state1 = AuthorityState(7, "ROOT-A", "V", 1, frozenset({1}))
-
-    t1 = Transition("t1", 7, "ROOT-A", "V", 1, "capability-X", "change")
+    roots_a = frozenset({"ROOT-A"})
+    v1 = Verifier("V", 1, roots_a, dependency="dep-trusted")
+    state1 = AuthorityState(7, "ROOT-A", "V", 1, "dep-trusted", frozenset({1}))
+    t1 = Transition("t1", 7, "ROOT-A", "V", 1, "dep-trusted", "capability-X", "change")
     assert qualify(t1, state1, v1)
 
-    # 1. Substituting V2 without an authorized state transition cannot pass.
-    v2 = Verifier("V", 2, roots)
-    t_v2 = replace(t1, verifier_version=2)
-    assert not qualify(t_v2, state1, v2)
+    # 1. Version substitution without an authorized state transition.
+    v2 = Verifier("V", 2, roots_a, dependency="dep-trusted")
+    assert not qualify(replace(t1, verifier_version=2), state1, v2)
 
-    # 2. A weaker verifier cannot launder weak constraints into authorization.
-    weak_v2 = Verifier("V", 2, roots, accepts_weak_constraints=True)
-    assert not qualify(t_v2, state1, weak_v2)
+    # 2. Weaker verifier cannot launder weak constraints.
+    weak_v1 = replace(v1, accepts_weak_constraints=True)
+    assert not qualify(t1, state1, weak_v1)
 
-    # 3. Replacing a dependency does not silently replace the verifier identity.
-    v1_dep = Verifier("V", 1, roots, dependency="dep-attacker")
-    assert qualify(t1, state1, v1_dep) is False
+    # 3. Dependency substitution cannot pass with the same verifier identity.
+    attacker_dep_v1 = replace(v1, dependency="dep-attacker")
+    attacker_dep_t = replace(t1, dependency="dep-attacker")
+    assert not qualify(attacker_dep_t, state1, attacker_dep_v1)
 
-    # 4. Dependency substitution is rejected even when the top-level name/version match.
-    v1_good_dep = Verifier("V", 1, roots, dependency="dep-trusted")
-    state_with_dependency = replace(state1)
-    # The bounded model has no dependency field in AuthorityState; therefore
-    # an implementation that allows unbound dependency substitution is unsafe.
-    # This is an explicit negative witness, not an accidental pass.
-    assert state_with_dependency.verifier_version == 1
-    assert v1_good_dep.dependency != v1_dep.dependency
-    assert not (v1_dep.dependency == "dep-attacker" and qualify(t1, state1, v1_dep))
+    # 4. Current state explicitly binds the dependency.
+    assert attacker_dep_v1.dependency != state1.dependency
+    assert not qualify(t1, state1, attacker_dep_v1)
 
-    # 5. Trust-root substitution is rejected by the protected active root.
-    attacker_v1 = Verifier("V", 1, frozenset({"ROOT-ATTACKER"}))
-    attacker_t = replace(t1, authority_root="ROOT-ATTACKER")
-    assert not qualify(attacker_t, state1, attacker_v1)
+    # 5. Trust-root substitution cannot manufacture current authority.
+    attacker_root_v1 = replace(v1, trusted_roots=frozenset({"ROOT-ATTACKER"}))
+    attacker_root_t = replace(t1, authority_root="ROOT-ATTACKER")
+    assert not qualify(attacker_root_t, state1, attacker_root_v1)
 
     # 6. Old epoch cannot authorize after rotation.
-    state2 = AuthorityState(8, "ROOT-B", "V", 2, frozenset({2}))
+    state2 = AuthorityState(8, "ROOT-B", "V", 2, "dep-v2", frozenset({2}))
     assert not qualify(t1, state2, v1)
 
-    # 7. New verifier becomes valid only after an explicit authority-state transition.
-    t2 = replace(t1, transition_id="t2", epoch=8, authority_root="ROOT-B", verifier_version=2)
-    v2_b = Verifier("V", 2, frozenset({"ROOT-B"}))
+    # 7. New verifier is valid only under the new explicit authority state.
+    v2_b = Verifier("V", 2, frozenset({"ROOT-B"}), dependency="dep-v2")
+    t2 = Transition("t2", 8, "ROOT-B", "V", 2, "dep-v2", "capability-X", "change")
     assert qualify(t2, state2, v2_b)
 
-    # 8. A verifier cannot self-authorize the state transition that makes itself trusted.
+    # 8. A candidate verifier cannot self-authorize the state that trusts it.
     forged_state = replace(state1, verifier_version=2, allowed_verifier_versions=frozenset({1, 2}))
-    assert not qualify(t_v2, state1, v2)
-    # The forged state is only a data object; without an authorized transition it
-    # cannot become current. The model therefore treats state replacement as guarded.
-    assert forged_state.epoch == state1.epoch
-    assert forged_state.active_root == state1.active_root
+    assert not qualify(replace(t1, verifier_version=2), state1, v2)
+    assert forged_state.verifier_version == 2
+    assert state1.verifier_version == 1
 
-    # 9. Constitutional guard cannot be disabled by the candidate transition.
+    # 9. Constitutional guard is outside the candidate's mutable semantics.
     disabled_guard = replace(state1, constitutional_guard=False)
     assert not qualify(t1, disabled_guard, v1)
 
-    # 10. Different verifier semantics under the same name/version are not enough evidence.
-    v1_semantic_change = Verifier("V", 1, roots, accepts_weak_constraints=True, dependency="dep-trusted")
-    assert not qualify(t1, state1, v1_semantic_change)
+    # 10. Same identity/version with changed semantics is not sufficient evidence.
+    semantic_change = replace(v1, accepts_weak_constraints=True)
+    assert not qualify(t1, state1, semantic_change)
 
-    # 11. Delegated verifier must still be rooted in current authority.
-    delegated = Verifier("V-delegated", 1, roots)
-    delegated_t = replace(t1, verifier_name="V-delegated")
-    assert not qualify(delegated_t, state1, delegated)
+    # 11. Delegated verifier cannot replace the current verifier identity implicitly.
+    delegated = Verifier("V-delegated", 1, roots_a, dependency="dep-trusted")
+    assert not qualify(replace(t1, verifier_name="V-delegated"), state1, delegated)
 
-    # 12. Candidate dependency cannot change the meaning of an already qualified transition.
-    qualified_before = qualify(t1, state1, v1)
+    # 12. A dependency mutation after qualification invalidates current qualification.
+    assert qualify(t1, state1, v1) is True
     substituted = replace(v1, dependency="dep-attacker")
-    assert qualified_before is True
     assert not qualify(t1, state1, substituted)
 
     print("P287 verifier/dependency substitution: 12/12 PASS")
-
 
 if __name__ == "__main__":
     main()
