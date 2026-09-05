@@ -2,11 +2,12 @@
 
 Ed25519 credentials are canonical signed objects. The protected root signs an
 owner credential whose payload binds the owner's public key; the owner signs
-an attenuated child credential bound to that certified key. Verification
-requires the protected root, valid delegation chain, scope attenuation,
-current epoch/policy/cache generation, and rejects substitution, tampering,
-replay and escalation. Cognition is only a selector, never an authority
-source. Cryptography is a realization mechanism, not a new Genesis primitive.
+an attenuated child credential whose parent key is bound to that certified
+owner key. Verification requires the protected root, valid delegation chain,
+scope attenuation, current epoch/policy/cache generation, and rejects
+substitution, tampering, replay and escalation. Cognition is only a selector,
+never an authority source. Cryptography is a realization mechanism, not a new
+Genesis primitive.
 """
 import base64
 import hashlib
@@ -66,7 +67,7 @@ def verify_chain(root_public, owner_cred, child_cred, required_scope, epoch, pol
         return False
     try:
         root_public.verify(base64.b64decode(owner_cred["sig"]), canonical(owner))
-        owner_public = Ed25519PublicKey.from_public_bytes(base64.b64decode(owner["subject_pub"]))
+        owner_public = Ed25519PublicKey.from_public_bytes(base64.b64decode(child["parent_pub"]))
         owner_public.verify(base64.b64decode(child_cred["sig"]), canonical(child))
     except Exception:
         return False
@@ -92,10 +93,8 @@ def main():
         ("strong", "weak_adversarial"),
     ):
         checked += 1
-        owner_candidate = dict(owner_cred)
-        owner_candidate["payload"] = dict(owner_cred["payload"])
-        candidate = dict(child)
-        candidate["payload"] = dict(child["payload"])
+        owner_candidate = {"payload": dict(owner_cred["payload"]), "sig": owner_cred["sig"]}
+        candidate = {"payload": dict(child["payload"]), "sig": child["sig"]}
         if child_kind == "scope_escalated":
             candidate["payload"]["scope"] = ["read", "write:task"]
         elif child_kind == "replayed":
