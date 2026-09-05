@@ -46,36 +46,35 @@ def run():
     current = Root("A1", 7, True)
     independent = Root("RECOVERY", 42, True)
     next_root = Root("A2", 8, True)
-    auth = RecoveryAuthority(independent, frozenset({"r1","r2","r3"}), 2)
+    auth = RecoveryAuthority(independent, frozenset({"r1", "r2", "r3"}), 2)
 
-    # 1. Independent recovery authority can authorize a successor.
-    good = RecoveryEvidence("RECOVERY", "A1", "A2", 8, frozenset({"r1","r2"}))
+    # P276 tests provenance of recovery authority, not cryptographic establishment.
+    good = RecoveryEvidence("RECOVERY", "A1", "A2", 8, frozenset({"r1", "r2"}))
     assert authorize_recovery(current, next_root, good, auth) is V.VALID
 
-    # 2. Current Genesis authority cannot be reused as recovery root merely
-    # because it is currently valid.
-    circular = RecoveryEvidence("A1", "A1", "A2", 8, frozenset({"r1","r2"}))
+    # Current Genesis authority cannot manufacture the independent recovery root.
+    circular = RecoveryEvidence("A1", "A1", "A2", 8, frozenset({"r1", "r2"}))
     assert authorize_recovery(current, next_root, circular, auth) is V.INVALID
 
-    # 3. A compromised/mutable recovery representation cannot become authority.
+    # A compromised mutable representation cannot become a trusted recovery root.
     compromised = RecoveryAuthority(Root("RECOVERY", 42, False), frozenset({"attacker"}), 1)
     forged = RecoveryEvidence("RECOVERY", "A1", "A2", 8, frozenset({"attacker"}))
     assert authorize_recovery(current, next_root, forged, compromised) is V.UNKNOWN
 
-    # 4. Replay for another successor is rejected.
-    other = RecoveryEvidence("RECOVERY", "A1", "EVIL", 8, frozenset({"r1","r2"}))
+    # Evidence is target-bound and cannot be replayed for another successor.
+    other = RecoveryEvidence("RECOVERY", "A1", "EVIL", 8, frozenset({"r1", "r2"}))
     assert authorize_recovery(current, next_root, other, auth) is V.INVALID
 
-    # 5. Old epoch cannot be skipped.
-    skipped = RecoveryEvidence("RECOVERY", "A1", "A3", 9, frozenset({"r1","r2"}))
+    # Epoch skipping is forbidden.
     a3 = Root("A3", 9, True)
+    skipped = RecoveryEvidence("RECOVERY", "A1", "A3", 9, frozenset({"r1", "r2"}))
     assert authorize_recovery(current, a3, skipped, auth) is V.INVALID
 
-    # 6. Missing recovery quorum remains unknown.
+    # Missing quorum remains UNKNOWN rather than becoming guessed authority.
     insufficient = RecoveryEvidence("RECOVERY", "A1", "A2", 8, frozenset({"r1"}))
     assert authorize_recovery(current, next_root, insufficient, auth) is V.UNKNOWN
 
-    # 7. Recovery authority does not grant ordinary execution authority.
+    # Recovery authority is not ordinary execution authority.
     assert auth.root.id != next_root.id
 
     print("P276 recovery-authority provenance: 7/7 PASS")
