@@ -1,0 +1,20 @@
+name: P297 distributed verifier disagreement
+
+on:
+  push:
+    paths:
+      - 'p297_distributed_verifier_disagreement_test.py'
+      - '.github/workflows/p297-distributed-verifier-disagreement.yml'
+  workflow_dispatch:
+
+jobs:
+  p297:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify exact triggering commit
+        run: test "${GITHUB_SHA}" = "$(git rev-parse HEAD)"
+      - name: Run P297 probe
+        run: python3 p297_distributed_verifier_disagreement_test.py
