@@ -1,0 +1,20 @@
+name: P302 Three Concurrent Mixed Generation
+
+on:
+  push:
+    paths:
+      - 'p302_three_concurrent_mixed_generation_test.py'
+      - '.github/workflows/p302-three-concurrent-mixed-generation.yml'
+  workflow_dispatch:
+
+jobs:
+  p302:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact triggering commit
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run P302
+        run: python3 p302_three_concurrent_mixed_generation_test.py
