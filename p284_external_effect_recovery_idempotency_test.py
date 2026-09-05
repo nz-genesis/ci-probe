@@ -1,7 +1,7 @@
 """P284: governed transition recovery across an external-effect boundary.
 
 Bounded model for partial success, retry, observation disagreement, and
-idempotency. It distinguishes internal rollback from external compensation.
+idempotency. Internal rollback never erases an external effect.
 """
 
 from dataclasses import dataclass
@@ -17,40 +17,47 @@ class Command:
 
 @dataclass
 class ExternalSystem:
+    supports_idempotency: bool
     applied_keys: set[str]
     effects: int = 0
 
     def apply(self, command: Command) -> str:
-        if command.idempotency_key in self.applied_keys:
+        if self.supports_idempotency and command.idempotency_key in self.applied_keys:
             return "ALREADY_APPLIED"
-        self.applied_keys.add(command.idempotency_key)
+        if self.supports_idempotency:
+            self.applied_keys.add(command.idempotency_key)
         self.effects += 1
         return "APPLIED"
+
+    def query(self, key: str) -> str:
+        if not self.supports_idempotency:
+            return "UNSUPPORTED"
+        return "APPLIED" if key in self.applied_keys else "ABSENT"
 
 
 def recover_after_uncertain_send(system: ExternalSystem, command: Command, observed: str | None) -> str:
     if observed == "APPLIED":
         return "COMMITTED"
-    result = system.apply(command)
-    if result == "ALREADY_APPLIED":
+    status = system.query(command.idempotency_key)
+    if status == "APPLIED":
         return "COMMITTED"
-    if result == "APPLIED":
-        return "COMMITTED"
+    if status == "ABSENT" and system.supports_idempotency:
+        return "COMMITTED" if system.apply(command) in {"APPLIED", "ALREADY_APPLIED"} else "UNKNOWN"
     return "UNKNOWN"
 
 
 def run() -> None:
     # 1. First execution produces one external effect.
-    system = ExternalSystem(set())
+    system = ExternalSystem(True, set())
     cmd = Command("T1", "K1", 7, "Genesis")
     assert system.apply(cmd) == "APPLIED"
     assert system.effects == 1
 
-    # 2. Retry after lost response is idempotent.
+    # 2. Retry after a lost response is idempotent.
     assert recover_after_uncertain_send(system, cmd, observed=None) == "COMMITTED"
     assert system.effects == 1
 
-    # 3. A duplicate transition with the same idempotency key is not a new effect.
+    # 3. A duplicate transition carrying the same idempotency key is not a new effect.
     duplicate = Command("T1-retry", "K1", 7, "Genesis")
     assert system.apply(duplicate) == "ALREADY_APPLIED"
     assert system.effects == 1
@@ -60,47 +67,51 @@ def run() -> None:
     assert system.apply(cmd2) == "APPLIED"
     assert system.effects == 2
 
-    # 5. Observation can confirm an already-applied effect without replay.
+    # 5. Explicit observation confirms an applied effect without replay.
     assert recover_after_uncertain_send(system, cmd2, observed="APPLIED") == "COMMITTED"
     assert system.effects == 2
 
-    # 6. Internal rollback is not an erasure of an observed external effect.
-    observed_effect = True
-    assert observed_effect is True
-    compensation_required = observed_effect and system.effects > 0
+    # 6. A recorded external effect cannot be erased by internal rollback.
+    observed_effects_before = system.effects
+    compensation_required = system.query("K2") == "APPLIED"
     assert compensation_required is True
+    assert system.effects == observed_effects_before
 
-    # 7. Different idempotency keys must not be collapsed merely because targets match.
+    # 7. Different idempotency keys must remain distinct even for the same target.
     cmd3 = Command("T3", "K3", 7, "Genesis")
     assert system.apply(cmd3) == "APPLIED"
     assert system.effects == 3
 
-    # 8. Replaying an old key remains bounded to the original effect.
+    # 8. Replaying an old key remains bounded to its original effect.
     assert system.apply(cmd) == "ALREADY_APPLIED"
     assert system.effects == 3
 
-    # 9. A stale authority epoch cannot be treated as a fresh external command.
+    # 9. Stale authority is a qualification failure, not a fresh external command.
     stale = Command("T4", "K4", 6, "Genesis")
-    assert stale.authority_epoch != cmd2.authority_epoch
     assert stale.authority_epoch < cmd2.authority_epoch
+    assert stale.authority_epoch != 7
 
-    # 10. Same transition ID with a different idempotency key is not equivalent.
+    # 10. Same transition ID with a different key is a distinct external request.
     altered = Command("T1", "K-ALTERED", 7, "Genesis")
     assert altered.transition_id == cmd.transition_id
     assert altered.idempotency_key != cmd.idempotency_key
     assert system.apply(altered) == "APPLIED"
     assert system.effects == 4
 
-    # 11. Idempotency is an external contract; Genesis cannot infer it from a cache hit.
+    # 11. A cache hit without an external confirmation cannot establish effect state.
+    non_idempotent = ExternalSystem(False, set())
     cache_hit = True
-    external_confirmation = False
-    assert cache_hit and not external_confirmation
-    assert "UNKNOWN" == "UNKNOWN"
+    unknown_cmd = Command("T5", "K5", 7, "Genesis")
+    assert non_idempotent.query(unknown_cmd.idempotency_key) == "UNSUPPORTED"
+    assert cache_hit and recover_after_uncertain_send(non_idempotent, unknown_cmd, None) == "UNKNOWN"
+    assert non_idempotent.effects == 0
 
-    # 12. If an external system cannot provide idempotent confirmation, recovery must
-    # remain compensatable/unknown rather than silently claiming success.
-    non_idempotent_uncertainty = "UNKNOWN"
-    assert non_idempotent_uncertainty in {"UNKNOWN", "COMPENSATION_REQUIRED"}
+    # 12. Once a non-idempotent system has actually applied the command, recovery
+    # remains an explicit compensation/observation problem rather than fake success.
+    assert non_idempotent.apply(unknown_cmd) == "APPLIED"
+    assert non_idempotent.effects == 1
+    assert recover_after_uncertain_send(non_idempotent, unknown_cmd, None) == "UNKNOWN"
+    assert non_idempotent.effects == 2  # retry may duplicate; this is evidence of the hazard
 
     print("P284 external-effect recovery/idempotency: 12/12 PASS")
 
