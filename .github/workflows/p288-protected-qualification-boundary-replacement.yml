@@ -1,0 +1,25 @@
+name: P288 protected qualification boundary replacement
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  p288:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Verify exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+
+      - name: Run P288 probe
+        run: python3 p288_protected_qualification_boundary_replacement_test.py
