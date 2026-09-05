@@ -1,0 +1,23 @@
+name: P296 multi-hop delegation attenuation revocation
+
+on:
+  push:
+    paths:
+      - 'p296_multi_hop_delegation_attenuation_revocation_test.py'
+      - '.github/workflows/p296-multi-hop-delegation-attenuation-revocation.yml'
+  workflow_dispatch:
+
+jobs:
+  p296:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify exact triggering commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_SHA}" = "$(git rev-parse HEAD)"
+      - name: Run P296 probe
+        run: python3 p296_multi_hop_delegation_attenuation_revocation_test.py
