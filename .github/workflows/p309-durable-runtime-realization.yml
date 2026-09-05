@@ -1,0 +1,19 @@
+name: P309 durable runtime realization
+
+on:
+  push:
+    paths:
+      - 'p309_durable_runtime_realization.py'
+      - '.github/workflows/p309-durable-runtime-realization.yml'
+  workflow_dispatch:
+
+jobs:
+  p309:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run P309
+        run: python p309_durable_runtime_realization.py
