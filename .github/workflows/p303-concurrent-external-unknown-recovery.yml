@@ -1,0 +1,21 @@
+name: P303 concurrent external UNKNOWN recovery
+
+on:
+  push:
+    paths:
+      - "p303_three_concurrent_external_unknown_recovery_test.py"
+      - ".github/workflows/p303-concurrent-external-unknown-recovery.yml"
+  pull_request:
+    paths:
+      - "p303_three_concurrent_external_unknown_recovery_test.py"
+      - ".github/workflows/p303-concurrent-external-unknown-recovery.yml"
+
+jobs:
+  p303:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact triggering revision
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run P303
+        run: python3 p303_three_concurrent_external_unknown_recovery_test.py
