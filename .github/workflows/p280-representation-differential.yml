@@ -1,0 +1,27 @@
+name: P280 Cross-Implementation Representation Differential
+
+on:
+  push:
+    paths:
+      - 'p280_cross_implementation_representation_differential_test.py'
+      - '.github/workflows/p280-representation-differential.yml'
+  pull_request:
+    paths:
+      - 'p280_cross_implementation_representation_differential_test.py'
+      - '.github/workflows/p280-representation-differential.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  p280:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify checked-out commit
+        run: |
+          echo "EXPECTED_SHA=${GITHUB_SHA}"
+          echo "CHECKED_OUT_SHA=$(git rev-parse HEAD)"
+          test "${GITHUB_SHA}" = "$(git rev-parse HEAD)"
+      - name: Run P280 bounded probe
+        run: python3 p280_cross_implementation_representation_differential_test.py
