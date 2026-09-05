@@ -24,6 +24,9 @@ class Transition:
     dependency: str
     target: str
     operation: str
+    candidate_verifier_name: Optional[str] = None
+    candidate_verifier_version: Optional[int] = None
+    candidate_dependency: Optional[str] = None
 
 @dataclass(frozen=True)
 class AuthorityState:
@@ -49,6 +52,24 @@ def qualify(t: Transition, s: AuthorityState, v: Verifier) -> bool:
         and v.dependency == s.dependency
         and t.authority_root in v.trusted_roots
         and not v.accepts_weak_constraints
+    )
+
+def rotate_verifier(current: AuthorityState, t: Transition, current_verifier: Verifier) -> AuthorityState:
+    """Only the currently trusted verifier can authorize its replacement."""
+    if not qualify(t, current, current_verifier):
+        raise ValueError("rotation transition is not currently qualified")
+    if t.operation != "rotate-verifier":
+        raise ValueError("wrong operation")
+    if None in (t.candidate_verifier_name, t.candidate_verifier_version, t.candidate_dependency):
+        raise ValueError("incomplete candidate verifier")
+    return AuthorityState(
+        epoch=current.epoch + 1,
+        active_root=current.active_root,
+        verifier_name=t.candidate_verifier_name,
+        verifier_version=t.candidate_verifier_version,
+        dependency=t.candidate_dependency,
+        allowed_verifier_versions=frozenset({t.candidate_verifier_version}),
+        constitutional_guard=current.constitutional_guard,
     )
 
 def main() -> None:
@@ -80,22 +101,25 @@ def main() -> None:
     attacker_root_t = replace(t1, authority_root="ROOT-ATTACKER")
     assert not qualify(attacker_root_t, state1, attacker_root_v1)
 
-    # 6. Old epoch cannot authorize after rotation.
-    state2 = AuthorityState(8, "ROOT-B", "V", 2, "dep-v2", frozenset({2}))
+    # 6. Old epoch cannot authorize after a real modeled verifier rotation.
+    rotation = Transition(
+        "rotate", 7, "ROOT-A", "V", 1, "dep-trusted", "verifier", "rotate-verifier",
+        candidate_verifier_name="V", candidate_verifier_version=2, candidate_dependency="dep-v2"
+    )
+    state2 = rotate_verifier(state1, rotation, v1)
+    assert state2.epoch == 8
     assert not qualify(t1, state2, v1)
 
-    # 7. New verifier is valid only under the new explicit authority state.
-    v2_b = Verifier("V", 2, frozenset({"ROOT-B"}), dependency="dep-v2")
-    t2 = Transition("t2", 8, "ROOT-B", "V", 2, "dep-v2", "capability-X", "change")
+    # 7. New verifier is valid only after the explicit guarded rotation.
+    v2_b = Verifier("V", 2, roots_a, dependency="dep-v2")
+    t2 = Transition("t2", 8, "ROOT-A", "V", 2, "dep-v2", "capability-X", "change")
     assert qualify(t2, state2, v2_b)
 
-    # 8. A candidate verifier cannot self-authorize the state that trusts it.
-    forged_state = replace(state1, verifier_version=2, allowed_verifier_versions=frozenset({1, 2}))
-    assert not qualify(replace(t1, verifier_version=2), state1, v2)
-    assert forged_state.verifier_version == 2
-    assert state1.verifier_version == 1
+    # 8. Candidate verifier cannot self-authorize its own rotation.
+    forged_rotation = replace(rotation, verifier_version=2, dependency="dep-v2")
+    assert not qualify(forged_rotation, state1, v2_b)
 
-    # 9. Constitutional guard is outside the candidate's mutable semantics.
+    # 9. Constitutional guard is outside candidate verifier semantics.
     disabled_guard = replace(state1, constitutional_guard=False)
     assert not qualify(t1, disabled_guard, v1)
 
@@ -103,11 +127,11 @@ def main() -> None:
     semantic_change = replace(v1, accepts_weak_constraints=True)
     assert not qualify(t1, state1, semantic_change)
 
-    # 11. Delegated verifier cannot replace the current verifier identity implicitly.
+    # 11. Delegated verifier cannot silently replace current verifier identity.
     delegated = Verifier("V-delegated", 1, roots_a, dependency="dep-trusted")
     assert not qualify(replace(t1, verifier_name="V-delegated"), state1, delegated)
 
-    # 12. A dependency mutation after qualification invalidates current qualification.
+    # 12. Dependency mutation after qualification invalidates current qualification.
     assert qualify(t1, state1, v1) is True
     substituted = replace(v1, dependency="dep-attacker")
     assert not qualify(t1, state1, substituted)
