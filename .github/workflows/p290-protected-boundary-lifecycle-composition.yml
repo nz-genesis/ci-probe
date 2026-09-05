@@ -1,0 +1,23 @@
+name: P290 protected boundary lifecycle composition
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  p290:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+      - name: Run P290 probe
+        run: python3 p290_protected_boundary_lifecycle_composition_test.py
