@@ -43,6 +43,8 @@ def recover_after_uncertain_send(system: ExternalSystem, command: Command, obser
         return "COMMITTED"
     if status == "ABSENT" and system.supports_idempotency:
         return "COMMITTED" if system.apply(command) in {"APPLIED", "ALREADY_APPLIED"} else "UNKNOWN"
+    # Without authoritative effect lookup/idempotency, retrying can duplicate
+    # an already-completed external action, so the safe result is UNKNOWN.
     return "UNKNOWN"
 
 
@@ -73,8 +75,7 @@ def run() -> None:
 
     # 6. A recorded external effect cannot be erased by internal rollback.
     observed_effects_before = system.effects
-    compensation_required = system.query("K2") == "APPLIED"
-    assert compensation_required is True
+    assert system.query("K2") == "APPLIED"
     assert system.effects == observed_effects_before
 
     # 7. Different idempotency keys must remain distinct even for the same target.
@@ -86,7 +87,7 @@ def run() -> None:
     assert system.apply(cmd) == "ALREADY_APPLIED"
     assert system.effects == 3
 
-    # 9. Stale authority is a qualification failure, not a fresh external command.
+    # 9. Stale authority is not silently upgraded by the external-effect layer.
     stale = Command("T4", "K4", 6, "Genesis")
     assert stale.authority_epoch < cmd2.authority_epoch
     assert stale.authority_epoch != 7
@@ -98,7 +99,7 @@ def run() -> None:
     assert system.apply(altered) == "APPLIED"
     assert system.effects == 4
 
-    # 11. A cache hit without an external confirmation cannot establish effect state.
+    # 11. A cache hit without external confirmation cannot establish effect state.
     non_idempotent = ExternalSystem(False, set())
     cache_hit = True
     unknown_cmd = Command("T5", "K5", 7, "Genesis")
@@ -106,12 +107,12 @@ def run() -> None:
     assert cache_hit and recover_after_uncertain_send(non_idempotent, unknown_cmd, None) == "UNKNOWN"
     assert non_idempotent.effects == 0
 
-    # 12. Once a non-idempotent system has actually applied the command, recovery
-    # remains an explicit compensation/observation problem rather than fake success.
+    # 12. If a non-idempotent system may already have applied the command,
+    # safe recovery must not blindly retry and duplicate the effect.
     assert non_idempotent.apply(unknown_cmd) == "APPLIED"
     assert non_idempotent.effects == 1
     assert recover_after_uncertain_send(non_idempotent, unknown_cmd, None) == "UNKNOWN"
-    assert non_idempotent.effects == 2  # retry may duplicate; this is evidence of the hazard
+    assert non_idempotent.effects == 1
 
     print("P284 external-effect recovery/idempotency: 12/12 PASS")
 
