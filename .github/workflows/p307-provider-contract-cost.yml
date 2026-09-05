@@ -1,0 +1,18 @@
+name: P307 Provider Contract Cost
+on:
+  push:
+    paths:
+      - 'p307_provider_contract_cost_interaction.py'
+      - '.github/workflows/p307-provider-contract-cost.yml'
+jobs:
+  p307:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact triggering commit
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run P307
+        run: python3 p307_provider_contract_cost_interaction.py
