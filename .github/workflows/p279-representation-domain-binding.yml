@@ -1,0 +1,27 @@
+name: P279 Representation Domain Binding
+
+on:
+  push:
+    paths:
+      - 'p279_representation_domain_binding_test.py'
+      - '.github/workflows/p279-representation-domain-binding.yml'
+  pull_request:
+    paths:
+      - 'p279_representation_domain_binding_test.py'
+      - '.github/workflows/p279-representation-domain-binding.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  p279:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify checked-out commit
+        run: |
+          echo "EXPECTED_SHA=${GITHUB_SHA}"
+          echo "CHECKED_OUT_SHA=$(git rev-parse HEAD)"
+          test "${GITHUB_SHA}" = "$(git rev-parse HEAD)"
+      - name: Run P279 bounded probe
+        run: python3 p279_representation_domain_binding_test.py
