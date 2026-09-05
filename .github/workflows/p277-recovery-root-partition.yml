@@ -1,0 +1,18 @@
+name: P277 Recovery Root Partition
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p277:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run P277 probe
+        run: python3 p277_recovery_root_partition_test.py
