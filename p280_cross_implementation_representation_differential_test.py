@@ -49,7 +49,10 @@ def strict_decode(raw: bytes) -> Transition:
         raise ValueError("schema/type mismatch")
     if not all(type(pairs[k]) is str for k in ("state_digest", "target", "authority_digest", "operation")):
         raise ValueError("field type mismatch")
-    return Transition(pairs["state_digest"], pairs["target"], pairs["epoch"], pairs["authority_digest"], pairs["operation"])
+    value = Transition(pairs["state_digest"], pairs["target"], pairs["epoch"], pairs["authority_digest"], pairs["operation"])
+    if raw != encode_a(value):
+        raise ValueError("non-canonical representation")
+    return value
 
 
 def rejects(raw: bytes) -> None:
@@ -74,6 +77,11 @@ def run() -> None:
     assert digest(domain, encode_a(changed)) != signed
     assert digest("genesis.authority.v1", a) != signed
 
+    # Same semantics in a different field order must not be accepted as a
+    # security representation: canonical bytes are part of the contract.
+    reordered = b'{"target":"Genesis","state_digest":"S1","operation":"self-change","epoch":7,"authority_digest":"A7"}'
+    rejects(reordered)
+
     rejects(b'{"authority_digest":"A7","epoch":7,"epoch":8,"operation":"self-change","state_digest":"S1","target":"Genesis"}')
     rejects(b'{"authority_digest":"A7","epoch":7.0,"operation":"self-change","state_digest":"S1","target":"Genesis"}')
     rejects(b'{"authority_digest":"A7","epoch":"7","operation":"self-change","state_digest":"S1","target":"Genesis"}')
@@ -87,7 +95,7 @@ def run() -> None:
     rejects(b'{"authority_digest":"A7","epoch":7,"operation":"self-change","state_digest":"S1","target":"Genesis"')
     rejects(b'not-json')
 
-    print("P280 cross-implementation representation differential: 12/12 PASS")
+    print("P280 cross-implementation representation differential: 13/13 PASS")
 
 
 if __name__ == "__main__":
