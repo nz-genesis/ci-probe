@@ -1,0 +1,16 @@
+name: P285 effect receipt binding crash consistency
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  p285:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact checkout
+        run: |
+          test "${GITHUB_SHA}" = "$(git rev-parse HEAD)"
+      - name: Run P285
+        run: python3 p285_effect_receipt_binding_crash_consistency_test.py
