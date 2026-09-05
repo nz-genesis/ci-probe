@@ -1,0 +1,20 @@
+name: P298 concurrent policy rotation in-flight recovery
+
+on:
+  push:
+    paths:
+      - 'p298_concurrent_policy_rotation_inflight_recovery_test.py'
+      - '.github/workflows/p298-concurrent-policy-rotation-inflight-recovery.yml'
+  workflow_dispatch:
+
+jobs:
+  p298:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify exact triggering commit
+        run: test "${GITHUB_SHA}" = "$(git rev-parse HEAD)"
+      - name: Run P298 probe
+        run: python3 p298_concurrent_policy_rotation_inflight_recovery_test.py
