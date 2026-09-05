@@ -1,0 +1,54 @@
+{
+  "schema_version": "3.0.0",
+  "challenge_id": "IR-V3",
+  "status": "FROZEN_NEUTRAL_PUBLIC_CHALLENGE",
+  "instructions": "Derive a smallest sufficient semantic factorization for the complete frozen case set. Do not assume any supplied ontology, primitive vocabulary, or category list. A smaller basis, different basis, irreducible residue, or H4/no-finite-basis conclusion is admissible.",
+  "cases": [
+    {"id":"C01","world_a":"A service is in condition X; an intervention is initiated and the service later reaches condition Y.","world_b":"A service is in condition X; no intervention is initiated and the service later reaches condition Y.","requirement":"Preserve any distinction required to explain the two histories when the present condition is equal."},
+    {"id":"C02","world_a":"A worker has a mechanism capable of performing operation R and the governing rule permits R in the current scope.","world_b":"The same mechanism is capable of R but the governing rule prohibits R in the current scope.","requirement":"Do not collapse technical possibility and normative permission."},
+    {"id":"C03","world_a":"An operation is attempted; its local execution completes; the intended outside change is later established.","world_b":"The same operation is attempted; its local execution completes; the intended outside change remains unresolved.","requirement":"Preserve the distinction between attempt, local execution and established outside result."},
+    {"id":"C04","world_a":"Two changes occur with evidence that their relative order is not known.","world_b":"The same two changes occur with evidence establishing a definite order.","requirement":"Represent justified ordering without inventing an order where none is established."},
+    {"id":"C05","world_a":"A system receives report S; the external event described by S occurred.","world_b":"A system receives the identical report S; the external event described by S did not occur.","requirement":"Keep received information distinguishable from the external event it purports to describe."},
+    {"id":"C06","world_a":"A process is lost after initiating an external interaction; later evidence establishes that the external result occurred.","world_b":"The same process is lost after initiating the interaction; later evidence establishes that it did not occur.","world_c":"The same process is lost and no later evidence establishes the result.","requirement":"Distinguish established positive, established negative and unresolved external result."},
+    {"id":"C07","world_a":"An authorized configuration change is applied and later reconstructed from bounded durable records.","world_b":"A similarly shaped change is attempted outside the applicable authority scope.","requirement":"Preserve enough information to distinguish governed change from unauthorized attempt."},
+    {"id":"C08","world_a":"Input I is received from source S and is currently valid and authorized for operation R.","world_b":"The same input I is received but its source or validity is unresolved and it is not sufficient authorization for R.","requirement":"Receiving and retaining input must not silently establish provenance, validity or permission."},
+    {"id":"C09","world_a":"Referent Q changes from condition A to B while continuity across the transformation is relevant.","world_b":"A different referent starts in condition B with no continuity from Q.","requirement":"Preserve continuity when it matters rather than identifying referents only by current condition."},
+    {"id":"C10","world_a":"Two instances have equal current observable condition and different preceding events.","world_b":"Two instances have equal current observable condition and identical preceding events.","requirement":"Preserve history distinctions only when supported by the task; equal current values alone are insufficient to infer identical history."},
+    {"id":"C11","world_a":"A permission was valid during interval T1 but has expired at T2.","world_b":"An otherwise identical permission remains valid at T2.","requirement":"Time-dependent validity must remain evaluable without silently treating stale permission as current."},
+    {"id":"C12","world_a":"An information artifact has a source, timestamp and support that conflict with another artifact.","world_b":"The artifacts have matching support and no conflict.","requirement":"Preserve source, support and conflict status rather than promoting reports directly to fact."},
+    {"id":"C13","world_a":"Operation A occurs and produces external effect E1; operation B occurs concurrently and produces E2; no causal relation is established.","world_b":"A occurs before B and evidence establishes that A causally contributes to E2.","requirement":"Do not equate temporal order, concurrency and causality."},
+    {"id":"C14","world_a":"Two component operations share a resource and can jointly satisfy a constraint when their effects are considered together.","world_b":"The same operations individually satisfy their local conditions but jointly violate the shared constraint.","requirement":"Represent composition and cross-domain constraint interaction without assuming a new primitive merely because operations are combined."},
+    {"id":"C15","world_a":"An external effect occurs without a command from the local system.","world_b":"A command is recorded but no external effect is established.","requirement":"Keep autonomous external occurrence/effect distinct from commanded attempt and from absence of established effect."},
+    {"id":"C16","world_a":"A candidate representation preserves every required distinction in the preceding cases.","world_b":"A candidate representation removes one claimed factor and hides the removed distinction in an opaque identifier or undeclared relation label.","requirement":"A reduction is valid only if semantics remain explicitly reconstructable; opaque renaming or hidden metadata is not a valid factorization."}
+  ],
+  "adversarial_cases": [
+    {"id":"A01","requirement":"Same present condition, different history."},
+    {"id":"A02","requirement":"Same capability, different permission."},
+    {"id":"A03","requirement":"Same local completion, different external outcome."},
+    {"id":"A04","requirement":"Concurrent events with no justified total order."},
+    {"id":"A05","requirement":"Same received signal, different external truth."},
+    {"id":"A06","requirement":"Crash with positive, negative or unresolved external result."},
+    {"id":"A07","requirement":"Authority scope/revocation changes applicability."},
+    {"id":"A08","requirement":"Same payload, different provenance/validity/support."},
+    {"id":"A09","requirement":"Transformation continuity versus recreation."},
+    {"id":"A10","requirement":"Temporal order versus causality."},
+    {"id":"A11","requirement":"Joint composition changes constraint satisfaction."},
+    {"id":"A12","requirement":"Autonomous external effect versus commanded attempt."},
+    {"id":"A13","requirement":"Opaque identifier or undeclared relation used to fake factor reduction."}
+  ],
+  "submission_contract": {
+    "required_fields":["basis","semantic_definitions","case_mappings","deletion_analysis","composition_rules","counterexamples","uncertainty","minimality_objective","provenance","candidate_visibility"],
+    "mapping_fields":["case_id","basis_ids","justification","observable_distinctions"],
+    "deletion_fields":["basis_id","cases_lost_if_removed","justification","anti_laundering_check"],
+    "counterexample_fields":["domain","scenario","failure_if_ignored"],
+    "provenance_fields":["source","execution_path","prior_exposure","operator_relationship"]
+  },
+  "rules": {
+    "target_neutrality": true,
+    "allow_h4": true,
+    "require_explicit_composition": true,
+    "forbid_opaque_factor": true,
+    "freeze_objective_before_comparison": true,
+    "freeze_raw_result_before_target_comparison": true
+  }
+}
