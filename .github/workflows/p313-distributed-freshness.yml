@@ -1,0 +1,22 @@
+name: P313 Distributed Freshness
+
+on:
+  push:
+    paths:
+      - 'p313_distributed_freshness_verifier_disagreement.py'
+      - '.github/workflows/p313-distributed-freshness.yml'
+  workflow_dispatch:
+
+jobs:
+  p313:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Verify exact triggering commit
+        run: test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python p313_distributed_freshness_verifier_disagreement.py
