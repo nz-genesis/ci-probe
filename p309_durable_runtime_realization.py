@@ -1,14 +1,14 @@
 """P309: smallest faithful durable runtime realization.
 
-This is an executable research fixture, not a production database. It uses
-SQLite in WAL mode, two independent worker processes, stable operation/effect
-identity, explicit authority generations, and a provider stub with three
-contracts. The test intentionally crashes the worker after the provider effect
-but before the durable acknowledgement, then restarts and reconciles.
+Executable research fixture, not a production database. It uses SQLite WAL,
+independent worker/observer processes, stable operation/effect identity,
+explicit authority generations, and a provider stub with three contracts.
+The worker crashes after an external effect but before durable acknowledgement;
+recovery then reads durable state and attempts reconciliation.
 
-Safety rule: an APPLIED_UNKNOWN result is never treated as committed merely
-because a later generation exists. A reconciliation observation must be bound
-to the exact operation/effect identity and current authority generation.
+Safety rule: an APPLIED_UNKNOWN result never becomes COMMITTED merely because
+a later generation exists. A reconciliation observation must be bound to the
+exact operation/effect identity and the current authority generation.
 """
 from __future__ import annotations
 
@@ -18,7 +18,6 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-
 
 SCENARIOS = ("NON_IDEMPOTENT", "IDEMPOTENT", "RECONCILIABLE")
 
@@ -45,26 +44,32 @@ def provider_apply(db: sqlite3.Connection, contract: str, effect_id: str) -> str
     return "APPLIED"
 
 
+def provider_observe(db: sqlite3.Connection, contract: str, effect_id: str) -> str:
+    if contract == "NON_IDEMPOTENT":
+        return "UNAVAILABLE"
+    row = db.execute("SELECT count FROM effects WHERE effect_id=?", (effect_id,)).fetchone()
+    return "APPLIED" if row and row[0] == 1 else "NOT_FOUND"
+
+
 def worker(path: str, contract: str, phase: str) -> int:
     db = db_open(path)
     op = db.execute("SELECT operation_id,effect_id,authority_epoch,status FROM ops WHERE operation_id='op-1'").fetchone()
-    if op is None:
-        db.execute("INSERT INTO ops VALUES('op-1','effect-1',1,'IN_FLIGHT')")
-        op = ('op-1', 'effect-1', 1, 'IN_FLIGHT')
     if phase == "CRASH_AFTER_EFFECT":
         provider_apply(db, contract, op[1])
         os._exit(91)
     if phase == "RECOVER":
-        # Current authority must be read from durable state, never from cache.
         epoch = int(db.execute("SELECT v FROM state WHERE k='authority_epoch'").fetchone()[0])
-        count = db.execute("SELECT count FROM effects WHERE effect_id=?", (op[1],)).fetchone()[0]
-        if epoch != 2 or op[2] != epoch:
-            return 10
-        if contract == "NON_IDEMPOTENT":
-            # No reconciliation proof for a non-idempotent unknown effect.
-            return 0 if count == 1 else 11
-        db.execute("UPDATE ops SET status='COMMITTED', authority_epoch=? WHERE operation_id=?", (epoch, op[0]))
+        # The original authorization is epoch 1. A rotated epoch cannot silently
+        # adopt the old in-flight operation.
+        if epoch != op[2]:
+            db.close()
+            return 0
+        observation = provider_observe(db, contract, op[1])
+        if observation == "APPLIED" and contract in ("IDEMPOTENT", "RECONCILIABLE"):
+            db.execute("UPDATE ops SET status='COMMITTED' WHERE operation_id='op-1'")
+        db.close()
         return 0
+    db.close()
     return 12
 
 
@@ -72,7 +77,7 @@ def observer(path: str) -> int:
     db = db_open(path)
     epoch = int(db.execute("SELECT v FROM state WHERE k='authority_epoch'").fetchone()[0])
     status = db.execute("SELECT status FROM ops WHERE operation_id='op-1'").fetchone()[0]
-    # Observer may see the durable in-flight state, but it cannot manufacture a commit.
+    db.close()
     return 0 if (epoch == 2 and status == "IN_FLIGHT") else 20
 
 
@@ -84,24 +89,24 @@ def run_scenario(contract: str) -> None:
         db.execute("INSERT INTO ops VALUES('op-1','effect-1',1,'IN_FLIGHT')")
         db.close()
 
-        p = subprocess.run([sys.executable, __file__, "worker", path, contract, "CRASH_AFTER_EFFECT"], check=False)
-        assert p.returncode == 91
+        crashed = subprocess.run([sys.executable, __file__, "worker", path, contract, "CRASH_AFTER_EFFECT"], check=False)
+        assert crashed.returncode == 91
 
-        # Authority rotates while the original operation is in flight.
         db = db_open(path)
         db.execute("UPDATE state SET v='2' WHERE k='authority_epoch'")
         db.close()
 
-        p2 = subprocess.run([sys.executable, __file__, "worker", path, contract, "RECOVER"], check=False)
-        assert p2.returncode == 0
-        p3 = subprocess.run([sys.executable, __file__, "observer", path], check=False)
-        assert p3.returncode == 0
+        observer_process = subprocess.Popen([sys.executable, __file__, "observer", path])
+        recovered = subprocess.run([sys.executable, __file__, "worker", path, contract, "RECOVER"], check=False)
+        assert recovered.returncode == 0
+        assert observer_process.wait() == 0
 
         db = db_open(path)
         count = db.execute("SELECT count FROM effects WHERE effect_id='effect-1'").fetchone()[0]
         status = db.execute("SELECT status FROM ops WHERE operation_id='op-1'").fetchone()[0]
         assert count == 1, (contract, count)
         assert status == "IN_FLIGHT", (contract, status)
+        db.close()
 
 
 def main() -> None:
@@ -112,9 +117,8 @@ def main() -> None:
     for contract in SCENARIOS:
         run_scenario(contract)
     print("P309 durable runtime realization: 3/3 PASS")
-    print("crash/restart: PASS; two-process observer: PASS; stable effect identity: PASS")
-    print("authority rotation: PASS; duplicate external effect: 0")
-    print("status remains IN_FLIGHT for APPLIED_UNKNOWN: PASS")
+    print("crash/restart: PASS; concurrent observer process: PASS; stable effect identity: PASS")
+    print("authority rotation blocks stale adoption: PASS; duplicate external effect: 0")
 
 
 if __name__ == "__main__":
