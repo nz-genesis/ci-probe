@@ -1,0 +1,18 @@
+name: P276 Recovery Authority Provenance
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p276:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run P276 probe
+        run: python3 p276_recovery_authority_provenance_test.py
