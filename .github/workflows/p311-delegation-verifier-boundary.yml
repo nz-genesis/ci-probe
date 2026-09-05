@@ -1,0 +1,19 @@
+name: P311 Delegation Verifier Boundary
+
+on:
+  push:
+    paths:
+      - 'p311_delegation_verifier_boundary.py'
+      - '.github/workflows/p311-delegation-verifier-boundary.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p311:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run P311 exact probe
+        run: python3 p311_delegation_verifier_boundary.py
