@@ -1,6 +1,6 @@
 # Call for Independent Reconstruction
 
-This repository hosts a public clean-room challenge for researchers who want to independently reconstruct a minimal semantic basis from a neutral set of obligations.
+This repository hosts a public clean-room challenge for researchers and independent AI-agent operators who want to independently reconstruct a minimal semantic basis from a neutral set of obligations.
 
 ## Active challenge
 
@@ -25,6 +25,14 @@ A materially different result is valid and useful. In particular, participants m
 - the challenge is incomplete, biased, circular, or under-specified;
 - the problem does not admit a finite universal basis under the tested assumptions.
 
+## Independent AI-agent route
+
+An external AI agent, human-operated agent, or independent research runner may participate through the pseudonymous execution procedure in:
+
+`EXTERNAL_AGENT_EXECUTION_PROTOCOL_V1.md`
+
+Public pseudonymity is permitted. It does **not** automatically establish material independence; the run still requires sufficient execution-control and provenance evidence for adjudication.
+
 ## Independence requirement
 
 For the strongest result, the participant should not inspect private research, a target basis, or unpublished reduction maps before committing their reconstruction.
@@ -43,7 +51,7 @@ Submit:
 6. provenance and candidate-visibility statement;
 7. the exact `challenge_sha256`;
 8. a cryptographic commitment to the raw submission before comparison;
-9. the raw submission after the agreed reveal point;
+9. the raw submission after the agreed reveal;
 10. verifier output and execution environment.
 
 ## Evaluation
