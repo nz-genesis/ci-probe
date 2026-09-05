@@ -1,19 +1,18 @@
 """P306 empirical total-cost benchmark for sufficient control.
 
 This is a new workload family, not a replay of earlier selector/workload probes.
-It compares three policies over heterogeneous tasks:
-- DIRECT: no governance mediation;
-- GOVERNED: every task pays qualification/verification overhead;
-- ADAPTIVE: only consequential/high-risk tasks pay that overhead.
+It compares GOVERNED (all tasks) with ADAPTIVE (only consequential/high-risk tasks)
+and keeps DIRECT only as a negative safety control.
 
-The benchmark measures local wall time, operation count, verification count and a
-transparent composite cost proxy. It does not claim that the proxy is a universal
-economic metric. It also asserts a safety/admissibility invariant: consequential tasks
-must never be executed by DIRECT or by ADAPTIVE without governance.
+The benchmark measures repeated local wall time, operation count, verification count
+and a transparent local cost proxy. It does not claim that the proxy is a universal
+economic metric. It asserts the safety/admissibility invariant that every consequential
+operation is governed by ADAPTIVE and GOVERNED.
 
 The purpose is to test the TRIZ direction "sufficient control rather than maximum
 control" while preserving the protected boundary.
 """
+from statistics import median
 from time import perf_counter
 
 WORKLOADS = (
@@ -29,9 +28,10 @@ WORKLOADS = (
 
 
 def work(units):
-    x = 0
+    x = 2166136261
     for i in range(units):
-        x = (x * 1664525 + i + 1013904223) & 0xFFFFFFFF
+        x ^= i + 101
+        x = (x * 16777619) & 0xFFFFFFFF
     return x
 
 
@@ -44,41 +44,54 @@ def run(policy, rounds=400):
     for _ in range(rounds):
         for name, units, consequential, risk in WORKLOADS:
             governed = policy == "GOVERNED" or (policy == "ADAPTIVE" and consequential)
-            if policy == "DIRECT" and consequential:
+            if consequential and not governed:
                 unsafe += 1
             if governed:
                 verifications += 1
-                checksum ^= work(20 + risk * 3)
-            checksum ^= work(units)
+                checksum = (checksum + work(20 + risk * 3)) & 0xFFFFFFFF
+            checksum = (checksum + work(units)) & 0xFFFFFFFF
             operations += 1
     elapsed = perf_counter() - start
-    # Transparent local proxy: wall time + weighted verification operations.
+    # Transparent local proxy: measured wall time + one microsecond per verification.
     cost_proxy = elapsed + verifications * 1e-6
     return elapsed, operations, verifications, unsafe, checksum, cost_proxy
 
 
-def main():
-    direct = run("DIRECT")
-    governed = run("GOVERNED")
-    adaptive = run("ADAPTIVE")
+def benchmark(policy, trials=7):
+    samples = [run(policy) for _ in range(trials)]
+    return (
+        median(x[0] for x in samples),
+        samples[0][1],
+        samples[0][2],
+        samples[0][3],
+        samples[0][4],
+        median(x[5] for x in samples),
+    )
 
-    # Governance invariant: adaptive must protect every consequential task.
+
+def main():
+    direct = benchmark("DIRECT")
+    governed = benchmark("GOVERNED")
+    adaptive = benchmark("ADAPTIVE")
+
+    # DIRECT is intentionally a negative control: consequential work is ungoverned.
     assert direct[3] > 0
+    # Both viable policies protect every consequential task.
     assert governed[3] == 0
     assert adaptive[3] == 0
+    # Adaptive control is strictly smaller on this workload family.
     assert adaptive[2] < governed[2]
-
-    # Same workload and deterministic work function preserve result comparability.
+    # Comparability and deterministic workload result are preserved.
     assert direct[1] == governed[1] == adaptive[1]
-    assert direct[5] > 0 and governed[5] > 0 and adaptive[5] > 0
+    assert len({direct[4], governed[4], adaptive[4]}) == 3
 
     print("P306 local sufficient-control benchmark: PASS")
     for label, result in (("DIRECT", direct), ("GOVERNED", governed), ("ADAPTIVE", adaptive)):
         elapsed, operations, verifications, unsafe, checksum, cost = result
         print(
-            f"{label}: wall={elapsed:.6f}s operations={operations} "
+            f"{label}: median_wall={elapsed:.6f}s operations={operations} "
             f"verifications={verifications} unsafe_consequential={unsafe} "
-            f"checksum={checksum} cost_proxy={cost:.6f}"
+            f"checksum={checksum} median_cost_proxy={cost:.6f}"
         )
 
 
