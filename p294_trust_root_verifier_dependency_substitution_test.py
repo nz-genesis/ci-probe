@@ -40,11 +40,14 @@ class State:
 TRUSTED_ROOT = "R0"
 PROTECTED_VERIFIER = "V0"
 PROTECTED_DEPENDENCY = "D0"
+PROTECTED_AUTHORITY_ROOTS = {TRUSTED_ROOT}
 
 
 def qualify(state: State, t: Transition, verifiers: dict[str, Verifier], authorities: set[Authority]) -> bool:
     v = verifiers.get(t.verifier_id)
     current_authority = Authority(state.authority_root, state.epoch)
+    if state.authority_root not in PROTECTED_AUTHORITY_ROOTS:
+        return False
     if current_authority not in authorities:
         return False
     if t.epoch != state.epoch or t.expected_revision != state.revision:
@@ -55,13 +58,12 @@ def qualify(state: State, t: Transition, verifiers: dict[str, Verifier], authori
         return False
     if v is None or not v.guard_intact:
         return False
-    if v.epoch != state.epoch or v.trusted_root != TRUSTED_ROOT:
+    if v.epoch != state.epoch or v.trusted_root not in PROTECTED_AUTHORITY_ROOTS:
         return False
     if t.verifier_dependency != v.dependency:
         return False
-    # The candidate verifier/dependency may be the target, but it cannot redefine
-    # the protected trust root or the protected qualification boundary used here.
-    if t.target == TRUSTED_ROOT or t.target == PROTECTED_VERIFIER or t.target == PROTECTED_DEPENDENCY:
+    # Mutable candidates cannot redefine the protected trust root or qualification boundary.
+    if t.target in {TRUSTED_ROOT, PROTECTED_VERIFIER, PROTECTED_DEPENDENCY}:
         return False
     return True
 
@@ -90,7 +92,7 @@ def main():
     assert commit(state, t1, verifiers, authorities)
     assert state.revision == 11
 
-    # 2. A verifier replacement may be accepted only under the current protected boundary.
+    # 2. A verifier replacement may be accepted only under the protected boundary.
     t2 = Transition("T2", 1, TRUSTED_ROOT, "V0", PROTECTED_DEPENDENCY, 11, "change_verifier", "V1")
     assert commit(state, t2, verifiers, authorities)
     state.verifier_id = "V1"
