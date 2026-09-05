@@ -1,0 +1,27 @@
+name: P281 Cross-Runtime Representation Differential
+
+on:
+  push:
+    paths:
+      - 'p281_cross_runtime_representation_differential_test.py'
+      - '.github/workflows/p281-cross-runtime-representation.yml'
+  pull_request:
+    paths:
+      - 'p281_cross_runtime_representation_differential_test.py'
+      - '.github/workflows/p281-cross-runtime-representation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  p281:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify checked-out commit
+        run: |
+          echo "EXPECTED_SHA=${GITHUB_SHA}"
+          echo "CHECKED_OUT_SHA=$(git rev-parse HEAD)"
+          test "${GITHUB_SHA}" = "$(git rev-parse HEAD)"
+      - name: Verify cross-runtime differential
+        run: python3 p281_cross_runtime_representation_differential_test.py
