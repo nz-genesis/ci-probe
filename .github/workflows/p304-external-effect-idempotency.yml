@@ -1,0 +1,21 @@
+name: P304 external effect idempotency
+
+on:
+  push:
+    paths:
+      - "p304_external_effect_idempotency_recovery_test.py"
+      - ".github/workflows/p304-external-effect-idempotency.yml"
+  pull_request:
+    paths:
+      - "p304_external_effect_idempotency_recovery_test.py"
+      - ".github/workflows/p304-external-effect-idempotency.yml"
+
+jobs:
+  p304:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact triggering revision
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run P304
+        run: python3 p304_external_effect_idempotency_recovery_test.py
