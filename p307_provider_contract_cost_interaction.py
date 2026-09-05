@@ -25,14 +25,9 @@ def retry_allowed(contract, first, reconciled, current, policy):
 
 
 def control_cost(contract, first, reconciled, current, policy):
-    # One qualification unit is mandatory for every consequential retry decision.
     cost = 1
-    # Conservative control performs reconciliation on every UNKNOWN outcome.
     if policy == "CONSERVATIVE" and first.endswith("UNKNOWN"):
         cost += 1
-    # Sufficient control spends reconciliation only where the provider contract
-    # can make its result actionable; this is a routing optimization, not a
-    # relaxation of authority or evidence predicates.
     if policy == "SUFFICIENT" and contract == "RECONCILIABLE" and first == "NOT_APPLIED_UNKNOWN":
         cost += 1
     return cost
@@ -59,19 +54,15 @@ def main():
             unsafe += 1
 
     assert unsafe == 0
-    # The sufficient policy must never buy its cost reduction by admitting an
-    # otherwise unsafe retry. The measured delta is deliberately bounded to the
-    # abstract control work above.
     for contract in CONTRACTS:
         assert retries[("SUFFICIENT", contract)] == retries[("CONSERVATIVE", contract)]
 
     print(f"P307 provider-contract cost matrix: {checked}/{checked} PASS")
     for contract in CONTRACTS:
-        print(
-            f"{contract}: conservative_cost={totals[(\"CONSERVATIVE\", contract)]}; "
-            f"sufficient_cost={totals[(\"SUFFICIENT\", contract)]}; "
-            f"retry_permissions={retries[(\"SUFFICIENT\", contract)]}"
-        )
+        conservative = totals[("CONSERVATIVE", contract)]
+        sufficient = totals[("SUFFICIENT", contract)]
+        permitted = retries[("SUFFICIENT", contract)]
+        print(f"{contract}: conservative_cost={conservative}; sufficient_cost={sufficient}; retry_permissions={permitted}")
 
 
 if __name__ == "__main__":
