@@ -5,6 +5,7 @@ from itertools import permutations
 
 
 # P313 bounded discriminator: stale qualification must never become current authority.
+# The workflow is now present on main; this source update intentionally triggers it.
 
 @dataclass(frozen=True)
 class State:
