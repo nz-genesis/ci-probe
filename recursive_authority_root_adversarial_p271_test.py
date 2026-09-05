@@ -108,6 +108,24 @@ def external_root_rotate(s: State, new_root: Root) -> State:
     )
 
 
+def reconcile_root(
+    local_roots: tuple[Root, ...], authoritative: Root | None
+) -> Result:
+    if authoritative is None:
+        return Result.UNKNOWN
+    if not local_roots:
+        return Result.UNKNOWN
+    if any(root.epoch > authoritative.epoch for root in local_roots):
+        return Result.CONFLICT
+    matching = tuple(
+        root for root in local_roots
+        if root.root_id == authoritative.root_id
+        and root.epoch == authoritative.epoch
+        and root.fingerprint == authoritative.fingerprint
+    )
+    return Result.ALLOW if matching else Result.CONFLICT
+
+
 def verify() -> None:
     s = initial()
 
@@ -149,35 +167,35 @@ def verify() -> None:
     )
     assert qualifies(delegated_fresh, s2) is True
 
-    # 8. Divergent coordinators cannot select a root merely from local state.
+    # 8. Divergent coordinators cannot resolve root authority from local state alone.
     coordinator_a = s2
     coordinator_b = replace(s2, root=Root("root-fork", 2, "fork-h2"))
-    assert coordinator_a.root.fingerprint != coordinator_b.root.fingerprint
-    assert Result.UNKNOWN is Result.UNKNOWN
+    assert reconcile_root((coordinator_a.root, coordinator_b.root), None) is Result.UNKNOWN
 
-    # 9. Reconciliation must use an authoritative root observation, not source
-    # majority. The model represents that as an explicit external observation.
-    authoritative = new_root
-    assert authoritative.fingerprint == s2.root.fingerprint
-    assert coordinator_a.root.fingerprint == authoritative.fingerprint
-    assert coordinator_b.root.fingerprint != authoritative.fingerprint
+    # 9. Reconciliation requires an authoritative root observation, not source majority.
+    assert reconcile_root((coordinator_a.root, coordinator_b.root), new_root) is Result.ALLOW
+    assert reconcile_root((coordinator_b.root,), new_root) is Result.CONFLICT
 
-    # 10. Root rotation itself is possible only through the external root gate.
+    # 10. A locally newer fork cannot silently win over the authoritative root.
+    newer_fork = Root("root-fork", 3, "fork-h3")
+    assert reconcile_root((newer_fork,), new_root) is Result.CONFLICT
+
+    # 11. Root rotation itself is possible only through the external root gate.
     assert s2.root.root_id == "root-1"
     assert s2.root.epoch == 2
     assert s2.authority_epoch == 2
 
-    # 11. Purpose remains outside ordinary recursive target changes.
+    # 12. Purpose remains outside ordinary recursive target changes.
     purpose = Candidate(s2.generation, "root-1", 2, 2, "verifier-v2", "purpose")
     assert qualifies(purpose, s2) is False
 
-    # 12. The same governed basis handles a new capability after root rotation.
+    # 13. The same governed basis handles a new capability after root rotation.
     capability_after_rotation = Candidate(
         s2.generation, "root-1", 2, 2, "verifier-v2", "capability"
     )
     assert qualifies(capability_after_rotation, s2) is True
 
-    print("P271 recursive authority-root adversarial: 12/12 PASS")
+    print("P271 recursive authority-root adversarial: 13/13 PASS")
 
 
 if __name__ == "__main__":
