@@ -28,7 +28,7 @@ def simulate(order, outcomes, idempotent):
     provider_effect = False
     provider_count = 0
     observed = False
-    committed = False
+    unsafe_local_commit = False
     outcome_index = 0
 
     for event in order:
@@ -54,26 +54,18 @@ def simulate(order, outcomes, idempotent):
         elif event == "OBSERVE":
             observed = provider_effect
         elif event == "COMMIT":
-            if (
+            commit_allowed = (
                 authorization == current_generation
                 and current_generation == 1
                 and authorization is not None
                 and authorization >= 0
                 and observed
                 and provider_effect
-            ):
-                committed = True
+            )
+            if not commit_allowed and observed:
+                unsafe_local_commit = True
 
-    local_commit_safe = (
-        not committed
-        or (
-            authorization == current_generation
-            and current_generation == 1
-            and observed
-            and provider_effect
-        )
-    )
-    return local_commit_safe, provider_count
+    return not unsafe_local_commit, provider_count
 
 
 def main():
