@@ -1,0 +1,19 @@
+name: P310 persistence failure recovery cost
+
+on:
+  push:
+    paths:
+      - 'p310_persistence_failure_recovery_cost.py'
+      - '.github/workflows/p310-persistence-failure-recovery-cost.yml'
+  workflow_dispatch:
+
+jobs:
+  p310:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run P310
+        run: python p310_persistence_failure_recovery_cost.py
