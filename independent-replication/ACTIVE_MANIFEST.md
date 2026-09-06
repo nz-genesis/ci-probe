@@ -36,11 +36,12 @@ Required active challenge metadata:
 - `challenge_id`: `IR-V3`
 - `schema_version`: `3.0.0`
 - frozen commit: `3d37e023b49a995b466954445c1672f5d7ef046d`
-- content SHA-256: `50f41fdc1a7d563367fb07316f2c84adc95c74a0`
+- **content SHA-256:** `913c162ede3741ead44dca3efe3fbbf33f5de764254d6a2da88cc90cf08b05a`
+- **Git blob SHA-1 (for the frozen file):** `50f41fdc1a7d563367fb07316f2c84adc95c74a0`
 
-The SHA-256 required by the replication protocol is the digest of the **exact bytes of `challenge-v3.json`** used by the participant.
+The SHA-256 required by the replication protocol is the digest of the **exact bytes of `challenge-v3.json`** used by the participant. The 40-hex Git blob SHA-1 is retained only as the repository object identifier and is not a content SHA-256.
 
-Repository tooling may expose a different 40-hex Git blob SHA-1 for the same file. That identifier is not the content SHA-256 and must never be substituted for it.
+The frozen challenge contains a historical `sha` field whose value is the Git blob SHA-1. Participants MUST NOT interpret that field as the protocol content SHA-256.
 
 **IR-V2 is not an active challenge.** A submission claiming IR-V3 that references `challenge-v2.json` MUST be rejected from the IR-V3 semantic gate and preserved only as historical/auxiliary evidence.
 
