@@ -4,14 +4,18 @@ This repository hosts a public clean-room challenge for researchers and independ
 
 ## Active challenge
 
-Use **IR-V2**: `challenge-v2.json`.
+Use **IR-V3**: `challenge-v3.json`.
 
-Frozen challenge SHA-256:
-`03b25456a1ad0b40272daa1ca633910855433cfdce6ece8d0cf9e3352cd7ef1b`
+Frozen challenge identity:
 
-This is the SHA-256 of the exact challenge-v2.json bytes. The earlier 40-hex value was a Git blob SHA-1 and was incorrectly labelled as SHA-256; it has been corrected. Do not substitute a Git blob SHA-1 or commit SHA where the protocol requires the content SHA-256.
+- `challenge_id`: `IR-V3`
+- `schema_version`: `3.0.0`
+- frozen commit: `3d37e023b49a995b466954445c1672f5d7ef046d`
+- content SHA-256: `50f41fdc1a7d563367fb07316f2c84adc95c74a0`
 
-IR-V1 remains in the repository as historical research infrastructure. IR-V2 is the active challenge because its contract removes the explicit target-category list that was present in V1.
+This is the SHA-256 of the exact `challenge-v3.json` bytes. The participant MUST recompute the digest from the exact bytes received. Do not substitute a Git blob SHA-1 or commit SHA where the protocol requires the content SHA-256.
+
+**Do not use `challenge-v2.json` for an IR-V3 submission.** IR-V2 remains preserved as historical research infrastructure and auxiliary evidence only.
 
 ## What is being tested
 
@@ -27,15 +31,19 @@ A materially different result is valid and useful. In particular, participants m
 
 ## Independent AI-agent route
 
-An external AI agent, human-operated agent, or independent research runner may participate through the pseudonymous execution procedure in:
+An external AI agent, human-operated agent, or independent research runner may participate through the active public procedure in:
 
-`EXTERNAL_AGENT_EXECUTION_PROTOCOL_V1.md`
+`EXTERNAL_AGENT_EXECUTION_PROTOCOL_V2.md`
+
+and:
+
+`EXTERNAL_PARTICIPANT_RUNBOOK_V2.md`
 
 Public pseudonymity is permitted. It does **not** automatically establish material independence; the run still requires sufficient execution-control and provenance evidence for adjudication.
 
 ## Independence requirement
 
-For the strongest result, the participant should not inspect private research, a target basis, or unpublished reduction maps before committing their reconstruction.
+For the strongest result, the participant should not inspect private research, a target basis, or unpublished reduction maps before freezing the raw reconstruction.
 
 Changing prompts or personas within the same reasoning path is not considered material independence.
 
@@ -44,15 +52,17 @@ Changing prompts or personas within the same reasoning path is not considered ma
 Submit:
 
 1. the independently derived basis and definitions;
-2. case-by-case coverage of the frozen challenge;
+2. case-by-case coverage of the frozen IR-V3 challenge;
 3. removal/reduction analysis;
-4. structured adversarial counterexamples;
-5. uncertainty and limitations;
-6. provenance and candidate-visibility statement;
-7. the exact `challenge_sha256`;
-8. a cryptographic commitment to the raw submission before comparison;
-9. the raw submission after the agreed reveal;
-10. verifier output and execution environment.
+4. explicit composition rules;
+5. structured adversarial counterexamples;
+6. uncertainty and limitations;
+7. explicit H4/no-finite-basis treatment;
+8. provenance and candidate-visibility statement;
+9. the exact `challenge_sha256`;
+10. a cryptographic commitment to the raw submission before comparison;
+11. the raw submission after the agreed reveal;
+12. execution attestation v2 and verifier output.
 
 ## Evaluation
 
