@@ -4,13 +4,18 @@ This public directory provides a clean-room mechanism for materially independent
 
 ## Active challenge
 
-Use **IR-V2**: `challenge-v2.json`.
+Use **IR-V3**: `challenge-v3.json`.
 
-The exact challenge bytes are the sole authority for `challenge_sha256`. The verifier computes SHA-256 directly from the supplied frozen challenge file and rejects a submission whose declared digest does not match. **Do not copy a digest from Git history, a Git blob SHA, or stale documentation.**
+Required active challenge identity:
 
-A previous version of this README incorrectly published a value as the SHA-256 of IR-V2. That value was not independently verified against the current challenge bytes and is removed here. The Git blob identifier shown by repository tooling is SHA-1 and must never be labelled SHA-256.
+- `challenge_id`: `IR-V3`
+- `schema_version`: `3.0.0`
+- frozen commit: `3d37e023b49a995b466954445c1672f5d7ef046d`
+- content SHA-256: `50f41fdc1a7d563367fb07316f2c84adc95c74a0`
 
-IR-V1 remains in the repository as historical research infrastructure. IR-V2 is the active challenge because its contract removes the explicit target-category list that was present in V1.
+The exact challenge bytes are the sole authority for `challenge_sha256`. The participant MUST compute SHA-256 directly from the exact supplied frozen challenge file. **Do not copy a digest from Git history, a Git blob SHA, or stale documentation.**
+
+**Do not use `challenge-v2.json` for an IR-V3 submission.** IR-V2 remains preserved as historical research infrastructure and auxiliary evidence only.
 
 ## Independence boundary
 
@@ -22,9 +27,9 @@ The challenge is not a test of agreement with a pre-existing answer. A materiall
 
 Every submission MUST include `challenge_sha256`, the SHA-256 of the exact frozen challenge file used for the reconstruction. The verifier recomputes that digest from the supplied challenge path and fails closed on mismatch.
 
-A replication run MUST record both the exact challenge commit/revision and the SHA-256 computed from the challenge bytes. A Git blob SHA-1, commit SHA, or any other repository identifier is not a substitute for the declared content SHA-256.
+A replication run MUST record the exact challenge commit/revision and the SHA-256 computed from the challenge bytes. A Git blob SHA-1, commit SHA, or any other repository identifier is not a substitute for the declared content SHA-256.
 
-This binds the submission to a concrete challenge revision rather than silently accepting the current file as equivalent. Published challenge V2 is immutable for a replication run; semantic changes require a new challenge version rather than rewriting V2 after results are observed.
+IR-V3 is frozen for the current replication campaign. Semantic changes require a new challenge version rather than rewriting V3 after results are observed.
 
 ## Challenge-incompleteness is valid evidence
 
@@ -53,19 +58,21 @@ This prevents a submission from passing merely by listing required words without
 
 This process boundary is necessary but is **not sufficient for material external independence**. A solver running in a separate process can still share the same model lineage, operator, credentials, hidden context, or research incentives. Therefore a run through this harness is classified as `RAW_BLIND_RUN; NOT_EXTERNAL_INDEPENDENCE_BY_ITSELF` until the participant/runtime provenance establishes the stronger independence claim required by the applicable protocol.
 
-For a high-strength blind run, the participant must receive only the frozen challenge and minimal contract, must not receive private Genesis material or prior target hypotheses, and must freeze the raw output before any target comparison. The review actor must not receive Genesis interpretation before attacking the frozen result.
+For a high-strength blind run, the participant must receive only the frozen IR-V3 challenge and minimal public execution contract, must not receive private Genesis material or prior target hypotheses, and must freeze the raw output before any target comparison. The review actor must not receive Genesis interpretation before attacking the frozen result.
 
 ## Procedure
 
-1. Freeze the exact challenge revision you received and record its commit/revision.
-2. Compute and record SHA-256 from those exact challenge bytes; do not substitute a Git blob SHA-1.
-3. Work from the challenge only; do not inspect private research or a current candidate basis before commitment.
-4. Produce a raw submission containing your basis, case mappings, deletion analysis, structured counterexamples, uncertainty, provenance, candidate visibility, and `challenge_sha256`. Preserve any out-of-challenge obligations or challenge criticisms in the raw result as additional fields or an accompanying report.
-5. Compute the commitment over the exact raw result bytes using the declared commit-reveal protocol and publish the commitment with an observable timestamp.
-6. After the agreed comparison window, reveal the raw submission and nonce.
-7. Run the structural verifier against the exact frozen challenge.
-8. Verify the commitment against the exact raw bytes and nonce; publish verifier output, challenge revision, challenge SHA-256, submission commitment, environment, candidate-visibility status, and deviations.
-9. Only after reveal compare the reconstruction with any target hypothesis. Adjudication must consider out-of-challenge findings before evaluating agreement.
+1. Freeze the exact IR-V3 challenge revision you received and record its commit/revision.
+2. Verify `challenge_id = IR-V3` and `schema_version = 3.0.0`.
+3. Compute and record SHA-256 from those exact challenge bytes; do not substitute a Git blob SHA-1.
+4. Work from the challenge and public execution protocol only; do not inspect private research or a current candidate basis before commitment.
+5. Produce a raw submission containing your basis, case mappings, deletion analysis, explicit composition rules, structured counterexamples, uncertainty, minimality objective, H4 treatment, provenance, candidate visibility, and `challenge_sha256`. Preserve any out-of-challenge obligations or challenge criticisms in the raw result as additional fields or an accompanying report.
+6. Freeze the exact raw result before target comparison.
+7. Compute the raw-result SHA-256 and create the commitment required by the active protocol before target comparison.
+8. Preserve the exact raw bytes and attestation/commitment material needed for later reveal.
+9. Run the structural verifier against the exact frozen challenge.
+10. Submit the raw result, execution attestation v2, commitment/reveal evidence and provenance declaration.
+11. Only after integrity/provenance review compare the reconstruction with any target hypothesis. Adjudication must consider out-of-challenge findings before evaluating agreement.
 
 ## What the verifier does not do
 
@@ -73,7 +80,7 @@ It does not contain or test a target ontology. Passing it does not prove semanti
 
 ## Blindness warning
 
-Git history of this public repository may reveal prior generic experiments. For strong R3/R4 blindness, use the frozen IR-V2 challenge snapshot without exposure to the target hypothesis and preserve the delivery/provenance path used by the independent participant.
+Git history of this public repository may reveal prior generic experiments. For strong blindness, use the frozen IR-V3 challenge snapshot without exposure to the target hypothesis and preserve the delivery/provenance path used by the independent participant.
 
 ## Security boundary
 
