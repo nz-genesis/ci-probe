@@ -6,6 +6,20 @@
 
 Provide a fresh, blind, materially-independent execution route for IR-V3 after the provenance limitations of BIR-1A. This protocol is a procedure, not evidence that an independent participant has executed.
 
+## Active challenge identity
+
+The active frozen challenge is:
+
+- file: `challenge-v3.json`
+- challenge ID: `IR-V3`
+- schema version: `3.0.0`
+- frozen commit: `3d37e023b49a995b466954445c1672f5d7ef046d`
+- content SHA-256: `50f41fdc1a7d563367fb07316f2c84adc95c74a0`
+
+A participant MUST independently recompute the content SHA-256 from the exact challenge bytes. A Git blob SHA-1 or commit SHA is not a substitute.
+
+`challenge-v2.json` is historical and is not valid for an IR-V3 submission.
+
 ## Independence boundary
 
 The participant may be an external AI-agent operator, research runner, or human using an external model/service. Public pseudonymity is allowed. Independence is adjudicated from execution control and provenance, not from anonymity.
@@ -21,16 +35,17 @@ IR-V3 is a new frozen challenge. The participant must start from the exact publi
 ## Required sequence
 
 1. Obtain `challenge-v3.json` and record its exact bytes.
-2. Compute and record the challenge SHA-256 before semantic work.
-3. Declare participant/model/provider/runtime provenance.
-4. Declare prior Genesis exposure and relationship to the Genesis operator.
-5. Generate the semantic reconstruction from the frozen challenge only.
-6. Freeze the exact raw result before seeing or requesting any Genesis target interpretation.
-7. Compute the raw-result SHA-256.
-8. Create a cryptographic commitment over the raw-result digest and run identifier; the commitment MUST exist before target comparison.
-9. Preserve the exact raw bytes and commitment material needed for later reveal.
-10. Run the public structural verifier if available.
-11. Submit the raw result, attestation and commitment/reveal evidence.
+2. Verify `challenge_id = IR-V3` and `schema_version = 3.0.0`.
+3. Compute and record the challenge SHA-256 before semantic work.
+4. Declare participant/model/provider/runtime provenance.
+5. Declare prior Genesis exposure and relationship to the Genesis operator.
+6. Generate the semantic reconstruction from the frozen challenge only.
+7. Freeze the exact raw result before seeing or requesting any Genesis target interpretation.
+8. Compute the raw-result SHA-256.
+9. Create a cryptographic commitment over the raw-result digest and run identifier; the commitment MUST exist before target comparison.
+10. Preserve the exact raw bytes and commitment material needed for later reveal.
+11. Run the public structural verifier if available.
+12. Submit the raw result, attestation and commitment/reveal evidence.
 
 ## Stronger provenance fields
 
