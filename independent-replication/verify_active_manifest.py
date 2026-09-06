@@ -20,7 +20,8 @@ PROTOCOL = ROOT / "EXTERNAL_AGENT_EXECUTION_PROTOCOL_V2.md"
 
 EXPECTED_ID = "IR-V3"
 EXPECTED_SCHEMA = "3.0.0"
-EXPECTED_SHA256 = "50f41fdc1a7d563367fb07316f2c84adc95c74a0"
+EXPECTED_SHA256 = "913c162ede3741ead44dca3efe3fbbf33f5de764254d6a2da88cc90cf08b05a"
+EXPECTED_GIT_BLOB_SHA1 = "50f41fdc1a7d563367fb07316f2c84adc95c74a0"
 EXPECTED_COMMIT = "3d37e023b49a995b466954445c1672f5d7ef046d"
 
 
@@ -62,6 +63,8 @@ def main() -> int:
         errors.append("ACTIVE_MANIFEST.md does not declare ACTIVE / IR-V3")
     if manifest and EXPECTED_COMMIT not in manifest:
         errors.append("ACTIVE_MANIFEST.md missing frozen IR-V3 commit")
+    if manifest and EXPECTED_GIT_BLOB_SHA1 not in manifest:
+        errors.append("ACTIVE_MANIFEST.md missing frozen-file Git blob SHA-1")
     if manifest and "challenge-v2.json` | historical frozen challenge | HISTORICAL / NOT ACTIVE" not in manifest:
         errors.append("ACTIVE_MANIFEST.md does not explicitly demote IR-V2 to historical status")
 
@@ -79,6 +82,7 @@ def main() -> int:
     print(f"Active challenge identity: {EXPECTED_ID} / schema {EXPECTED_SCHEMA}")
     if CHALLENGE.is_file():
         print(f"Active challenge SHA-256: {hashlib.sha256(CHALLENGE.read_bytes()).hexdigest()}")
+    print(f"Frozen-file Git blob SHA-1: {EXPECTED_GIT_BLOB_SHA1}")
     print(f"Active challenge verification: {'PASS' if not errors else 'FAIL'}")
     if errors:
         for error in errors:
