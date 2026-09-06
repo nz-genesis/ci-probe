@@ -14,9 +14,10 @@ The active frozen challenge is:
 - challenge ID: `IR-V3`
 - schema version: `3.0.0`
 - frozen commit: `3d37e023b49a995b466954445c1672f5d7ef046d`
-- content SHA-256: `50f41fdc1a7d563367fb07316f2c84adc95c74a0`
+- **content SHA-256:** `913c162ede3741ead44dca3efe3fbbf33f5de764254d6a2da88cc90cf08b05a`
+- **Git blob SHA-1:** `50f41fdc1a7d563367fb07316f2c84adc95c74a0`
 
-A participant MUST independently recompute the content SHA-256 from the exact challenge bytes. A Git blob SHA-1 or commit SHA is not a substitute.
+A participant MUST independently recompute the content SHA-256 from the exact challenge bytes. A Git blob SHA-1 or commit SHA is not a substitute. The frozen challenge's internal `sha` field contains the Git blob SHA-1 and is not the protocol content SHA-256.
 
 `challenge-v2.json` is historical and is not valid for an IR-V3 submission.
 
