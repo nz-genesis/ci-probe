@@ -6,6 +6,7 @@ correctness or material independence.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -29,11 +30,22 @@ def main() -> int:
     if not CHALLENGE.is_file():
         errors.append("missing challenge-v3.json")
     else:
-        challenge = json.loads(CHALLENGE.read_text(encoding="utf-8"))
-        if challenge.get("challenge_id") != EXPECTED_ID:
-            errors.append("challenge-v3.json has unexpected challenge_id")
-        if challenge.get("schema_version") != EXPECTED_SCHEMA:
-            errors.append("challenge-v3.json has unexpected schema_version")
+        challenge_bytes = CHALLENGE.read_bytes()
+        actual_sha256 = hashlib.sha256(challenge_bytes).hexdigest()
+        if actual_sha256 != EXPECTED_SHA256:
+            errors.append(
+                "challenge-v3.json content SHA-256 mismatch: "
+                f"expected {EXPECTED_SHA256}, got {actual_sha256}"
+            )
+        try:
+            challenge = json.loads(challenge_bytes.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            errors.append(f"challenge-v3.json is not valid UTF-8 JSON: {exc}")
+        else:
+            if challenge.get("challenge_id") != EXPECTED_ID:
+                errors.append("challenge-v3.json has unexpected challenge_id")
+            if challenge.get("schema_version") != EXPECTED_SCHEMA:
+                errors.append("challenge-v3.json has unexpected schema_version")
 
     required_files = [MANIFEST, README, CALL, RUNBOOK, PROTOCOL]
     for path in required_files:
@@ -65,6 +77,8 @@ def main() -> int:
 
     print(f"Independent-replication active surface files checked: {len(required_files)}")
     print(f"Active challenge identity: {EXPECTED_ID} / schema {EXPECTED_SCHEMA}")
+    if CHALLENGE.is_file():
+        print(f"Active challenge SHA-256: {hashlib.sha256(CHALLENGE.read_bytes()).hexdigest()}")
     print(f"Active challenge verification: {'PASS' if not errors else 'FAIL'}")
     if errors:
         for error in errors:
