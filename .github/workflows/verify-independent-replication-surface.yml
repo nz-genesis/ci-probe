@@ -1,0 +1,23 @@
+name: Verify independent replication surface
+
+on:
+  push:
+    paths:
+      - 'independent-replication/**'
+      - '.github/workflows/verify-independent-replication-surface.yml'
+  pull_request:
+    paths:
+      - 'independent-replication/**'
+      - '.github/workflows/verify-independent-replication-surface.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-active-surface:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Verify active challenge consistency
+        run: python independent-replication/verify_active_manifest.py
