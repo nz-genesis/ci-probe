@@ -1,0 +1,9 @@
+{
+  "schema": "external-realization-private-witness-envelope-v1",
+  "envelope_id": "p189-private-witness-e1",
+  "request_id": "p189-correspondence-1",
+  "action": "bounded-realization",
+  "semantic_witness_commitment_sha256": "0efabb5e78028b3f082e6695ee39ae2b4aa2bdaeb603ae0c94233a94cebcc306",
+  "disclosure": "commitment-only",
+  "private_witness_contents": false
+}
