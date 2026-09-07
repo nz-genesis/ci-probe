@@ -6,6 +6,11 @@ on:
       - 'external-realization-private-witness-envelope.json'
       - 'external_realization_private_witness_correspondence.py'
       - '.github/workflows/external-realization-private-witness-correspondence.yml'
+  pull_request:
+    paths:
+      - 'external-realization-private-witness-envelope.json'
+      - 'external_realization_private_witness_correspondence.py'
+      - '.github/workflows/external-realization-private-witness-correspondence.yml'
   workflow_dispatch:
 
 permissions:
