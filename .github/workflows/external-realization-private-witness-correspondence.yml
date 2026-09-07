@@ -1,0 +1,21 @@
+name: External Realization Private Witness Correspondence
+
+on:
+  push:
+    paths:
+      - 'external-realization-private-witness-envelope.json'
+      - 'external_realization_private_witness_correspondence.py'
+      - '.github/workflows/external-realization-private-witness-correspondence.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  correspondence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute commitment correspondence probe
+        run: python3 external_realization_private_witness_correspondence.py
