@@ -1,0 +1,20 @@
+name: External Realization Attestation Equivocation
+
+on:
+  push:
+    paths:
+      - 'external_realization_attestation_equivocation.py'
+      - '.github/workflows/external-realization-attestation-equivocation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  equivocation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute equivocation boundary probe
+        run: python3 external_realization_attestation_equivocation.py
