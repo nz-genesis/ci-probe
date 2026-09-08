@@ -1,0 +1,103 @@
+name: P385 external implementation concordance
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  p385-external-provtoolbox:
+    name: p385-frozen-external-provtoolbox
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout public harness commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Clone and freeze external implementation
+        env:
+          PROVTOOLBOX_SHA: bbff1d7eecd15175e6be8a055f67d311e40f9f04
+        run: |
+          set -euo pipefail
+          mkdir -p p385/receipt
+          git clone --no-tags https://github.com/lucmoreau/ProvToolbox.git p385/ProvToolbox
+          git -C p385/ProvToolbox fetch --no-tags origin "$PROVTOOLBOX_SHA"
+          git -C p385/ProvToolbox checkout --detach "$PROVTOOLBOX_SHA"
+          test "$(git -C p385/ProvToolbox rev-parse HEAD)" = "$PROVTOOLBOX_SHA"
+
+      - name: Install frozen external build prerequisites
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y graphviz jq
+          node --version
+          npm --version
+          npm install --global ajv-cli@5.0.0
+          ajv help >/dev/null
+          cat > /usr/local/bin/dot <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$#" -eq 1 && "$1" == "--version" ]]; then
+  exec /usr/bin/dot -V
+fi
+exec /usr/bin/dot "$@"
+EOF
+          chmod +x /usr/local/bin/dot
+          command -v dot
+          dot --version
+          jq --version
+          curl --version | head -n 1
+          mvn --version | head -n 3
+          java --version | head -n 3
+
+      - name: Capture toolchain and source identity
+        run: |
+          set -euo pipefail
+          java -version 2> p385/receipt/java-version.txt || true
+          mvn --version > p385/receipt/maven-version.txt
+          node --version > p385/receipt/node-version.txt
+          npm --version > p385/receipt/npm-version.txt
+          ajv help > p385/receipt/ajv-help.txt
+          dot --version > p385/receipt/dot-version.txt 2>&1
+          jq --version > p385/receipt/jq-version.txt 2>&1
+          git -C p385/ProvToolbox rev-parse HEAD > p385/receipt/external-commit.txt
+          sha256sum p385/ProvToolbox/pom.xml > p385/receipt/external-pom.sha256
+
+      - name: Execute external validation test suite
+        working-directory: p385/ProvToolbox
+        run: |
+          set -o pipefail
+          mvn -pl modules-validation/prov-validation -am test 2>&1 | tee ../../p385-external-maven-test.log
+
+      - name: Write reproducible external execution receipt
+        if: always()
+        env:
+          PROVTOOLBOX_SHA: bbff1d7eecd15175e6be8a055f67d311e40f9f04
+        run: |
+          set -euo pipefail
+          {
+            echo "P385 EXTERNAL EXECUTION RECEIPT"
+            echo "public harness repository: nz-genesis/ci-probe"
+            echo "external repository: lucmoreau/ProvToolbox"
+            echo "external commit: $PROVTOOLBOX_SHA"
+            echo "workflow: $GITHUB_WORKFLOW"
+            echo "run: $GITHUB_RUN_ID"
+            echo "attempt: $GITHUB_RUN_ATTEMPT"
+            echo "job: $GITHUB_JOB"
+            echo "runner: $RUNNER_NAME"
+            echo "source checkout: $GITHUB_SHA"
+            echo "graphviz compatibility: /usr/local/bin/dot -> /usr/bin/dot -V for --version only"
+          } > p385/receipt/EXECUTION_RECEIPT.txt
+
+      - name: Upload P385 execution receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p385-external-provtoolbox-receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            p385/receipt/
+            p385-external-maven-test.log
+          if-no-files-found: error
