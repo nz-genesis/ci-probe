@@ -61,6 +61,20 @@ jobs:
           npm --version
           npm install --global ajv-cli@5.0.0
           ajv help >/dev/null
+          # The frozen ProvToolbox POM calls `dot --version`, while the
+          # real Graphviz CLI exposes version reporting as `dot -V`.
+          # Keep the real Graphviz binary and adapt only that compatibility
+          # spelling; all other invocations delegate unchanged.
+          cat > /usr/local/bin/dot <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$#" -eq 1 && "$1" == "--version" ]]; then
+  exec /usr/bin/dot -V
+fi
+exec /usr/bin/dot "$@"
+EOF
+          chmod +x /usr/local/bin/dot
+          command -v dot
           dot --version
           jq --version
           curl --version | head -n 1
@@ -103,6 +117,7 @@ jobs:
             echo "job: $GITHUB_JOB"
             echo "runner: $RUNNER_NAME"
             echo "source checkout: $GITHUB_SHA"
+            echo "graphviz compatibility: /usr/local/bin/dot -> /usr/bin/dot -V for --version only"
           } > p385/receipt/EXECUTION_RECEIPT.txt
 
       - name: Upload P385 execution receipt
