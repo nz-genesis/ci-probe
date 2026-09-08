@@ -55,6 +55,8 @@ jobs:
       - name: Install frozen external build prerequisites
         run: |
           set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y graphviz jq
           node --version
           npm --version
           npm install --global ajv-cli@5.0.0
@@ -73,6 +75,8 @@ jobs:
           node --version > p385/receipt/node-version.txt
           npm --version > p385/receipt/npm-version.txt
           ajv help > p385/receipt/ajv-help.txt
+          dot --version > p385/receipt/dot-version.txt 2>&1
+          jq --version > p385/receipt/jq-version.txt 2>&1
           git -C p385/ProvToolbox rev-parse HEAD > p385/receipt/external-commit.txt
           sha256sum p385/ProvToolbox/pom.xml > p385/receipt/external-pom.sha256
 
