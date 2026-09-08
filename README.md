@@ -29,6 +29,12 @@ Use its current frozen challenge and runbook. The active public call is the IR-V
 
 The older `independence/` directory is retained as a historical/control surface. It is not a second independent evidence lineage and must not be treated as the current replication entrypoint.
 
+### P385 external implementation execution boundary
+
+P385 uses this public repository as an execution surface for the frozen external `lucmoreau/ProvToolbox` implementation. The external implementation itself is immutable for the experiment; only the public runner environment may supply prerequisites required by the frozen build. The current target is commit `bbff1d7eecd15175e6be8a055f67d311e40f9f04` (ProvToolbox 2.2.4).
+
+The P385 job is `p385-frozen-external-provtoolbox` in `.github/workflows/p287-verifier-dependency-substitution.yml`. A configured or queued job is not evidence: P385 counts only an observed runner execution with exact checkout identity, logs and reproducible receipt. External execution success is still not, by itself, Genesis semantic concordance or universal-minimality evidence.
+
 ## Evidence boundary
 
 A successful public run establishes only the behavior checked by that public artifact. It does not establish any private Genesis semantic claim by itself. Public execution evidence may be reviewed and, when warranted, imported into the private Genesis research corpus with explicit provenance and epistemic scope.
