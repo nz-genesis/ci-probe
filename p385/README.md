@@ -31,3 +31,7 @@ The public repository must remain Genesis-agnostic. Private Genesis research imp
 ## Current frozen target
 
 `lucmoreau/ProvToolbox@bbff1d7eecd15175e6be8a055f67d311e40f9f04`
+
+## Harness state
+
+The P385 job is intentionally attached to an existing public workflow that is known to execute on GitHub-hosted runners. The external implementation remains immutable; environment compatibility is handled only in the public runner.
