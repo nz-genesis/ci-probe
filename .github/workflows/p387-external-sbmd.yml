@@ -1,0 +1,50 @@
+name: p387-external-sbmd
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  p387-external-sbmd:
+    name: p387-frozen-external-sbmd
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout probe
+        uses: actions/checkout@v4
+
+      - name: Capture runner identity
+        run: |
+          set -euo pipefail
+          uname -a
+          node --version || true
+          npm --version || true
+
+      - name: Setup Node 16 for frozen Angular 14 lineage
+        uses: actions/setup-node@v4
+        with:
+          node-version: '16.20.2'
+
+      - name: Clone frozen external implementation
+        env:
+          EXTERNAL_REPO: https://github.com/SebastianGTTS/situational-business-model-developer.git
+          EXTERNAL_SHA: 84c8e7f360662e3c37fc8b96078046058b550560
+        run: |
+          set -euo pipefail
+          rm -rf external/sbmd
+          git clone "$EXTERNAL_REPO" external/sbmd
+          git -C external/sbmd checkout --detach "$EXTERNAL_SHA"
+          git -C external/sbmd rev-parse HEAD
+
+      - name: Install exact locked dependencies
+        working-directory: external/sbmd
+        run: npm ci
+
+      - name: Execute external implementation test suite
+        working-directory: external/sbmd
+        run: npm test -- --runInBand
+
+      - name: Build external implementation
+        working-directory: external/sbmd
+        run: npm run build
