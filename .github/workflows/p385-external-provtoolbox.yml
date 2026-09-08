@@ -1,4 +1,5 @@
 name: P385 external implementation concordance
+run-name: P385 isolated external concordance ${{ github.run_number }}
 
 on:
   push:
