@@ -52,11 +52,27 @@ jobs:
           git -C p385/ProvToolbox checkout --detach "$PROVTOOLBOX_SHA"
           test "$(git -C p385/ProvToolbox rev-parse HEAD)" = "$PROVTOOLBOX_SHA"
 
+      - name: Install frozen external build prerequisites
+        run: |
+          set -euo pipefail
+          node --version
+          npm --version
+          npm install --global ajv-cli@5.0.0
+          ajv help >/dev/null
+          dot --version
+          jq --version
+          curl --version | head -n 1
+          mvn --version | head -n 3
+          java --version | head -n 3
+
       - name: Capture toolchain and source identity
         run: |
           set -euo pipefail
           java -version 2> p385/receipt/java-version.txt || true
           mvn --version > p385/receipt/maven-version.txt
+          node --version > p385/receipt/node-version.txt
+          npm --version > p385/receipt/npm-version.txt
+          ajv help > p385/receipt/ajv-help.txt
           git -C p385/ProvToolbox rev-parse HEAD > p385/receipt/external-commit.txt
           sha256sum p385/ProvToolbox/pom.xml > p385/receipt/external-pom.sha256
 
