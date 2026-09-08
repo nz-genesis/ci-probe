@@ -1,0 +1,1 @@
+Second isolated P387 external SBMD trigger. No semantic corpus or Genesis material.
