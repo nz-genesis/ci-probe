@@ -1,0 +1,22 @@
+name: P385 Runner Diagnostic
+
+on:
+  push:
+    paths:
+      - 'p385/**'
+      - '.github/workflows/p385-runner-diagnostic.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  runner:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          set -euo pipefail
+          echo "runner=$RUNNER_NAME"
+          echo "os=$RUNNER_OS"
+          echo "arch=$RUNNER_ARCH"
+          test -n "$RUNNER_NAME"
