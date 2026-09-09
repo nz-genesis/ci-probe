@@ -90,14 +90,17 @@ jobs:
 
       - name: Execute SOPCOM frontend tests
         working-directory: external/sopcom-frontend
+        continue-on-error: true
         run: |
-          set -euo pipefail
+          set -o pipefail
           npx ng test --watch=false --browsers=ChromeHeadless | tee ../../sopcom-frontend-test.txt
 
       - name: Build SOPCOM frontend
+        if: ${{ always() }}
         working-directory: external/sopcom-frontend
+        continue-on-error: true
         run: |
-          set -euo pipefail
+          set -o pipefail
           npm run build | tee ../../sopcom-frontend-build.txt
 
       - name: Verify hosted receipt completeness
@@ -108,6 +111,14 @@ jobs:
             test -s "$f"
           done
           printf '%s\n' 'receipt_completeness=PASS' > sopcom-receipt-completeness.txt
+
+      - name: Fail job when frontend execution failed
+        if: ${{ always() }}
+        run: |
+          set -euo pipefail
+          if grep -q 'Process completed with exit code 1' sopcom-frontend-test.txt 2>/dev/null; then exit 1; fi
+          if grep -q 'Error:' sopcom-frontend-test.txt; then exit 1; fi
+          if grep -q 'Error:' sopcom-frontend-build.txt; then exit 1; fi
 
       - name: Upload exact SOPCOM execution receipt
         if: ${{ always() }}
