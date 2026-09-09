@@ -28,7 +28,7 @@ jobs:
       - name: Record explicit research execution trigger
         run: |
           set -euo pipefail
-          printf '%s\n' 'P387 external source-native execution trigger: receipt-path correction rerun' 'No semantic fixture or candidate mapping is introduced by this step.' | tee p387-trigger.txt
+          printf '%s\n' 'P387 external source-native execution trigger: receipt-path correction rerun with completeness gate' 'No semantic fixture or candidate mapping is introduced by this step.' | tee p387-trigger.txt
 
       - name: Setup Node 16 for frozen Angular 14 lineage
         uses: actions/setup-node@v4
@@ -68,6 +68,15 @@ jobs:
         working-directory: external/sbmd
         run: npm run build
 
+      - name: Verify hosted receipt completeness
+        if: ${{ always() }}
+        run: |
+          set -euo pipefail
+          for f in p387-external-identity.txt p387-package-contract.txt p387-runner-identity.txt p387-trigger.txt; do
+            test -s "$f"
+          done
+          printf '%s\n' 'receipt_completeness=PASS' > p387-receipt-completeness.txt
+
       - name: Upload P387 exact hosted execution receipt
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -78,4 +87,5 @@ jobs:
             p387-package-contract.txt
             p387-runner-identity.txt
             p387-trigger.txt
+            p387-receipt-completeness.txt
           if-no-files-found: error
