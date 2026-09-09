@@ -21,7 +21,7 @@ jobs:
         run: |
           set -euo pipefail
           uname -a | tee sopcom-runner-identity.txt
-          printf 'runner_name=%s\nrunner_os=%s\nrunner_arch=%s\nrunner_version=%s\n' "${RUNNER_NAME:-unknown}" "${RUNNER_OS:-unknown}" "${RUNNER_ARCH:-unknown}" "${RUNNER_VERSION:-unknown}" | tee -a sopcom-runner-identity.txt
+          printf 'runner_name=%s\nrunner_os=%s\nrunner_arch=%s\nrunner_version=%s\n' "${RUNNER_NAME:-unknown}" "${RUNNER_OS:-unknown}" "${RUNNER_ARCH:-unknown}" | tee -a sopcom-runner-identity.txt
           printf '%s\n' 'SOPCOM source-native external implementation execution' 'No Genesis semantic fixture or candidate mapping is introduced by this workflow.' | tee sopcom-trigger.txt
 
       - name: Setup Node 16 for Angular 13 lineage
@@ -65,13 +65,26 @@ jobs:
           test "$actual" = "$SOPCOM_FRONTEND_SHA"
           printf 'repo=%s\nexpected_sha=%s\nchecked_out_sha=%s\n' "$SOPCOM_FRONTEND_REPO" "$SOPCOM_FRONTEND_SHA" "$actual" | tee sopcom-frontend-identity.txt
 
-      - name: Install and execute SOPCOM frontend tests
+      - name: Install frontend dependencies with recorded compatibility fallback
+        working-directory: external/sopcom-frontend
+        run: |
+          set -u
+          test -f package.json
+          test -f package-lock.json
+          if npm ci > ../../sopcom-npm-ci-strict.txt 2>&1; then
+            printf '%s\n' 'install_mode=strict_npm_ci' > ../../sopcom-install-mode.txt
+          else
+            strict_status=$?
+            printf 'strict_npm_ci_exit=%s\n' "$strict_status" >> ../../sopcom-npm-ci-strict.txt
+            rm -rf node_modules
+            npm ci --legacy-peer-deps > ../../sopcom-npm-ci-legacy-peer-deps.txt 2>&1
+            printf '%s\n' 'install_mode=legacy_peer_deps_after_strict_failure' > ../../sopcom-install-mode.txt
+          fi
+
+      - name: Execute SOPCOM frontend tests
         working-directory: external/sopcom-frontend
         run: |
           set -euo pipefail
-          test -f package.json
-          test -f package-lock.json
-          npm ci
           npx ng test --watch=false --browsers=ChromeHeadless | tee ../../sopcom-frontend-test.txt
 
       - name: Build SOPCOM frontend
@@ -84,7 +97,7 @@ jobs:
         if: ${{ always() }}
         run: |
           set -euo pipefail
-          for f in sopcom-runner-identity.txt sopcom-trigger.txt sopcom-backend-identity.txt sopcom-backend-runtime.txt sopcom-backend-php-lint.txt sopcom-frontend-identity.txt sopcom-frontend-test.txt sopcom-frontend-build.txt; do
+          for f in sopcom-runner-identity.txt sopcom-trigger.txt sopcom-backend-identity.txt sopcom-backend-runtime.txt sopcom-backend-php-lint.txt sopcom-frontend-identity.txt sopcom-install-mode.txt sopcom-npm-ci-strict.txt sopcom-npm-ci-legacy-peer-deps.txt sopcom-frontend-test.txt sopcom-frontend-build.txt; do
             test -s "$f"
           done
           printf '%s\n' 'receipt_completeness=PASS' > sopcom-receipt-completeness.txt
@@ -101,6 +114,9 @@ jobs:
             sopcom-backend-runtime.txt
             sopcom-backend-php-lint.txt
             sopcom-frontend-identity.txt
+            sopcom-install-mode.txt
+            sopcom-npm-ci-strict.txt
+            sopcom-npm-ci-legacy-peer-deps.txt
             sopcom-frontend-test.txt
             sopcom-frontend-build.txt
             sopcom-receipt-completeness.txt
