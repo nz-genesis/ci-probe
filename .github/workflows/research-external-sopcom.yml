@@ -24,6 +24,11 @@ jobs:
           printf 'runner_name=%s\nrunner_os=%s\nrunner_arch=%s\nrunner_version=%s\n' "${RUNNER_NAME:-unknown}" "${RUNNER_OS:-unknown}" "${RUNNER_ARCH:-unknown}" "${RUNNER_VERSION:-unknown}" | tee -a sopcom-runner-identity.txt
           printf '%s\n' 'SOPCOM source-native external implementation execution' 'No Genesis semantic fixture or candidate mapping is introduced by this workflow.' | tee sopcom-trigger.txt
 
+      - name: Setup Node 16 for Angular 13 lineage
+        uses: actions/setup-node@v4
+        with:
+          node-version: '16.20.2'
+
       - name: Clone frozen SOPCOM backend
         env:
           SOPCOM_BACKEND_REPO: https://github.com/carmequer/SOPCOM-REP-Backend.git
