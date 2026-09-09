@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   p387-external-sbmd:
     name: p387-frozen-external-sbmd
@@ -40,7 +43,17 @@ jobs:
           rm -rf external/sbmd
           git clone "$EXTERNAL_REPO" external/sbmd
           git -C external/sbmd checkout --detach "$EXTERNAL_SHA"
-          git -C external/sbmd rev-parse HEAD
+          actual="$(git -C external/sbmd rev-parse HEAD)"
+          test "$actual" = "$EXTERNAL_SHA"
+          printf 'external_repo=%s\nexternal_expected_sha=%s\nexternal_checked_out_sha=%s\n' "$EXTERNAL_REPO" "$EXTERNAL_SHA" "$actual" | tee p387-external-identity.txt
+
+      - name: Verify frozen external package contract
+        working-directory: external/sbmd
+        run: |
+          set -euo pipefail
+          test -f package.json
+          test -f package-lock.json
+          node -e 'const p=require("./package.json"); if(p.name!=="bmdl-modeler") process.exit(1); if(p.version!=="1.2.0") process.exit(1); if(p.scripts?.test!=="jest") process.exit(1); if(p.scripts?.build!=="ng build") process.exit(1); console.log(JSON.stringify({name:p.name,version:p.version,test:p.scripts.test,build:p.scripts.build}))' | tee ../p387-package-contract.txt
 
       - name: Install exact locked dependencies
         working-directory: external/sbmd
@@ -53,3 +66,13 @@ jobs:
       - name: Build external implementation
         working-directory: external/sbmd
         run: npm run build
+
+      - name: Upload P387 exact hosted execution receipt
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: p387-execution-receipt-${{ github.sha }}
+          path: |
+            p387-external-identity.txt
+            p387-package-contract.txt
+          if-no-files-found: warn
