@@ -20,14 +20,15 @@ jobs:
       - name: Capture runner identity
         run: |
           set -euo pipefail
-          uname -a
-          node --version || true
-          npm --version || true
+          uname -a | tee p387-runner-identity.txt
+          printf 'runner_name=%s\nrunner_os=%s\nrunner_arch=%s\nrunner_version=%s\n' "${RUNNER_NAME:-unknown}" "${RUNNER_OS:-unknown}" "${RUNNER_ARCH:-unknown}" "${RUNNER_VERSION:-unknown}" | tee -a p387-runner-identity.txt
+          node --version | tee -a p387-runner-identity.txt
+          npm --version | tee -a p387-runner-identity.txt
 
       - name: Record explicit research execution trigger
         run: |
           set -euo pipefail
-          printf '%s\n' 'P387 external source-native execution trigger: 2026-09-09 continuation' 'No semantic fixture or candidate mapping is introduced by this step.'
+          printf '%s\n' 'P387 external source-native execution trigger: receipt-path correction rerun' 'No semantic fixture or candidate mapping is introduced by this step.' | tee p387-trigger.txt
 
       - name: Setup Node 16 for frozen Angular 14 lineage
         uses: actions/setup-node@v4
@@ -53,7 +54,7 @@ jobs:
           set -euo pipefail
           test -f package.json
           test -f package-lock.json
-          node -e 'const p=require("./package.json"); if(p.name!=="bmdl-modeler") process.exit(1); if(p.version!=="1.2.0") process.exit(1); if(p.scripts?.test!=="jest") process.exit(1); if(p.scripts?.build!=="ng build") process.exit(1); console.log(JSON.stringify({name:p.name,version:p.version,test:p.scripts.test,build:p.scripts.build}))' | tee ../p387-package-contract.txt
+          node -e 'const p=require("./package.json"); if(p.name!=="bmdl-modeler") process.exit(1); if(p.version!=="1.2.0") process.exit(1); if(p.scripts?.test!=="jest") process.exit(1); if(p.scripts?.build!=="ng build") process.exit(1); console.log(JSON.stringify({name:p.name,version:p.version,test:p.scripts.test,build:p.scripts.build}))' | tee ../../p387-package-contract.txt
 
       - name: Install exact locked dependencies
         working-directory: external/sbmd
@@ -75,4 +76,6 @@ jobs:
           path: |
             p387-external-identity.txt
             p387-package-contract.txt
-          if-no-files-found: warn
+            p387-runner-identity.txt
+            p387-trigger.txt
+          if-no-files-found: error
