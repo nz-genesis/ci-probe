@@ -21,6 +21,11 @@ jobs:
           node --version || true
           npm --version || true
 
+      - name: Record explicit research execution trigger
+        run: |
+          set -euo pipefail
+          printf '%s\n' 'P387 external source-native execution trigger: 2026-09-09 continuation' 'No semantic fixture or candidate mapping is introduced by this step.'
+
       - name: Setup Node 16 for frozen Angular 14 lineage
         uses: actions/setup-node@v4
         with:
