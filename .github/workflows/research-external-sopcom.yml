@@ -80,6 +80,15 @@ jobs:
           set -euo pipefail
           npm run build | tee ../../sopcom-frontend-build.txt
 
+      - name: Verify hosted receipt completeness
+        if: ${{ always() }}
+        run: |
+          set -euo pipefail
+          for f in sopcom-runner-identity.txt sopcom-trigger.txt sopcom-backend-identity.txt sopcom-backend-runtime.txt sopcom-backend-php-lint.txt sopcom-frontend-identity.txt sopcom-frontend-test.txt sopcom-frontend-build.txt; do
+            test -s "$f"
+          done
+          printf '%s\n' 'receipt_completeness=PASS' > sopcom-receipt-completeness.txt
+
       - name: Upload exact SOPCOM execution receipt
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -94,4 +103,5 @@ jobs:
             sopcom-frontend-identity.txt
             sopcom-frontend-test.txt
             sopcom-frontend-build.txt
+            sopcom-receipt-completeness.txt
           if-no-files-found: error
