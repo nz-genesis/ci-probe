@@ -1,0 +1,20 @@
+name: P274 Multi-Epoch Equivocation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p274:
+    name: p274-multiepoch-equivocation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute bounded P274 probe
+        run: python3 p274_multiepoch_equivocation_test.py
