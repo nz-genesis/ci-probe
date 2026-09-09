@@ -1,0 +1,33 @@
+name: P268 Adversarial Recovery Composition
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p268:
+    name: p268-adversarial-recovery-composition
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact triggering revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+
+      - name: Verify checkout identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          expected="${{ github.event.pull_request.head.sha || github.sha }}"
+          test "$actual" = "$expected"
+          printf 'EXPECTED_SHA=%s\nCHECKED_OUT_SHA=%s\n' "$expected" "$actual"
+
+      - name: Execute adversarial recovery composition probe
+        run: python3 recursive_recovery_composition_p268_test.py
