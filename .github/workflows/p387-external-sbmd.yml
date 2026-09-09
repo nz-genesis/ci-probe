@@ -34,7 +34,7 @@ jobs:
       - name: Clone frozen external implementation
         env:
           EXTERNAL_REPO: https://github.com/SebastianGTTS/situational-business-model-developer.git
-          EXTERNAL_SHA: 84c8e7f360662e3c37fc8b96078046058b550560
+          EXTERNAL_SHA: 4b49f93423cc2c17822f794a12187130c2c11202
         run: |
           set -euo pipefail
           rm -rf external/sbmd
