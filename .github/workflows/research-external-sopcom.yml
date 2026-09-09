@@ -1,0 +1,92 @@
+name: research-external-sopcom
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  external-sopcom:
+    name: frozen-external-sopcom
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout probe
+        uses: actions/checkout@v4
+
+      - name: Record trigger and runner identity
+        run: |
+          set -euo pipefail
+          uname -a | tee sopcom-runner-identity.txt
+          printf 'runner_name=%s\nrunner_os=%s\nrunner_arch=%s\nrunner_version=%s\n' "${RUNNER_NAME:-unknown}" "${RUNNER_OS:-unknown}" "${RUNNER_ARCH:-unknown}" "${RUNNER_VERSION:-unknown}" | tee -a sopcom-runner-identity.txt
+          printf '%s\n' 'SOPCOM source-native external implementation execution' 'No Genesis semantic fixture or candidate mapping is introduced by this workflow.' | tee sopcom-trigger.txt
+
+      - name: Clone frozen SOPCOM backend
+        env:
+          SOPCOM_BACKEND_REPO: https://github.com/carmequer/SOPCOM-REP-Backend.git
+          SOPCOM_BACKEND_SHA: 4f391c66de3235fd7254b1854a5be7506ebdb8e4
+        run: |
+          set -euo pipefail
+          git clone "$SOPCOM_BACKEND_REPO" external/sopcom-backend
+          git -C external/sopcom-backend checkout --detach "$SOPCOM_BACKEND_SHA"
+          actual="$(git -C external/sopcom-backend rev-parse HEAD)"
+          test "$actual" = "$SOPCOM_BACKEND_SHA"
+          printf 'repo=%s\nexpected_sha=%s\nchecked_out_sha=%s\n' "$SOPCOM_BACKEND_REPO" "$SOPCOM_BACKEND_SHA" "$actual" | tee sopcom-backend-identity.txt
+
+      - name: Validate SOPCOM backend package and PHP source
+        working-directory: external/sopcom-backend
+        run: |
+          set -euo pipefail
+          test -f api/src/composer.json
+          test -f api/src/composer.lock
+          test -f api/Dockerfile
+          php --version | tee ../../sopcom-backend-runtime.txt
+          composer --version | tee -a ../../sopcom-backend-runtime.txt
+          composer install --working-dir=api/src --no-interaction --prefer-dist --no-progress
+          find api/src -type f -name '*.php' -print0 | xargs -0 -n1 php -l | tee ../../sopcom-backend-php-lint.txt
+
+      - name: Clone frozen SOPCOM frontend
+        env:
+          SOPCOM_FRONTEND_REPO: https://github.com/carmequer/SOPCOM-REP-Frontend.git
+          SOPCOM_FRONTEND_SHA: de74fe3c256039593e434c73031c4002e8951f25
+        run: |
+          set -euo pipefail
+          git clone "$SOPCOM_FRONTEND_REPO" external/sopcom-frontend
+          git -C external/sopcom-frontend checkout --detach "$SOPCOM_FRONTEND_SHA"
+          actual="$(git -C external/sopcom-frontend rev-parse HEAD)"
+          test "$actual" = "$SOPCOM_FRONTEND_SHA"
+          printf 'repo=%s\nexpected_sha=%s\nchecked_out_sha=%s\n' "$SOPCOM_FRONTEND_REPO" "$SOPCOM_FRONTEND_SHA" "$actual" | tee sopcom-frontend-identity.txt
+
+      - name: Install and execute SOPCOM frontend tests
+        working-directory: external/sopcom-frontend
+        run: |
+          set -euo pipefail
+          test -f package.json
+          test -f package-lock.json
+          npm ci
+          npx ng test --watch=false --browsers=ChromeHeadless | tee ../../sopcom-frontend-test.txt
+
+      - name: Build SOPCOM frontend
+        working-directory: external/sopcom-frontend
+        run: |
+          set -euo pipefail
+          npm run build | tee ../../sopcom-frontend-build.txt
+
+      - name: Upload exact SOPCOM execution receipt
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sopcom-execution-receipt-${{ github.sha }}
+          path: |
+            sopcom-runner-identity.txt
+            sopcom-trigger.txt
+            sopcom-backend-identity.txt
+            sopcom-backend-runtime.txt
+            sopcom-backend-php-lint.txt
+            sopcom-frontend-identity.txt
+            sopcom-frontend-test.txt
+            sopcom-frontend-build.txt
+          if-no-files-found: error
