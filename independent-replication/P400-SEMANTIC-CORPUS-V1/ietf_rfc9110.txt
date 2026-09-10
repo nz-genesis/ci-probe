@@ -1,0 +1,11 @@
+RFC 9110 — HTTP Semantics
+
+Each message is either a request or a response. A client constructs request messages that communicate its intentions and routes those messages toward an identified origin server. A server listens for requests, parses each message received, interprets the message semantics in relation to the identified target resource, and responds to the request.
+
+The client examines received responses to see if its intentions were carried out, determining what to do next based on the status codes and content received.
+
+HTTP semantics include the intentions defined by each request method, extensions described in request header fields, status codes that describe the response, and other control data and resource metadata.
+
+A request method is considered idempotent if the intended effect on the server of multiple identical requests with that method is the same as the effect for a single such request.
+
+The idempotent property only applies to what has been requested by the user; a server is free to log each request separately, retain a revision control history, or implement other non-idempotent side effects for each idempotent request.
