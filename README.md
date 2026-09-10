@@ -19,13 +19,21 @@ ROOT
 └── .github/workflows/          public CI workflows
 ```
 
+### Public execution/control role
+
+`ci-probe` is the public execution/control substrate for bounded Genesis research whenever public GitHub-hosted execution, independently inspectable execution evidence, public control/replication, private/public correspondence, or an external blind-replication surface is required by the applicable research protocol.
+
+The public repository does not acquire authority over Genesis semantics. Its results establish only the properties actually executed and evidenced by its public artifacts. Private Genesis interpretation, witnesses, correspondence decisions and canonical state remain in `nz-genesis/genesis-lab`.
+
+A private workflow, local run, assistant/tool response, or another repository may provide diagnostic or supplementary evidence, but does not substitute for an applicable `ci-probe` execution/control step.
+
 ### Active clean-room replication
 
 The **only active entrypoint for materially independent reconstruction is**:
 
 `independent-replication/`
 
-Use its current frozen challenge and runbook. The active public call is the IR-V2 challenge described in `independent-replication/INDEPENDENT_REPLICATION_CALL.md`.
+Use its current frozen challenge and runbook. The active public call is the IR-V3 challenge described in `independent-replication/INDEPENDENT_REPLICATION_CALL.md`.
 
 The older `independence/` directory is retained as a historical/control surface. It is not a second independent evidence lineage and must not be treated as the current replication entrypoint.
 
@@ -59,7 +67,7 @@ The repository contains bounded probes for execution, authority/revocation, reco
 
 ## Continuous integration
 
-See [`ROOT_WORKFLOW_POLICY.md`](ROOT_WORKFLOW_POLICY.md).
+See `ROOT_WORKFLOW_POLICY.md`.
 
 `.github/workflows/ci-probe.yml` is the generic repository smoke/substrate workflow. It must not be interpreted as a universal semantic test suite. Experiment-specific workflows remain separately scoped and their individual run conclusions must be reported from their exact workflow run, job and logs.
 
