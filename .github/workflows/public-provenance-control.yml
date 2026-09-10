@@ -1,0 +1,54 @@
+name: Public Provenance Control
+
+# PUBLIC-SAFE CONTROL ONLY
+# No private Genesis data, secrets, credentials, or private repository access.
+
+on:
+  push:
+    paths:
+      - 'tools/deterministic_provenance_gate.py'
+      - 'tools/test_deterministic_provenance_gate.py'
+      - 'tools/p400_public_provenance_control/**'
+      - '.github/workflows/public-provenance-control.yml'
+  pull_request:
+    paths:
+      - 'tools/deterministic_provenance_gate.py'
+      - 'tools/test_deterministic_provenance_gate.py'
+      - 'tools/p400_public_provenance_control/**'
+      - '.github/workflows/public-provenance-control.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provenance-control:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Verify checkout identity
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+      - name: Compile and run adversarial tests
+        working-directory: tools
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deterministic_provenance_gate.py test_deterministic_provenance_gate.py
+          python3 -m unittest -v test_deterministic_provenance_gate.py
+      - name: Run public fixture gate
+        run: |
+          set -euo pipefail
+          python3 tools/deterministic_provenance_gate.py \
+            --manifest tools/p400_public_provenance_control/manifest.json \
+            --claims tools/p400_public_provenance_control/claims.jsonl \
+            --corpus tools/p400_public_provenance_control
+      - name: Verify public fixture digests
+        run: |
+          set -euo pipefail
+          sha256sum tools/deterministic_provenance_gate.py
+          sha256sum tools/p400_public_provenance_control/*.txt
