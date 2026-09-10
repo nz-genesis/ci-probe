@@ -10,6 +10,12 @@ on:
       - 'tools/test_deterministic_provenance_gate.py'
       - 'tools/p400_public_provenance_control/**'
       - '.github/workflows/public-provenance-control.yml'
+  pull_request:
+    paths:
+      - 'tools/deterministic_provenance_gate.py'
+      - 'tools/test_deterministic_provenance_gate.py'
+      - 'tools/p400_public_provenance_control/**'
+      - '.github/workflows/public-provenance-control.yml'
   workflow_dispatch:
 
 permissions:
