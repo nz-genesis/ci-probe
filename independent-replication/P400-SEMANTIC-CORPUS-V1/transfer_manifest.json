@@ -1,0 +1,16 @@
+{
+  "corpus_id": "P400-SEMANTIC-CORPUS-V1",
+  "source_repository": "nz-genesis/genesis-lab",
+  "source_commit": "02354080a066f7e8b577f9a3273256a28e8aa8ac",
+  "source_path": "research/verification/p400_semantic_corpus_v1/",
+  "files": {
+    "kubernetes_controllers.txt": "6cd6a91e0fe3e175cba02024b65ffeed4ccb26d129181f98ebbebe43c7d9e42c",
+    "w3c_prov_overview.txt": "342b98b4e48d4fa11cbc5dc5bf55117ae8f3062cef12eecb9981c72e6ff31f4f",
+    "nist_ai_rmf_core.txt": "dc157bda53aabfc1ba019f6cb32b7cbb7e4033106494b48f8beb6cb3a9fb57c1",
+    "ietf_rfc9110.txt": "6d68f776b4d077d982aebc72039bc8a093d2ff0935a1d13e6f3729c83095bd98",
+    "ros2_lifecycle_rolling.txt": "cf1cef527017461e59fb363d21f3eafd4a81ad898c0e97dd6a22a4e39b6f2a3f",
+    "nasa_se_handbook_appendix.txt": "97f3760780c5f16f8d2b68e0016029c345a1ec46bfcd3da7b919a1623f4cfe04"
+  },
+  "integrity_note": "Expected SHA-256 values are copied from the frozen canonical manifest. The receiving executor MUST recompute SHA-256 over the exact checked-out transfer files; Git blob SHA-1 and commit SHA are not substitutes.",
+  "blind_boundary": "After transfer verification, genesis-lab must not be accessed during blind reconstruction. This transfer package is the sole semantic evidence input."
+}
