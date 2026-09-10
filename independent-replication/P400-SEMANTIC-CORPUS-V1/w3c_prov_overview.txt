@@ -1,0 +1,11 @@
+PROV-Overview
+
+Provenance is information about entities, activities, and people involved in producing a piece of data or thing, which can be used to form assessments about its quality, reliability or trustworthiness.
+
+The PROV Family of Documents defines a model, corresponding serializations and other supporting definitions to enable the inter-operable interchange of provenance information in heterogeneous environments such as the Web.
+
+The goal of PROV is to enable the wide publication and interchange of provenance on the Web and other information systems. PROV enables one to represent and interchange provenance information using widely available formats such as RDF and XML.
+
+The design of PROV stems from recommendations that a provenance framework should support the core concepts of identifying an object, attributing the object to person or entity, and representing processing steps; accessing provenance-related information; accessing provenance; provenance of provenance; reproducibility; versioning; representing procedures; and representing derivation.
+
+At its core is a conceptual data model (PROV-DM), which defines a common vocabulary used to describe provenance. This is instantiated by various serializations used by implementations to interchange provenance. Constraints are defined to help developers and users express valid provenance.
