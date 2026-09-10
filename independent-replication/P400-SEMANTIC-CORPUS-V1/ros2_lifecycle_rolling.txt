@@ -1,0 +1,17 @@
+ROS 2 lifecycle — Rolling 0.38.0 documentation
+
+ROS 2 introduces the concept of managed nodes, also called LifecycleNodes. Managed nodes contain a state machine with a set of predefined states. These states can be changed by invoking a transition, passing a specific transition ID which indicates the succeeding consecutive state.
+
+The implementation differentiates between Primary States and Transition States.
+
+Primary states are supposed to be steady states in which any node can perform their respective task.
+
+Transition states are used to indicate whether a transition between two primary states is considered successful or not.
+
+A managed node can be in primary states such as unconfigured, inactive, active, and finalized, and transition states such as configuring, activating, deactivating, cleaning up, and shutting down.
+
+The possible transitions include configure, activate, deactivate, cleanup, and shutdown.
+
+The lifecycle talker represents a managed node and publishes according to which state the node is in. Its primary task is executed in the active state.
+
+Lifecycle transitions invoke callback functions that prepare or tear down the resources required for publishing.
