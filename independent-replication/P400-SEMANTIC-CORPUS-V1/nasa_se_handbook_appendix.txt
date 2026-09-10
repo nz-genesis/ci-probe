@@ -1,0 +1,11 @@
+NASA Systems Engineering Handbook — Verification and Validation
+
+When developing requirements, it is important to identify an approach for verifying the requirements. A verification matrix should identify each requirement by a unique identifier and be definitive as to the source from which the requirement is taken.
+
+When developing requirements, it is also important to identify a validation approach for how additional validation evaluation, testing, analysis, or other demonstrations will be performed to ensure customer or sponsor satisfaction.
+
+Sources for a validation plan can include stakeholder or customer needs, goals and objectives documentation, rationale statements for requirements, lessons learned, system architecture modeling, test-as-you-fly design goals and constraints, and verification and validation plans.
+
+Validation products can take many forms, including stakeholder evaluation and feedback, peer reviews, physical models of all fidelities, simulations, virtual modeling, tests, fit-checks, procedure dry-runs, integration activities, and phase-level review solicitation and feedback.
+
+The Product Validation Process is conducted on an implemented or integrated end product. Verification provides objective evidence that requirements in the requirements document or specification were met, whereas validation is performed to ensure that the right product functions in the expected manner when placed in the intended environment.
