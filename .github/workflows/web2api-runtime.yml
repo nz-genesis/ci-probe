@@ -1,0 +1,89 @@
+name: Public Web2API Runtime Probe
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'web2api-runtime/**'
+      - '.github/workflows/web2api-runtime.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    name: ${{ matrix.candidate }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - candidate: playwright-node
+            package: playwright@1.63.0
+            install: npx playwright install --with-deps chromium
+          - candidate: patchright-node
+            package: patchright@1.63.0
+            install: npx patchright install chromium
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.21.0'
+          package-manager-cache: false
+      - name: Install browser library
+        working-directory: web2api-runtime
+        run: npm install --no-save --ignore-scripts "${{ matrix.package }}"
+      - name: Install Chromium
+        working-directory: web2api-runtime
+        run: ${{ matrix.install }}
+      - name: Execute real browser probe
+        working-directory: web2api-runtime
+        env:
+          BROWSER_CANDIDATE: ${{ matrix.candidate }}
+        run: node node-runner.mjs | tee result-${{ matrix.candidate }}.json
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: web2api-runtime-${{ matrix.candidate }}
+          path: web2api-runtime/result-${{ matrix.candidate }}.json
+          if-no-files-found: error
+
+  python:
+    name: ${{ matrix.candidate }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - candidate: playwright-python
+            requirements: requirements-playwright.txt
+            install: python -m playwright install --with-deps chromium
+          - candidate: patchright-python
+            requirements: requirements-patchright.txt
+            install: patchright install chromium
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14.7'
+          cache: pip
+          cache-dependency-path: web2api-runtime/${{ matrix.requirements }}
+      - name: Install browser library
+        working-directory: web2api-runtime
+        run: python -m pip install -r "${{ matrix.requirements }}"
+      - name: Install Chromium
+        working-directory: web2api-runtime
+        run: ${{ matrix.install }}
+      - name: Execute real browser probe
+        working-directory: web2api-runtime
+        env:
+          BROWSER_CANDIDATE: ${{ matrix.candidate }}
+        run: python python-runner.py | tee result-${{ matrix.candidate }}.json
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: web2api-runtime-${{ matrix.candidate }}
+          path: web2api-runtime/result-${{ matrix.candidate }}.json
+          if-no-files-found: error
