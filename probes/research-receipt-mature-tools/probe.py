@@ -63,7 +63,7 @@ def run_intoto():
         functionary_public = fn.public_key.to_dict()
         functionary_public["keyid"] = fn.public_key.keyid
         l=Layout(); l.set_relative_expiration(days=1); l.add_functionary_key(functionary_public)
-        step=Step(name="receipt"); step.pubkeys=[fn.public_key.keyid]; step.add_product_rule_from_string("CREATE receipt"); step.add_product_rule_from_string("DISALLOW *"); l.steps=[step]
+        step=Step(name="receipt"); step.pubkeys=[fn.public_key.keyid]; step.expected_command=["python3","-c","pass"]; step.add_product_rule_from_string("CREATE receipt"); step.add_product_rule_from_string("DISALLOW *"); l.steps=[step]
         m=Metablock(signed=l); m.create_signature(owner); m.dump(str(p/"root.layout"))
         old=Path.cwd(); os.chdir(p)
         try:
