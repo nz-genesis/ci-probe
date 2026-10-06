@@ -181,6 +181,7 @@ describe("independent semantic vectors vs executable REA", () => {
     const initial = build(request([capture]));
     const obligation = initial.obligations[0];
     if (!obligation) throw new Error("missing generated obligation");
+    const p = proof("missing-cases", obligation.obligation_id);
 
     const b = completeBinding(obligation, p.evidence_id);
     b.original_cases = obligation.observed_cases;
@@ -203,6 +204,7 @@ describe("independent semantic vectors vs executable REA", () => {
     const initial = build(request([capture]));
     const obligation = initial.obligations[0];
     if (!obligation) throw new Error("missing generated obligation");
+    const p = proof("weak", obligation.obligation_id);
 
     const b = completeBinding(obligation, p.evidence_id);
     b.fixtures = b.fixtures.map((f) => ({ ...f, authority: "unit" as const }));
