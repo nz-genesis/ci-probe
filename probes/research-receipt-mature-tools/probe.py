@@ -83,9 +83,11 @@ def run_intoto():
 
 def run_tuf():
     ss={r:CryptoSigner.generate_ed25519() for r in ("root","timestamp","snapshot","targets")}
-    bootstrap_root=root(ss)
+    bootstrap_root_md=Metadata.from_bytes(root(ss))
+    bootstrap_root_md.signed.version=2
+    bootstrap_root=sign(bootstrap_root_md,ss["root"])
     remote_root_md=Metadata.from_bytes(bootstrap_root)
-    remote_root_md.signed.version=2
+    remote_root_md.signed.version=3
     remote_root=sign(remote_root_md,ss["root"])
     a=state(V1,1,ss); b=state(V2,2,ss)
     with tempfile.TemporaryDirectory() as td:
