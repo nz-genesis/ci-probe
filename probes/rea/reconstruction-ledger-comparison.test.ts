@@ -367,3 +367,5 @@ describe("independent semantic vectors vs executable REA", () => {
     expect(result.status).toBe("unknown");
   });
 });
+
+// Hosted execution probe: output counts only from the exact frozen upstream implementation and vector set.
