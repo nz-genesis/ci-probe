@@ -156,6 +156,9 @@ describe("independent semantic vectors vs executable REA", () => {
       }),
     );
 
+    console.log("COMPLETE_VECTOR_DIAGNOSTICS", JSON.stringify(result.obligations[0]));
+    console.log("COMPLETE_VECTOR_LEDGER_STATUS", result.status);
+
     expect(result.obligations[0]?.status).toBe("verified");
     expect(result.status).toBe("ready");
   });
