@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { PROCESS_PROVIDER } from "./src/application/ProcessEvidence.js";
 import { MANAGED_WORKFLOW_PROVIDER } from "./src/application/InvestigationProviders.js";
-import { buildSyntheticJavaScriptApplicationGraph, createJavaScriptApplicationNode, createJavaScriptApplicationGraph } from "./src/domain/javascriptApplicationGraph.js";
+import { createJavaScriptApplicationNode, createJavaScriptApplicationGraph } from "./src/domain/javascriptApplicationGraph.js";
+import { buildSyntheticJavaScriptApplicationGraph } from "./src/domain/javascriptApplicationGraph.fixture.js";
 import { artifactEvidence } from "./src/domain/javascriptApplicationGraph.fixture.js";
 import {
   buildReconstructionObligationLedgerEvidenceValidated,
