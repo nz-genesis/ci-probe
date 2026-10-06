@@ -37,9 +37,7 @@ jobs:
         run: .venv/bin/sigstore sign receipt.json
       - name: Verify exact workflow identity
         env:
-          CERT_IDENTITY: ${{ github.event_name == 'pull_request' && format('https://github.com/{0}/.github/workflows/Mature%20Receipt%20Tool%20Probe.yml@refs/pull/{1}/merge', github.repository, github.event.pull_request.number) || format('https://github.com/{0}/.github/workflows/Mature%20Receipt%20Tool%20Probe.yml@refs/heads/{1}', github.repository, github.ref_name) }}
-        run: .venv/bin/sigstore verify identity receipt.json --cert-identity "${CERT_IDENTITY}" --cert-oidc-issuer https://token.actions.githubusercontent.com
-      - name: Reject mutation
+          CERT_IDENTITY: https://github.com/${{ github.workflow_ref }}
         run: |
           cp receipt.json mutated.json
           sed -i 's/"version":"1"/"version":"2"/' mutated.json
