@@ -77,3 +77,5 @@ jobs:
             probe-checkout-identity.txt
             rea-checkout-identity.txt
           if-no-files-found: error
+
+# Execution probe revision: test file is staged into REA's supported src/application Vitest lane.
