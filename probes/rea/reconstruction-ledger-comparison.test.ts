@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { MANAGED_WORKFLOW_PROVIDER, PROCESS_PROVIDER } from "./src/application/InvestigationProviders.js";
+import { MANAGED_WORKFLOW_PROVIDER } from "./src/application/InvestigationProviders.js";
+import { PROCESS_PROVIDER } from "./src/application/ProcessEvidence.js";
 import {
   buildReconstructionObligationLedgerEvidenceValidated,
   resolveReconstructionObligationLedgerRequest,
@@ -12,7 +13,7 @@ import {
   createJavaScriptApplicationGraph,
   createJavaScriptApplicationNode,
 } from "./src/domain/javascriptApplicationGraph.js";
-import { unknownEvidence } from "./src/domain/javascriptApplicationGraph.fixture.js";
+import { artifactEvidence } from "./src/domain/javascriptApplicationGraph.fixture.js";
 import { createEvidence, type Evidence } from "./src/domain/evidence.js";
 import { createEvidenceBundle } from "./src/domain/evidenceBundle.js";
 import { jsonValueSchema } from "./src/domain/jsonValue.js";
@@ -544,7 +545,7 @@ describe("independent semantic vectors vs executable REA", () => {
         {
           label: "unclassified boundary",
           properties: { reason: "synthetic omission probe" },
-          evidence: unknownEvidence(),
+          evidence: artifactEvidence("5".repeat(64), "unknown/boundary"),
         },
       ],
     });
