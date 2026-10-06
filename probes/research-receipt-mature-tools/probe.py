@@ -54,7 +54,9 @@ def run_intoto():
     with tempfile.TemporaryDirectory() as td:
         p=Path(td); (p/"receipt").write_bytes(V1)
         owner=CryptoSigner.generate_ed25519(); fn=CryptoSigner.generate_ed25519()
-        l=Layout(); l.set_relative_expiration(days=1); l.add_functionary_key(fn.public_key.to_dict())
+        functionary_public = fn.public_key.to_dict()
+        functionary_public["keyid"] = fn.public_key.keyid
+        l=Layout(); l.set_relative_expiration(days=1); l.add_functionary_key(functionary_public)
         step=Step(name="receipt"); step.pubkeys=[fn.public_key.keyid]; step.add_product_rule_from_string("CREATE receipt"); step.add_product_rule_from_string("DISALLOW *"); l.steps=[step]
         m=Metablock(signed=l); m.create_signature(owner); m.dump(str(p/"root.layout"))
         old=Path.cwd(); os.chdir(p)
@@ -62,9 +64,11 @@ def run_intoto():
             link=in_toto_run("receipt",[],["receipt"],["python3","-c","pass"],True,fn)
             assert link.signed.products["receipt"]["sha256"]==h(V1)
             params=inspect.signature(in_toto_verify).parameters; assert "metadata" in params and "layout_key_dict" in params
-            in_toto_verify(metadata=m,layout_key_dict={owner.public_key.keyid:owner.public_key.to_dict()})
+            owner_public = owner.public_key.to_dict()
+            owner_public["keyid"] = owner.public_key.keyid
+            in_toto_verify(metadata=m,layout_key_dict={owner.public_key.keyid:owner_public})
             (p/"receipt").write_bytes(V2)
-            try: in_toto_verify(metadata=m,layout_key_dict={owner.public_key.keyid:owner.public_key.to_dict()})
+            try: in_toto_verify(metadata=m,layout_key_dict={owner.public_key.keyid:owner_public})
             except Exception: print("intoto_mutation=PASS")
             else: raise AssertionError("in-toto accepted mutation")
         finally: os.chdir(old)
