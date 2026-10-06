@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { MANAGED_WORKFLOW_PROVIDER, PROCESS_PROVIDER } from "./src/application/InvestigationProviders.js";
-import { MANAGED_WORKFLOW_PROVIDER } from "./src/application/InvestigationProviders.js";
-import { buildSyntheticJavaScriptApplicationGraph, createJavaScriptApplicationNode, createJavaScriptApplicationGraph } from "./src/domain/javascriptApplicationGraph.js";
-import { artifactEvidence } from "./src/domain/javascriptApplicationGraph.fixture.js";
 import {
   buildReconstructionObligationLedgerEvidenceValidated,
   resolveReconstructionObligationLedgerRequest,
@@ -10,10 +7,12 @@ import {
 import { EMPTY_PROCESS_CAPTURE_EXAMPLE } from "./src/domain/processCapture.fixture.js";
 import {
   buildSyntheticJavaScriptApplicationGraph,
+} from "./src/domain/javascriptApplicationGraph.fixture.js";
+import {
   createJavaScriptApplicationGraph,
   createJavaScriptApplicationNode,
-  unknownEvidence,
-} from "./src/domain/javascriptApplicationGraph.fixture.js";
+} from "./src/domain/javascriptApplicationGraph.js";
+import { unknownEvidence } from "./src/domain/javascriptApplicationGraph.fixture.js";
 import { createEvidence, type Evidence } from "./src/domain/evidence.js";
 import { createEvidenceBundle } from "./src/domain/evidenceBundle.js";
 import { jsonValueSchema } from "./src/domain/jsonValue.js";
