@@ -1,0 +1,8 @@
+{
+  "schema": "generic-provenance-v1",
+  "sources": [
+    {"source_id":"SRC-A","path":"alpha.txt","sha256":"dd219cdb9403d0603b22b922dbad8cfebef6766f90b182649324cf2235dacf2e"},
+    {"source_id":"SRC-B","path":"beta.txt","sha256":"bd2a6ee4a9d2912d250d6934384704d9de1a62433772dfe89cadba82d187a2ba"},
+    {"source_id":"SRC-C","path":"gamma.txt","sha256":"3854675ee51b10096fe8d708fbff769f59586272fc24a89effe9d048c7596bf8"}
+  ]
+}
