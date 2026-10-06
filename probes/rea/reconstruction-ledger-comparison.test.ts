@@ -529,6 +529,7 @@ describe("independent semantic vectors vs executable REA", () => {
       }),
       confidence: "inferred",
       authority: "analyst-inference",
+      evidenceLinks: [sourceEvidence.evidence_id],
     });
 
     const result = build(request([sourceEvidence, managed]));
