@@ -61,11 +61,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp probes/rea/reconstruction-ledger-comparison.test.ts rea-upstream/reconstruction-ledger-comparison.test.ts
+          cp probes/rea/reconstruction-ledger-comparison.test.ts rea-upstream/src/application/reconstruction-ledger-comparison.test.ts
 
       - name: Execute comparison vectors against exact REA
         working-directory: rea-upstream
-        run: npx vitest run reconstruction-ledger-comparison.test.ts --reporter=verbose
+        run: npx vitest run src/application/reconstruction-ledger-comparison.test.ts --reporter=verbose
 
       - name: Upload exact execution receipt
         if: ${{ always() }}
