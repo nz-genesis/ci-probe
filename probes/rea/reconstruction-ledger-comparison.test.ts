@@ -455,7 +455,7 @@ describe("independent semantic vectors vs executable REA", () => {
     expect(obligation?.status).toBe("unknown");
     expect(result.status).toBe("unknown");
   });
-  it("complete application coverage preserves an admitted unknown in the qualification frontier", () => {
+  it("mixed complete coverage does not erase an admitted unknown from qualification without a limitation", () => {
     const baseGraph = buildSyntheticJavaScriptApplicationGraph();
     const unknownNode = createJavaScriptApplicationNode({
       kind: "unknown",
@@ -486,6 +486,19 @@ describe("independent semantic vectors vs executable REA", () => {
     };
     const graph = createJavaScriptApplicationGraph(graphInput);
 
+    const sourceEvidence = createEvidence(
+      undefined,
+      { id: "fixture-source", name: "Synthetic graph source", version: "1" },
+      {
+        predicateType: "rea.synthetic-graph-source",
+        operation: "observe_synthetic_graph",
+        parameters: {},
+        result: { value: "mixed-known-unknown" },
+        confidence: "observed",
+        authority: "shipped-artifact",
+      },
+    );
+
     const managed = createEvidence(undefined, MANAGED_WORKFLOW_PROVIDER, {
       predicateType: "rea.managed-application-graph",
       operation: "project_managed_application_graph",
@@ -511,23 +524,36 @@ describe("independent semantic vectors vs executable REA", () => {
         },
         graph,
         coverage: { status: "complete-within-inputs" },
-        evidence_links: [`ev_${"b".repeat(64)}`],
+        evidence_links: [sourceEvidence.evidence_id],
         limitations: [],
       }),
       confidence: "inferred",
       authority: "analyst-inference",
     });
 
-    const result = build(request([managed]));
-    expect(result.obligations.some(
+    const result = build(request([sourceEvidence, managed]));
+    const knownCandidateCount = result.obligations.filter(
       (obligation) => obligation.target.application_node_id !== unknownNode.node_id,
-    )).toBe(true);
-    expect(result.obligations.some(
+    ).length;
+    const unknownPresent = result.obligations.some(
       (obligation) => obligation.target.application_node_id === unknownNode.node_id,
-    )).toBe(false);
-    expect(result.limitations.length).toBeGreaterThan(0);
-  });
+    );
 
+    console.log(
+      "MIXED_UNKNOWN_BOUNDARY",
+      JSON.stringify({
+        graphCoverage: graph.coverage.status,
+        knownCandidateCount,
+        unknownPresent,
+        limitations: result.limitations,
+        ledgerStatus: result.status,
+      }),
+    );
+
+    expect(knownCandidateCount).toBeGreaterThan(0);
+    expect(unknownPresent).toBe(false);
+    expect(result.limitations).toHaveLength(0);
+  });
 
 });
 
