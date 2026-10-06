@@ -67,10 +67,17 @@ def run_intoto():
             owner_public = owner.public_key.to_dict()
             owner_public["keyid"] = owner.public_key.keyid
             in_toto_verify(metadata=m,layout_key_dict={owner.public_key.keyid:owner_public})
-            (p/"receipt").write_bytes(V2)
+            # in-toto verifies the signed Link/authorized process evidence.
+            # Live target mutation is a TUF distribution-layer test below.
+            # Here we tamper with the signed Link while keeping its old signature.
+            link_files = list(p.glob("receipt.*.link"))
+            assert len(link_files) == 1
+            link_md = Metablock.load(str(link_files[0]))
+            link_md.signed.products["receipt"]["sha256"] = "0" * 64
+            link_md.dump(str(link_files[0]))
             try: in_toto_verify(metadata=m,layout_key_dict={owner.public_key.keyid:owner_public})
-            except Exception: print("intoto_mutation=PASS")
-            else: raise AssertionError("in-toto accepted mutation")
+            except Exception: print("intoto_link_tamper_detection=PASS")
+            else: raise AssertionError("in-toto accepted tampered Link")
         finally: os.chdir(old)
     print("intoto_valid=PASS")
 
