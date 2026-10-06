@@ -178,8 +178,7 @@ describe("independent semantic vectors vs executable REA", () => {
 
   it("missing original negative/cancellation cases stays open", () => {
     const capture = processEvidence();
-    const p = proof("missing-cases", obligation.obligation_id);
-    const initial = build(request([capture, p]));
+    const initial = build(request([capture]));
     const obligation = initial.obligations[0];
     if (!obligation) throw new Error("missing generated obligation");
 
@@ -201,8 +200,7 @@ describe("independent semantic vectors vs executable REA", () => {
 
   it("weak proof authority stays open", () => {
     const capture = processEvidence();
-    const p = proof("weak", obligation.obligation_id);
-    const initial = build(request([capture, p]));
+    const initial = build(request([capture]));
     const obligation = initial.obligations[0];
     if (!obligation) throw new Error("missing generated obligation");
 
@@ -221,8 +219,8 @@ describe("independent semantic vectors vs executable REA", () => {
   });
 
   it("residual unknown stays unknown", () => {
-    const p = proof("unknown", id, "shipped-artifact");
     const id = "obl.unknown";
+    const p = proof("unknown", id, "shipped-artifact");
     const o = reviewed(id, p.evidence_id, {
       residual_unknown_ids: ["u1"],
     });
