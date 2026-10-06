@@ -339,6 +339,70 @@ describe("independent semantic vectors vs executable REA", () => {
     expect(result.status).toBe("open");
   });
 
+
+  it("contradiction duplicate-evidence boundary is observable", () => {
+    const p = proof("duplicate-contradiction", "obl.duplicate-contradiction");
+    const original = createEvidence(
+      undefined,
+      { id: "fixture-static", name: "Static artifact", version: "1" },
+      {
+        predicateType: "rea.static-observation",
+        operation: "observe_static_behavior",
+        parameters: {},
+        result: { value: "original" },
+        confidence: "observed",
+        authority: "shipped-artifact",
+      },
+    );
+    const o = reviewed(
+      "obl.duplicate-contradiction",
+      original.evidence_id,
+      {
+        required_original_authority: "static",
+      },
+    );
+    const b = {
+      ...completeBinding(
+        {
+          obligation_id: o.obligation_id,
+          required_case_kinds: o.required_case_kinds,
+        } as ReconstructionObligationLedger["obligations"][number],
+        p.evidence_id,
+      ),
+      original_cases: [
+        {
+          kind: "positive" as const,
+          evidence_id: original.evidence_id,
+          location: "/positive",
+        },
+      ],
+    };
+
+    const result = build(
+      request([p, original], {
+        reviewed_obligations: [o],
+        manifest: {
+          bindings: [b],
+          contradictions: [
+            {
+              obligation_id: o.obligation_id,
+              evidence_ids: [original.evidence_id, original.evidence_id],
+            },
+          ],
+        },
+      }),
+    );
+
+    const status = result.obligations[0]?.status;
+    const diagnostics = result.obligations[0]?.diagnostics.map((d) => d.code);
+    console.log(
+      "DUPLICATE_CONTRADICTION_BOUNDARY",
+      JSON.stringify({ status, diagnostics }),
+    );
+    expect(status).toBe("contradicted");
+    expect(diagnostics).toContain("contradiction");
+  });
+
   it("candidate generation preserves cancellation and truncation uncertainty", () => {
     const base = EMPTY_PROCESS_CAPTURE_EXAMPLE;
     const captured = {
