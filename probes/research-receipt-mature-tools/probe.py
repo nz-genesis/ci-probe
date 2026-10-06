@@ -13,7 +13,7 @@ from in_toto.models.metadata import Metablock
 from in_toto.runlib import in_toto_run
 from in_toto.verifylib import in_toto_verify
 from securesystemslib.signer import CryptoSigner
-from tuf.api.exceptions import BadVersionNumberError, ExpiredMetadataError, LengthOrHashMismatchError
+from tuf.api.exceptions import BadVersionNumberError, DownloadHTTPError, ExpiredMetadataError, LengthOrHashMismatchError
 from tuf.api.metadata import Metadata, MetaFile, Root, Role, Snapshot, TargetFile, Targets, Timestamp
 from tuf.api.serialization.json import JSONSerializer
 from tuf.ngclient import Updater
@@ -33,6 +33,8 @@ class F(FetcherInterface):
             n=p[len("/metadata/"):-5]
             if n.endswith(".root"):
                 version=int(n.split(".",1)[0])
+                if version not in self.roots:
+                    raise DownloadHTTPError(f"GET {url}: not found", 404)
                 yield self.roots[version]
                 return
             yield self.state[n.split(".",1)[-1]]
