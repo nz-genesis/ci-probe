@@ -1,6 +1,7 @@
 name: REA Ledger Comparison
 
 on:
+  pull_request:
   push:
     paths:
       - "probes/rea/**"
