@@ -1,0 +1,57 @@
+name: Mature Receipt Tool Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "probes/research-receipt-mature-tools/**"
+      - ".github/workflows/research-receipt-mature-tools.yml"
+  pull_request:
+    paths:
+      - "probes/research-receipt-mature-tools/**"
+      - ".github/workflows/research-receipt-mature-tools.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  mature-tools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install exact mature Python tools
+        run: |
+          python3 --version
+          python3 -m pip install --upgrade pip
+          python3 -m pip install "in-toto==3.1.0" "tuf==7.0.1" "sigstore==4.5.0"
+          python3 -c "import importlib.metadata as m; assert m.version('in-toto')=='3.1.0'; assert m.version('tuf')=='7.0.1'; assert m.version('sigstore')=='4.5.0'"
+      - name: Execute in-toto and TUF probe
+        run: python3 probes/research-receipt-mature-tools/probe.py
+      - name: Create common receipt
+        run: printf '%s\n' '{"claim":"mature-tool-receipt","source":"system-A","version":"1","scope":"bounded"}' > receipt.json
+      - name: Sign with Sigstore keyless OIDC
+        run: sigstore sign receipt.json
+      - name: Verify exact workflow identity
+        env:
+          CERT_IDENTITY: ${{ github.event_name == 'pull_request' && format('https://github.com/{0}/.github/workflows/Mature%20Receipt%20Tool%20Probe.yml@refs/pull/{1}/merge', github.repository, github.event.pull_request.number) || format('https://github.com/{0}/.github/workflows/Mature%20Receipt%20Tool%20Probe.yml@refs/heads/{1}', github.repository, github.ref_name) }}
+        run: sigstore verify identity receipt.json --cert-identity "${CERT_IDENTITY}" --cert-oidc-issuer https://token.actions.githubusercontent.com
+      - name: Reject mutation
+        run: |
+          cp receipt.json mutated.json
+          sed -i 's/"version":"1"/"version":"2"/' mutated.json
+          if sigstore verify identity mutated.json --cert-identity-regexp '.*' --cert-oidc-issuer https://token.actions.githubusercontent.com; then exit 1; fi
+          echo "sigstore_mutation=PASS"
+      - name: Reject wrong identity
+        run: |
+          if sigstore verify identity receipt.json --cert-identity 'https://github.com/attacker/attacker/.github/workflows/evil.yml@refs/heads/main' --cert-oidc-issuer https://token.actions.githubusercontent.com; then exit 1; fi
+          echo "sigstore_identity=PASS"
+      - name: Require transparency evidence
+        run: |
+          python3 - <<'PY'
+          import json
+          b=json.load(open("receipt.sigstore.json",encoding="utf-8"))
+          assert b.get("verificationMaterial",{}).get("tlogEntries")
+          print("sigstore_transparency=PASS")
+          PY
