@@ -106,7 +106,11 @@ def run_tuf():
         except BadVersionNumberError: print("tuf_rollback=PASS")
         else: raise AssertionError("rollback accepted")
         u4=Updater(str(md/"mix"),"https://probe.invalid/metadata/",str(tg/"mix"),"https://probe.invalid/targets/",F({6:root6,7:root7},b,a["targets"]),bootstrap=bootstrap_root)
-        try: u4.refresh()
+        try:
+            u4.refresh()
+            mix_info=u4.get_targetinfo("receipt")
+            assert mix_info is not None
+            u4.download_target(mix_info)
         except LengthOrHashMismatchError: print("tuf_mixmatch=PASS")
         else: raise AssertionError("mixmatch accepted")
         e=dict(b); tm=Metadata.from_bytes(e["timestamp"]); tm.signed.expires=dt.datetime.now(dt.timezone.utc)-dt.timedelta(minutes=1); e["timestamp"]=sign(tm,ss["timestamp"])
