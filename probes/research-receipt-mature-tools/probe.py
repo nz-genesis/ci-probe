@@ -105,7 +105,7 @@ def run_tuf():
         try: u3.refresh()
         except BadVersionNumberError: print("tuf_rollback=PASS")
         else: raise AssertionError("rollback accepted")
-        u4=Updater(str(md/"mix"),"https://probe.invalid/metadata/",str(tg/"mix"),"https://probe.invalid/targets/",F({6:root6,7:root7},b,a["targets"]),bootstrap=bootstrap_root)
+        u4=Updater(str(md/"mix"),"https://probe.invalid/metadata/",str(tg/"mix"),"https://probe.invalid/targets/",F({6:root6,7:root7},b,V1),bootstrap=bootstrap_root)
         try:
             u4.refresh()
             mix_info=u4.get_targetinfo("receipt")
