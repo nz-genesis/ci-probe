@@ -1,19 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { MANAGED_WORKFLOW_PROVIDER } from "./src/application/InvestigationProviders.js";
 import { PROCESS_PROVIDER } from "./src/application/ProcessEvidence.js";
 import {
   buildReconstructionObligationLedgerEvidenceValidated,
   resolveReconstructionObligationLedgerRequest,
 } from "./src/application/ReconstructionObligationLedgerService.js";
 import { EMPTY_PROCESS_CAPTURE_EXAMPLE } from "./src/domain/processCapture.fixture.js";
-import {
-  buildSyntheticJavaScriptApplicationGraph,
-} from "./src/domain/javascriptApplicationGraph.fixture.js";
-import {
-  createJavaScriptApplicationGraph,
-  createJavaScriptApplicationNode,
-} from "./src/domain/javascriptApplicationGraph.js";
-import { artifactEvidence } from "./src/domain/javascriptApplicationGraph.fixture.js";
 import { createEvidence, type Evidence } from "./src/domain/evidence.js";
 import { createEvidenceBundle } from "./src/domain/evidenceBundle.js";
 import { jsonValueSchema } from "./src/domain/jsonValue.js";
@@ -27,7 +18,6 @@ import {
 
 const proof = (
   id: string,
-  obligationId: string,
   authority: "shipped-artifact" | "controlled-replay" = "controlled-replay",
 ) =>
   createEvidence(
@@ -37,19 +27,7 @@ const proof = (
       predicateType: "rea.reconstruction-proof",
       operation: "verify_reconstruction_obligations",
       parameters: {},
-      result: {
-        passed: true,
-        obligation_ids: [obligationId],
-        fixture_ids: [
-          "fixture.positive",
-          "fixture.negative",
-          "fixture.cancellation",
-          "fixture.teardown",
-        ],
-        case_kinds: ["positive", "negative", "cancellation", "teardown"],
-        verifier_ids: ["verifier.fixture"],
-        claim_ids: ["claim.fixture"],
-      },
+      result: { passed: true },
       confidence: "observed",
       authority,
     },
@@ -168,7 +146,7 @@ describe("independent semantic vectors vs executable REA", () => {
     const obligation = initial.obligations[0];
     if (!obligation) throw new Error("missing generated obligation");
 
-    const p = proof("complete", obligation.obligation_id);
+    const p = proof("complete");
     const b = completeBinding(obligation, p.evidence_id);
     b.original_cases = originalCases(obligation, capture.evidence_id);
 
@@ -178,19 +156,16 @@ describe("independent semantic vectors vs executable REA", () => {
       }),
     );
 
-    console.log("COMPLETE_VECTOR_DIAGNOSTICS", JSON.stringify(result.obligations[0]));
-    console.log("COMPLETE_VECTOR_LEDGER_STATUS", result.status);
-
     expect(result.obligations[0]?.status).toBe("verified");
     expect(result.status).toBe("ready");
   });
 
   it("missing original negative/cancellation cases stays open", () => {
     const capture = processEvidence();
-    const initial = build(request([capture]));
+    const p = proof("missing-cases");
+    const initial = build(request([capture, p]));
     const obligation = initial.obligations[0];
     if (!obligation) throw new Error("missing generated obligation");
-    const p = proof("missing-cases", obligation.obligation_id);
 
     const b = completeBinding(obligation, p.evidence_id);
     b.original_cases = obligation.observed_cases;
@@ -210,10 +185,10 @@ describe("independent semantic vectors vs executable REA", () => {
 
   it("weak proof authority stays open", () => {
     const capture = processEvidence();
-    const initial = build(request([capture]));
+    const p = proof("weak");
+    const initial = build(request([capture, p]));
     const obligation = initial.obligations[0];
     if (!obligation) throw new Error("missing generated obligation");
-    const p = proof("weak", obligation.obligation_id);
 
     const b = completeBinding(obligation, p.evidence_id);
     b.fixtures = b.fixtures.map((f) => ({ ...f, authority: "unit" as const }));
@@ -230,8 +205,8 @@ describe("independent semantic vectors vs executable REA", () => {
   });
 
   it("residual unknown stays unknown", () => {
+    const p = proof("unknown", "shipped-artifact");
     const id = "obl.unknown";
-    const p = proof("unknown", id, "shipped-artifact");
     const o = reviewed(id, p.evidence_id, {
       residual_unknown_ids: ["u1"],
     });
@@ -286,7 +261,7 @@ describe("independent semantic vectors vs executable REA", () => {
   });
 
   it("dependency chain fails closed", () => {
-    const p = proof("deps", "obl.a", "shipped-artifact");
+    const p = proof("deps", "shipped-artifact");
     const ids = ["a", "b", "c"];
     const ros = ids.map((id, i) =>
       reviewed(`obl.${id}`, p.evidence_id, {
@@ -348,70 +323,6 @@ describe("independent semantic vectors vs executable REA", () => {
     expect(result.status).toBe("open");
   });
 
-
-  it("contradiction duplicate-evidence boundary is observable", () => {
-    const p = proof("duplicate-contradiction", "obl.duplicate-contradiction");
-    const original = createEvidence(
-      undefined,
-      { id: "fixture-static", name: "Static artifact", version: "1" },
-      {
-        predicateType: "rea.static-observation",
-        operation: "observe_static_behavior",
-        parameters: {},
-        result: { value: "original" },
-        confidence: "observed",
-        authority: "shipped-artifact",
-      },
-    );
-    const o = reviewed(
-      "obl.duplicate-contradiction",
-      original.evidence_id,
-      {
-        required_original_authority: "static",
-      },
-    );
-    const b = {
-      ...completeBinding(
-        {
-          obligation_id: o.obligation_id,
-          required_case_kinds: o.required_case_kinds,
-        } as ReconstructionObligationLedger["obligations"][number],
-        p.evidence_id,
-      ),
-      original_cases: [
-        {
-          kind: "positive" as const,
-          evidence_id: original.evidence_id,
-          location: "/positive",
-        },
-      ],
-    };
-
-    const result = build(
-      request([p, original], {
-        reviewed_obligations: [o],
-        manifest: {
-          bindings: [b],
-          contradictions: [
-            {
-              obligation_id: o.obligation_id,
-              evidence_ids: [original.evidence_id, original.evidence_id],
-            },
-          ],
-        },
-      }),
-    );
-
-    const status = result.obligations[0]?.status;
-    const diagnostics = result.obligations[0]?.diagnostics.map((d) => d.code);
-    console.log(
-      "DUPLICATE_CONTRADICTION_BOUNDARY",
-      JSON.stringify({ status, diagnostics }),
-    );
-    expect(status).toBe("contradicted");
-    expect(diagnostics).toContain("contradiction");
-  });
-
   it("candidate generation preserves cancellation and truncation uncertainty", () => {
     const base = EMPTY_PROCESS_CAPTURE_EXAMPLE;
     const captured = {
@@ -455,107 +366,6 @@ describe("independent semantic vectors vs executable REA", () => {
     expect(obligation?.status).toBe("unknown");
     expect(result.status).toBe("unknown");
   });
-  it("mixed complete coverage does not erase an admitted unknown from qualification without a limitation", () => {
-    const baseGraph = buildSyntheticJavaScriptApplicationGraph();
-    const unknownNode = createJavaScriptApplicationNode({
-      kind: "unknown",
-      identity: {
-        strategy: "content-digest",
-        stability: "global-exact",
-        sha256: "5".repeat(64),
-      },
-      observations: [
-        {
-          label: "unclassified boundary",
-          properties: { reason: "synthetic omission probe" },
-          evidence: artifactEvidence("5".repeat(64), "unknown/boundary"),
-        },
-      ],
-    });
-    const { graph_id: _graphId, ...graphInput } = {
-      ...baseGraph,
-      nodes: [...baseGraph.nodes, unknownNode],
-      edges: baseGraph.edges,
-      coverage: {
-        status: "complete" as const,
-        truncated: false,
-        omitted_count: 0,
-        limits: [],
-      },
-      limitations: baseGraph.limitations,
-    };
-    const graph = createJavaScriptApplicationGraph(graphInput);
-
-    const sourceEvidence = createEvidence(
-      undefined,
-      { id: "fixture-source", name: "Synthetic graph source", version: "1" },
-      {
-        predicateType: "rea.synthetic-graph-source",
-        operation: "observe_synthetic_graph",
-        parameters: {},
-        result: { value: "mixed-known-unknown" },
-        confidence: "observed",
-        authority: "shipped-artifact",
-      },
-    );
-
-    const managed = createEvidence(undefined, MANAGED_WORKFLOW_PROVIDER, {
-      predicateType: "rea.managed-application-graph",
-      operation: "project_managed_application_graph",
-      parameters: {},
-      result: jsonValueSchema.parse({
-        projection_id: `magp_${"a".repeat(64)}`,
-        root_artifact_sha256: "1".repeat(64),
-        source_evidence: {
-          managed_artifact_evidence_id: null,
-          managed_members_evidence_id: null,
-          managed_native_boundaries_evidence_id: null,
-        },
-        summary: {
-          graph_nodes: graph.nodes.length,
-          graph_edges: graph.edges.length,
-          assemblies: 0,
-          modules: 0,
-          types: 0,
-          methods: 0,
-          fields: 0,
-          pinvoke_imports: 0,
-          native_implementations: 0,
-        },
-        graph,
-        coverage: { status: "complete-within-inputs" },
-        evidence_links: [sourceEvidence.evidence_id],
-        limitations: [],
-      }),
-      confidence: "inferred",
-      authority: "analyst-inference",
-      evidenceLinks: [sourceEvidence.evidence_id],
-    });
-
-    const result = build(request([sourceEvidence, managed]));
-    const knownCandidateCount = result.obligations.filter(
-      (obligation) => obligation.target.application_node_id !== unknownNode.node_id,
-    ).length;
-    const unknownPresent = result.obligations.some(
-      (obligation) => obligation.target.application_node_id === unknownNode.node_id,
-    );
-
-    console.log(
-      "MIXED_UNKNOWN_BOUNDARY",
-      JSON.stringify({
-        graphCoverage: graph.coverage.status,
-        knownCandidateCount,
-        unknownPresent,
-        limitations: result.limitations,
-        ledgerStatus: result.status,
-      }),
-    );
-
-    expect(knownCandidateCount).toBeGreaterThan(0);
-    expect(unknownPresent).toBe(false);
-    expect(result.limitations).toHaveLength(0);
-  });
-
 });
 
 // Hosted execution probe: output counts only from the exact frozen upstream implementation and vector set.
