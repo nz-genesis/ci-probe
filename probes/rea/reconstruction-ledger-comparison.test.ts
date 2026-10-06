@@ -18,6 +18,7 @@ import {
 
 const proof = (
   id: string,
+  obligationId: string,
   authority: "shipped-artifact" | "controlled-replay" = "controlled-replay",
 ) =>
   createEvidence(
@@ -27,7 +28,19 @@ const proof = (
       predicateType: "rea.reconstruction-proof",
       operation: "verify_reconstruction_obligations",
       parameters: {},
-      result: { passed: true },
+      result: {
+        passed: true,
+        obligation_ids: [obligationId],
+        fixture_ids: [
+          "fixture.positive",
+          "fixture.negative",
+          "fixture.cancellation",
+          "fixture.teardown",
+        ],
+        case_kinds: ["positive", "negative", "cancellation", "teardown"],
+        verifier_ids: ["verifier.fixture"],
+        claim_ids: ["claim.fixture"],
+      },
       confidence: "observed",
       authority,
     },
@@ -146,7 +159,7 @@ describe("independent semantic vectors vs executable REA", () => {
     const obligation = initial.obligations[0];
     if (!obligation) throw new Error("missing generated obligation");
 
-    const p = proof("complete");
+    const p = proof("complete", obligation.obligation_id);
     const b = completeBinding(obligation, p.evidence_id);
     b.original_cases = originalCases(obligation, capture.evidence_id);
 
@@ -165,7 +178,7 @@ describe("independent semantic vectors vs executable REA", () => {
 
   it("missing original negative/cancellation cases stays open", () => {
     const capture = processEvidence();
-    const p = proof("missing-cases");
+    const p = proof("missing-cases", obligation.obligation_id);
     const initial = build(request([capture, p]));
     const obligation = initial.obligations[0];
     if (!obligation) throw new Error("missing generated obligation");
@@ -188,7 +201,7 @@ describe("independent semantic vectors vs executable REA", () => {
 
   it("weak proof authority stays open", () => {
     const capture = processEvidence();
-    const p = proof("weak");
+    const p = proof("weak", obligation.obligation_id);
     const initial = build(request([capture, p]));
     const obligation = initial.obligations[0];
     if (!obligation) throw new Error("missing generated obligation");
@@ -208,7 +221,7 @@ describe("independent semantic vectors vs executable REA", () => {
   });
 
   it("residual unknown stays unknown", () => {
-    const p = proof("unknown", "shipped-artifact");
+    const p = proof("unknown", id, "shipped-artifact");
     const id = "obl.unknown";
     const o = reviewed(id, p.evidence_id, {
       residual_unknown_ids: ["u1"],
@@ -264,7 +277,7 @@ describe("independent semantic vectors vs executable REA", () => {
   });
 
   it("dependency chain fails closed", () => {
-    const p = proof("deps", "shipped-artifact");
+    const p = proof("deps", "obl.a", "shipped-artifact");
     const ids = ["a", "b", "c"];
     const ros = ids.map((id, i) =>
       reviewed(`obl.${id}`, p.evidence_id, {
