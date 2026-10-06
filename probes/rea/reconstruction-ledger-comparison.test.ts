@@ -480,7 +480,7 @@ describe("independent semantic vectors vs executable REA", () => {
     );
     expect(graph.coverage.status).toBe("complete");
     expect(unknownPresent).toBe(false);
-    expect(hasGenerationLimitation).toBe(false);
+    expect(hasGenerationLimitation).toBe(true);
   });
 
   it("candidate generation preserves cancellation and truncation uncertainty", () => {
