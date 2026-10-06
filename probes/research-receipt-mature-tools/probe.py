@@ -61,7 +61,7 @@ def run_intoto():
         m=Metablock(signed=l); m.create_signature(owner); m.dump(str(p/"root.layout"))
         old=Path.cwd(); os.chdir(p)
         try:
-            link=in_toto_run("receipt",[],["receipt"],["python3","-c","pass"],True,fn)
+            link=in_toto_run("receipt",[],["receipt"],["python3","-c","pass"],record_streams=True,signing_key=fn)
             assert link.signed.products["receipt"]["sha256"]==h(V1)
             params=inspect.signature(in_toto_verify).parameters; assert "metadata" in params and "layout_key_dict" in params
             owner_public = owner.public_key.to_dict()
