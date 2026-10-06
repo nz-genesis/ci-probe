@@ -424,8 +424,9 @@ describe("independent semantic vectors vs executable REA", () => {
         },
       ],
     });
+    const { graph_id: _baseGraphId, ...baseInput } = base;
     const graph = createJavaScriptApplicationGraph({
-      ...base,
+      ...baseInput,
       nodes: [...base.nodes, unknown],
       edges: base.edges,
       coverage: base.coverage,
