@@ -39,10 +39,19 @@ jobs:
         env:
           CERT_IDENTITY: https://github.com/${{ github.workflow_ref }}
         run: |
+          .venv/bin/sigstore verify identity receipt.json             --cert-identity "${CERT_IDENTITY}"             --cert-oidc-issuer https://token.actions.githubusercontent.com
+
+      - name: Reject mutation
+        env:
+          CERT_IDENTITY: https://github.com/${{ github.workflow_ref }}
+        run: |
           cp receipt.json mutated.json
           sed -i 's/"version":"1"/"version":"2"/' mutated.json
-          if .venv/bin/sigstore verify identity mutated.json --cert-identity-regexp '.*' --cert-oidc-issuer https://token.actions.githubusercontent.com; then exit 1; fi
+          if .venv/bin/sigstore verify identity mutated.json             --cert-identity "${CERT_IDENTITY}"             --cert-oidc-issuer https://token.actions.githubusercontent.com; then
+            exit 1
+          fi
           echo "sigstore_mutation=PASS"
+
       - name: Reject wrong identity
         run: |
           if .venv/bin/sigstore verify identity receipt.json --cert-identity 'https://github.com/attacker/attacker/.github/workflows/evil.yml@refs/heads/main' --cert-oidc-issuer https://token.actions.githubusercontent.com; then exit 1; fi
@@ -51,7 +60,7 @@ jobs:
         run: |
           .venv/bin/python - <<'PY'
           import json
-          b=json.load(open("receipt.sigstore.json",encoding="utf-8"))
+          b=json.load(open("receipt.json.sigstore.json",encoding="utf-8"))
           assert b.get("verificationMaterial",{}).get("tlogEntries")
           print("sigstore_transparency=PASS")
           PY
