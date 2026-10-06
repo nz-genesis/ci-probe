@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PROCESS_PROVIDER } from "./src/application/ProcessEvidence.js";
+import { MANAGED_WORKFLOW_PROVIDER, PROCESS_PROVIDER } from "./src/application/InvestigationProviders.js";
 import { MANAGED_WORKFLOW_PROVIDER } from "./src/application/InvestigationProviders.js";
 import { buildSyntheticJavaScriptApplicationGraph, createJavaScriptApplicationNode, createJavaScriptApplicationGraph } from "./src/domain/javascriptApplicationGraph.js";
 import { artifactEvidence } from "./src/domain/javascriptApplicationGraph.fixture.js";
@@ -8,6 +8,12 @@ import {
   resolveReconstructionObligationLedgerRequest,
 } from "./src/application/ReconstructionObligationLedgerService.js";
 import { EMPTY_PROCESS_CAPTURE_EXAMPLE } from "./src/domain/processCapture.fixture.js";
+import {
+  buildSyntheticJavaScriptApplicationGraph,
+  createJavaScriptApplicationGraph,
+  createJavaScriptApplicationNode,
+  unknownEvidence,
+} from "./src/domain/javascriptApplicationGraph.fixture.js";
 import { createEvidence, type Evidence } from "./src/domain/evidence.js";
 import { createEvidenceBundle } from "./src/domain/evidenceBundle.js";
 import { jsonValueSchema } from "./src/domain/jsonValue.js";
@@ -526,6 +532,80 @@ describe("independent semantic vectors vs executable REA", () => {
     expect(obligation?.status).toBe("unknown");
     expect(result.status).toBe("unknown");
   });
+  it("complete application coverage preserves an admitted unknown in the qualification frontier", () => {
+    const baseGraph = buildSyntheticJavaScriptApplicationGraph();
+    const unknownNode = createJavaScriptApplicationNode({
+      kind: "unknown",
+      identity: {
+        strategy: "content-digest",
+        stability: "global-exact",
+        sha256: "5".repeat(64),
+      },
+      observations: [
+        {
+          label: "unclassified boundary",
+          properties: { reason: "synthetic omission probe" },
+          evidence: unknownEvidence(),
+        },
+      ],
+    });
+    const { graph_id: _graphId, ...graphInput } = {
+      ...baseGraph,
+      nodes: [...baseGraph.nodes, unknownNode],
+      edges: baseGraph.edges,
+      coverage: {
+        status: "complete" as const,
+        truncated: false,
+        omitted_count: 0,
+        limits: [],
+      },
+      limitations: baseGraph.limitations,
+    };
+    const graph = createJavaScriptApplicationGraph(graphInput);
+
+    const managed = createEvidence(undefined, MANAGED_WORKFLOW_PROVIDER, {
+      predicateType: "rea.managed-application-graph",
+      operation: "project_managed_application_graph",
+      parameters: {},
+      result: jsonValueSchema.parse({
+        projection_id: `magp_${"a".repeat(64)}`,
+        root_artifact_sha256: "1".repeat(64),
+        source_evidence: {
+          managed_artifact_evidence_id: null,
+          managed_members_evidence_id: null,
+          managed_native_boundaries_evidence_id: null,
+        },
+        summary: {
+          graph_nodes: graph.nodes.length,
+          graph_edges: graph.edges.length,
+          assemblies: 0,
+          modules: 0,
+          types: 0,
+          methods: 0,
+          fields: 0,
+          pinvoke_imports: 0,
+          native_implementations: 0,
+        },
+        graph,
+        coverage: { status: "complete-within-inputs" },
+        evidence_links: [`ev_${"b".repeat(64)}`],
+        limitations: [],
+      }),
+      confidence: "inferred",
+      authority: "analyst-inference",
+    });
+
+    const result = build(request([managed]));
+    expect(result.obligations.some(
+      (obligation) => obligation.target.application_node_id !== unknownNode.node_id,
+    )).toBe(true);
+    expect(result.obligations.some(
+      (obligation) => obligation.target.application_node_id === unknownNode.node_id,
+    )).toBe(false);
+    expect(result.limitations.length).toBeGreaterThan(0);
+  });
+
+
 });
 
 // Hosted execution probe: output counts only from the exact frozen upstream implementation and vector set.
