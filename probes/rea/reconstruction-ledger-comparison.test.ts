@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { PROCESS_PROVIDER } from "./src/application/ProcessEvidence.js";
+import { MANAGED_WORKFLOW_PROVIDER } from "./src/application/InvestigationProviders.js";
+import { buildSyntheticJavaScriptApplicationGraph, createJavaScriptApplicationNode, createJavaScriptApplicationGraph } from "./src/domain/javascriptApplicationGraph.js";
+import { artifactEvidence } from "./src/domain/javascriptApplicationGraph.fixture.js";
 import {
   buildReconstructionObligationLedgerEvidenceValidated,
   resolveReconstructionObligationLedgerRequest,
@@ -401,6 +404,83 @@ describe("independent semantic vectors vs executable REA", () => {
     );
     expect(status).toBe("contradicted");
     expect(diagnostics).toContain("contradiction");
+  });
+
+  it("complete application coverage does not silently omit an admitted unknown node", () => {
+    const base = buildSyntheticJavaScriptApplicationGraph();
+    const unknown = createJavaScriptApplicationNode({
+      kind: "unknown",
+      identity: {
+        strategy: "content-digest",
+        stability: "global-exact",
+        sha256: "5".repeat(64),
+      },
+      observations: [
+        {
+          label: "unclassified boundary",
+          properties: { role: "boundary" },
+          evidence: artifactEvidence("5".repeat(64), "unknown/boundary.js"),
+        },
+      ],
+    });
+    const graph = createJavaScriptApplicationGraph({
+      ...base,
+      nodes: [...base.nodes, unknown],
+      edges: base.edges,
+      coverage: base.coverage,
+      limitations: base.limitations,
+    });
+    const evidence = createEvidence(undefined, MANAGED_WORKFLOW_PROVIDER, {
+      predicateType: "rea.managed-application-graph",
+      operation: "project_managed_application_graph",
+      parameters: {},
+      result: {
+        projection_id: "magp_" + "a".repeat(64),
+        root_artifact_sha256: "1".repeat(64),
+        source_evidence: {
+          managed_artifact_evidence_id: null,
+          managed_members_evidence_id: null,
+          managed_native_boundaries_evidence_id: null,
+        },
+        summary: {
+          graph_nodes: graph.nodes.length,
+          graph_edges: graph.edges.length,
+          assemblies: 0,
+          modules: 0,
+          types: 0,
+          methods: 0,
+          fields: 0,
+          pinvoke_imports: 0,
+          native_implementations: 0,
+        },
+        graph,
+        coverage: { status: "complete-within-inputs" },
+        evidence_links: [],
+        limitations: [],
+      },
+      confidence: "inferred",
+      authority: "analyst-inference",
+    });
+    const result = build(request([evidence]));
+    const unknownPresent = result.obligations.some(
+      (o) => o.target.application_node_id === unknown.node_id,
+    );
+    const hasGenerationLimitation = result.limitations.some((x) =>
+      x.includes("unknown"),
+    );
+    console.log(
+      "UNKNOWN_NODE_GENERATION_BOUNDARY",
+      JSON.stringify({
+        graphCoverage: graph.coverage.status,
+        unknownNodeId: unknown.node_id,
+        unknownPresent,
+        hasGenerationLimitation,
+        candidateCount: result.obligations.length,
+      }),
+    );
+    expect(graph.coverage.status).toBe("complete");
+    expect(unknownPresent).toBe(false);
+    expect(hasGenerationLimitation).toBe(false);
   });
 
   it("candidate generation preserves cancellation and truncation uncertainty", () => {
