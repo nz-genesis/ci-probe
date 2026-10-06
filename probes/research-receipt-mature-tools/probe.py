@@ -26,13 +26,17 @@ def h(x): return hashlib.sha256(x).hexdigest()
 def sign(md,s): md.signatures.clear(); md.sign(s,append=True); return md.to_bytes(JSONSerializer())
 
 class F(FetcherInterface):
-    def __init__(self,root,state,target): self.root=root; self.state=state; self.target=target
+    def __init__(self,roots,state,target): self.roots=roots; self.state=state; self.target=target
     def _fetch(self,url):
         p=urlparse(url).path
         if p.startswith("/metadata/"):
             n=p[len("/metadata/"):-5]
-            if n.endswith(".root"): yield self.root; return
-            yield self.state[n.split(".",1)[-1]]; return
+            if n.endswith(".root"):
+                version=int(n.split(".",1)[0])
+                yield self.roots[version]
+                return
+            yield self.state[n.split(".",1)[-1]]
+            return
         if p.startswith("/targets/"): yield self.target; return
         raise RuntimeError(p)
 
@@ -84,26 +88,27 @@ def run_intoto():
 def run_tuf():
     ss={r:CryptoSigner.generate_ed25519() for r in ("root","timestamp","snapshot","targets")}
     bootstrap_root_md=Metadata.from_bytes(root(ss))
-    bootstrap_root_md.signed.version=4
+    bootstrap_root_md.signed.version=5
     bootstrap_root=sign(bootstrap_root_md,ss["root"])
-    remote_root_md=Metadata.from_bytes(bootstrap_root)
-    remote_root_md.signed.version=5
-    remote_root=sign(remote_root_md,ss["root"])
+    root6_md=Metadata.from_bytes(bootstrap_root); root6_md.signed.version=6
+    root6=sign(root6_md,ss["root"])
+    root7_md=Metadata.from_bytes(root6); root7_md.signed.version=7
+    root7=sign(root7_md,ss["root"])
     a=state(V1,1,ss); b=state(V2,2,ss)
     with tempfile.TemporaryDirectory() as td:
         d=Path(td); md=d/"md"; tg=d/"tg"
-        u=Updater(str(md),"https://probe.invalid/metadata/",str(tg),"https://probe.invalid/targets/",F(remote_root,a,V1),bootstrap=bootstrap_root); u.refresh(); info=u.get_targetinfo("receipt"); assert info is not None; assert Path(u.download_target(info)).read_bytes()==V1; print("tuf_valid=PASS")
-        u2=Updater(str(md),"https://probe.invalid/metadata/",str(tg),"https://probe.invalid/targets/",F(remote_root,b,V2),bootstrap=bootstrap_root); u2.refresh(); print("tuf_forward=PASS")
-        u3=Updater(str(md),"https://probe.invalid/metadata/",str(tg),"https://probe.invalid/targets/",F(remote_root,a,V1),bootstrap=bootstrap_root)
+        u=Updater(str(md),"https://probe.invalid/metadata/",str(tg),"https://probe.invalid/targets/",F({6:root6,7:root7},a,V1),bootstrap=bootstrap_root); u.refresh(); info=u.get_targetinfo("receipt"); assert info is not None; assert Path(u.download_target(info)).read_bytes()==V1; print("tuf_valid=PASS")
+        u2=Updater(str(md),"https://probe.invalid/metadata/",str(tg),"https://probe.invalid/targets/",F({6:root6,7:root7},b,V2),bootstrap=bootstrap_root); u2.refresh(); print("tuf_forward=PASS")
+        u3=Updater(str(md),"https://probe.invalid/metadata/",str(tg),"https://probe.invalid/targets/",F({6:root6,7:root7},a,V1),bootstrap=bootstrap_root)
         try: u3.refresh()
         except BadVersionNumberError: print("tuf_rollback=PASS")
         else: raise AssertionError("rollback accepted")
-        u4=Updater(str(md/"mix"),"https://probe.invalid/metadata/",str(tg/"mix"),"https://probe.invalid/targets/",F(remote_root,b,a["targets"]),bootstrap=bootstrap_root)
+        u4=Updater(str(md/"mix"),"https://probe.invalid/metadata/",str(tg/"mix"),"https://probe.invalid/targets/",F({6:root6,7:root7},b,a["targets"]),bootstrap=bootstrap_root)
         try: u4.refresh()
         except LengthOrHashMismatchError: print("tuf_mixmatch=PASS")
         else: raise AssertionError("mixmatch accepted")
         e=dict(b); tm=Metadata.from_bytes(e["timestamp"]); tm.signed.expires=dt.datetime.now(dt.timezone.utc)-dt.timedelta(minutes=1); e["timestamp"]=sign(tm,ss["timestamp"])
-        u5=Updater(str(md/"expired"),"https://probe.invalid/metadata/",str(tg/"expired"),"https://probe.invalid/targets/",F(remote_root,e,V2),bootstrap=bootstrap_root)
+        u5=Updater(str(md/"expired"),"https://probe.invalid/metadata/",str(tg/"expired"),"https://probe.invalid/targets/",F({6:root6,7:root7},e,V2),bootstrap=bootstrap_root)
         try: u5.refresh()
         except ExpiredMetadataError: print("tuf_expiry=PASS")
         else: raise AssertionError("expired metadata accepted")
