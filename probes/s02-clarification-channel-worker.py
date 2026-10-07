@@ -12,8 +12,8 @@ for raw in sys.stdin:
         out={"type":"clarification_required","request_id":rid,"clarification_id":cid,"options":options}
     elif m.get("type")=="clarification_response":
         if pending is None:
-  cid=m.get("clarification_id")
-  out={"status":"REPLAYED_RESPONSE"} if isinstance(cid,str) and cid in consumed else {"status":"NO_PENDING_CLARIFICATION"}
+            cid=m.get("clarification_id")
+            out={"status":"REPLAYED_RESPONSE"} if isinstance(cid,str) and cid in consumed else {"status":"NO_PENDING_CLARIFICATION"}
         else:
             rid,cid,options=pending
             if m.get("request_id")!=rid or m.get("clarification_id")!=cid:
