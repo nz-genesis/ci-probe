@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from typing import Any
 
 
-REPO = "nz-genesis/genesis-lab"
+REPO = "nz-genesis/ci-probe"
 API_URL = f"https://api.github.com/repos/{REPO}"
 TASK = "resolve_repository_identity"
 
