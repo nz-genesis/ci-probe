@@ -22,8 +22,7 @@ def main():
         text=True, bufsize=1,
     )
     def send(msg):
-        p.stdin.write(json.dumps(msg) + "
-")
+        p.stdin.write(json.dumps(msg) + "\\n")
         p.stdin.flush()
         line=p.stdout.readline()
         assert line
