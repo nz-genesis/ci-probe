@@ -1,1 +1,1 @@
-GENERATION=1
+{"generation": 1, "kind": "COMMIT", "run_id": "37599239305", "worker": {"hostname": "runnervmwvtoz", "job": "worker", "run_id": "37599239305", "runner_arch": "X64", "runner_name": "GitHub Actions 1000071410", "runner_os": "Linux"}}
