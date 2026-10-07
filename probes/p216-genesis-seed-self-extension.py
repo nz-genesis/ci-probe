@@ -118,7 +118,7 @@ def main() -> None:
 
         r2 = build_realization(root / "realization_r2.py", "sys.argv[1][::-1]")
         replaced = execute(r2, authority, contract, 1, "genesis")
-        assert replaced["output"] == "siseneG"
+        assert replaced["output"] == "siseneg"
         assert r1.digest != r2.digest
 
         attacks = 0
