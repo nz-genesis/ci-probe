@@ -202,7 +202,6 @@ def run_tuf_recovery():
         # After recovery, a root signed only by removed A cannot authorize a later state.
         bad3=signed_root(v3,[a])
         ua=Updater(str(md/"removed"),"https://probe.invalid/metadata/",str(tg/"removed"),"https://probe.invalid/targets/",F({1:bootstrap,2:good_v2,3:bad3},state2,V2),bootstrap=bootstrap)
-        ua.refresh()
         try:
             ua.refresh()
         except Exception:
@@ -210,12 +209,16 @@ def run_tuf_recovery():
         else:
             raise AssertionError("removed root key unexpectedly retained authority")
 
-        # Historical state must not silently roll back after recovery.
-        stale=Updater(str(md/"stale"),"https://probe.invalid/metadata/",str(tg/"stale"),"https://probe.invalid/targets/",F(roots,state1,V1),bootstrap=bootstrap)
+        # Historical state must not silently roll back after recovery. Start
+        # from the recovered state, then serve the older state on refresh.
+        mutable=F(roots,state2,V2)
+        stale=Updater(str(md/"stale"),"https://probe.invalid/metadata/",str(tg/"stale"),"https://probe.invalid/targets/",mutable,bootstrap=bootstrap)
         stale.refresh()
+        mutable.state=state1
+        mutable.target=V1
         try:
             stale.refresh()
-        except Exception:
+        except BadVersionNumberError:
             print("tuf_stale_state_rejected=PASS")
         else:
             raise AssertionError("stale state unexpectedly accepted")
