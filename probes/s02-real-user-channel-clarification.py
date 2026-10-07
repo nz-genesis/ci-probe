@@ -66,3 +66,5 @@ def main():
 
 if __name__=="__main__":
     main()
+
+# Trigger fresh hosted execution after apparatus review: 2026-10-07.
