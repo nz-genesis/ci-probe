@@ -1,0 +1,93 @@
+name: Genesis P347 Multi-Host Governance Boundary
+on:
+  push:
+    branches:
+      - research/p347-multi-host-governance-boundary-v0
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  worker:
+    name: p347-worker-a
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: \${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify exact triggering SHA
+        run: |
+          set -euo pipefail
+          test "\$(git rev-parse HEAD)" = "\$GITHUB_SHA"
+          printf 'WORKER_SHA=%s\nHOST=%s\n' "\$GITHUB_SHA" "\$(hostname)"
+      - name: Execute worker
+        env:
+          P347_BRANCH: \${{ github.ref_name }}
+          P347_OUT: worker-result.json
+        run: python3 probes/p347_multi_host_governance_boundary.py worker
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p347-worker-result
+          path: worker-result.json
+  authority:
+    name: p347-authority-c
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: \${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify exact triggering SHA
+        run: |
+          set -euo pipefail
+          test "\$(git rev-parse HEAD)" = "\$GITHUB_SHA"
+          printf 'AUTHORITY_SHA=%s\nHOST=%s\n' "\$GITHUB_SHA" "\$(hostname)"
+      - name: Execute authority mutation
+        env:
+          P347_BRANCH: \${{ github.ref_name }}
+          P347_OUT: authority-result.json
+        run: python3 probes/p347_multi_host_governance_boundary.py authority
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p347-authority-result
+          path: authority-result.json
+  observer:
+    name: p347-independent-observer-b
+    needs: [worker, authority]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: \${{ github.ref_name }}
+          fetch-depth: 1
+      - name: Execute independent observation
+        env:
+          P347_BRANCH: \${{ github.ref_name }}
+          P347_OUT: observer-result.json
+        run: python3 probes/p347_multi_host_governance_boundary.py observer
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: p347-*-result
+          merge-multiple: true
+      - name: Verify P347 semantic boundary
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          worker=json.load(open("worker-result.json"))
+          authority=json.load(open("authority-result.json"))
+          observer=json.load(open("observer-result.json"))
+          assert worker["real_child_sigkill_observed"] is True
+          assert worker["stale_effect_rejected_409"] is True
+          assert authority["generation_after_mutation"] == 2
+          assert observer["authoritative_final_generation_2"] is True
+          assert observer["distinct_runner_hosts"] is True
+          print("P347_MULTI_HOST_CORE_BOUNDARY=PASS")
+          print("P347_STALE_AUTHORITY_REJECTION=PASS")
+          print("P347_REAL_PROCESS_CRASH_INTERLEAVING=PASS")
+          print("P347_INDEPENDENT_OBSERVER=PASS")
+          print("P347_VERDICT=SUPPORTED_BOUNDED_MULTI_HOST_EXECUTION")
+          PY
