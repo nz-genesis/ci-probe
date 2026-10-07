@@ -1,4 +1,5 @@
 name: Genesis P347 Multi-Host Governance Boundary
+# P347 apparatus frozen after Red Team: trusted push, no checkout, explicit actor token.
 on:
   push:
     branches:
