@@ -35,3 +35,5 @@ jobs:
           if-no-files-found: error
 
 # Trigger: include stale-source adversarial witness.
+
+# Trigger: corrected stale-source receipt witness.
