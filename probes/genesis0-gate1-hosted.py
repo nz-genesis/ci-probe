@@ -16,7 +16,8 @@ from pathlib import Path
 
 REPO = "https://github.com/nz-genesis/genesis-lab.git"
 COMMIT = os.environ.get("GENESIS_LAB_COMMIT", "56913566e2f9ab4dbbf9407f12915dd26264fda3")
-TESTS = [
+TESTS = [  # Exact Genesis₀ + V0 Gate-1 test set: 48 tests.
+
     "genesis/experimental/semantic_kernel_v0/test_kernel.py",
     "genesis/experimental/semantic_kernel_v0/test_cognitive_boundary.py",
     "genesis/experimental/semantic_kernel_v0/test_effect_protocol.py",
