@@ -22,6 +22,7 @@ jobs:
           printf 'WORKER_SHA=%s\nHOST=%s\nRUNNER=ubuntu-22.04\n' "$GITHUB_SHA" "$(hostname)"
       - name: Execute worker
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           P347_BRANCH: ${{ github.ref_name }}
           P347_OUT: worker-result.json
         run: python3 p347_multi_host_governance_boundary.py worker
