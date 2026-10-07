@@ -24,7 +24,7 @@ jobs:
         env:
           P347_BRANCH: ${{ github.ref_name }}
           P347_OUT: worker-result.json
-        run: python3 probes/p347_multi_host_governance_boundary.py worker
+        run: python3 p347_multi_host_governance_boundary.py worker
       - uses: actions/upload-artifact@v4
         with:
           name: p347-worker-result
@@ -46,7 +46,7 @@ jobs:
         env:
           P347_BRANCH: ${{ github.ref_name }}
           P347_OUT: authority-result.json
-        run: python3 probes/p347_multi_host_governance_boundary.py authority
+        run: python3 p347_multi_host_governance_boundary.py authority
       - uses: actions/upload-artifact@v4
         with:
           name: p347-authority-result
@@ -68,7 +68,7 @@ jobs:
         env:
           P347_BRANCH: ${{ github.ref_name }}
           P347_OUT: observer-result.json
-        run: python3 probes/p347_multi_host_governance_boundary.py observer
+        run: python3 p347_multi_host_governance_boundary.py observer
       - uses: actions/download-artifact@v4
         with:
           pattern: p347-*-result
