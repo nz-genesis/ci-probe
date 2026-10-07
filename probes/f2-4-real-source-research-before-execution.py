@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import http.server
 import re
+import threading
 import urllib.request
 from pathlib import Path
 
@@ -33,6 +35,47 @@ def fetch(url: str) -> tuple[str, str]:
         if response.status != 200:
             raise AssertionError(f"unexpected HTTP status: {response.status}")
     return body, hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+class MutableHandler(http.server.BaseHTTPRequestHandler):
+    body = b"the GET method is defined to be safe.\\n"
+
+    def do_GET(self):
+        payload = self.body
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def log_message(self, format, *args):
+        return
+
+
+def run_stale_source_adversarial_case() -> dict:
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), MutableHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        url = f"http://127.0.0.1:{server.server_port}/source"
+        first_body, first_sha = fetch(url)
+        assert "GET" in first_body
+        MutableHandler.body = b"the POST method is defined to be safe.\\n"
+        second_body, second_sha = fetch(url)
+        assert second_body != first_body
+        assert second_sha != first_sha
+        execution_allowed = second_sha == first_sha
+        assert execution_allowed is False
+        return {
+            "status": "PASS",
+            "property": "stale research is rejected before execution",
+            "research_sha256": first_sha,
+            "current_sha256": second_sha,
+            "execution_allowed": execution_allowed,
+        }
+    finally:
+        MutableHandler.body = b"the GET method is defined to be safe.\\n"
+        server.shutdown()
 
 
 def main() -> None:
@@ -64,6 +107,8 @@ def main() -> None:
     artifact_sha = hashlib.sha256(output.read_bytes()).hexdigest()
     assert artifact_sha == action_sha
 
+    stale_case = run_stale_source_adversarial_case()
+
     receipt = {
         "control_id": "F2.4-REAL-SOURCE-RESEARCH-BEFORE-EXECUTION-V1",
         "genesis_semantics_included": False,
@@ -76,6 +121,7 @@ def main() -> None:
         "action_url": ACTION_URL,
         "action_status": 200,
         "artifact_sha256": artifact_sha,
+        "stale_source_adversarial_case": stale_case,
     }
     Path("f24-real-source-control-result.json").write_text(
         json.dumps(receipt, indent=2) + "\n", encoding="utf-8"
