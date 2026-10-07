@@ -89,3 +89,5 @@ def main():
 
 if __name__=="__main__":
     main()
+
+# Control revision: trigger after workflow installation.
