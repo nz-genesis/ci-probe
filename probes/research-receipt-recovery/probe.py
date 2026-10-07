@@ -15,6 +15,7 @@ from in_toto.models.metadata import Metablock
 from in_toto.runlib import in_toto_run
 from in_toto.verifylib import in_toto_verify
 from securesystemslib.signer import CryptoSigner
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from tuf.api.exceptions import BadVersionNumberError, UnsignedMetadataError, DownloadHTTPError
 from tuf.api.metadata import Metadata, MetaFile, Root, Role, Snapshot, TargetFile, Targets, Timestamp
 from tuf.api.serialization.json import JSONSerializer
@@ -80,19 +81,22 @@ class F(FetcherInterface):
 def run_local_rotation():
     with tempfile.TemporaryDirectory() as td:
         p=Path(td)
-        a=CryptoSigner.generate_ed25519()
-        b=CryptoSigner.generate_ed25519()
+        a=Ed25519PrivateKey.generate()
+        b=Ed25519PrivateKey.generate()
         msg=V1
         sig_a=a.sign(msg)
-        assert a.public_key.verify(sig_a,msg)
-        assert a.public_key.keyid != b.public_key.keyid
+        a.public_key().verify(sig_a,msg)
+        sig_b=b.sign(msg)
+        b.public_key().verify(sig_b,msg)
         # Current trust policy rotates from A to B. Historical A signature remains
         # cryptographically valid, but current policy rejects A.
-        current={b.public_key.keyid}
-        assert a.public_key.keyid not in current
-        assert b.public_key.keyid in current
-        sig_b=b.sign(msg)
-        assert b.public_key.verify(sig_b,msg)
+        def keyid(pub):
+            return hashlib.sha256(pub.public_bytes_raw()).hexdigest()
+        a_id=keyid(a.public_key()); b_id=keyid(b.public_key())
+        assert a_id != b_id
+        current={b_id}
+        assert a_id not in current
+        assert b_id in current
         print("local_rotation_old_rejected=PASS")
         print("local_rotation_new_accepted=PASS")
         print("local_historical_signature_crypto_valid=PASS")
