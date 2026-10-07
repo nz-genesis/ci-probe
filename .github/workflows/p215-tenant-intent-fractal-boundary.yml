@@ -1,0 +1,16 @@
+name: P215 Tenant Intent Fractal Boundary
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - probes/p215-tenant-intent-fractal-boundary.py
+      - .github/workflows/p215-tenant-intent-fractal-boundary.yml
+
+jobs:
+  p215:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run P215 bounded executable probe
+        run: python3 probes/p215-tenant-intent-fractal-boundary.py
