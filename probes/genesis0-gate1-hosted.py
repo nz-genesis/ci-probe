@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 
 REPO = "https://github.com/nz-genesis/genesis-lab.git"
-COMMIT = os.environ.get("GENESIS_LAB_COMMIT", "56913566e2f9ab4dbbf9407f12915dd26264fda3")
+COMMIT = os.environ.get("GENESIS_LAB_COMMIT", "1c49b9e654ddcce001556740a76a5a8ba9f4ad7a")
 TESTS = [  # Exact Genesis₀ + V0 Gate-1 test set: 48 tests.
 
     "genesis/experimental/semantic_kernel_v0/test_kernel.py",
