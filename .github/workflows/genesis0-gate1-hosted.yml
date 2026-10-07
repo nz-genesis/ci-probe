@@ -1,20 +1,85 @@
 name: Genesis0 Gate 1 Hosted Verification
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       genesis_lab_commit:
         description: "Exact genesis-lab commit to verify"
         required: true
-        default: "1c49b9e654ddcce001556740a76a5a8ba9f4ad7a"
-  push:
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
   genesis0-gate1:
-    runs-on: ubuntu-latest
-    env:
-      GENESIS_LAB_COMMIT: ${{ github.event.inputs.genesis_lab_commit || '1c49b9e654ddcce001556740a76a5a8ba9f4ad7a' }}
+    name: genesis0-gate1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - name: Run Genesis0 hosted executable probe
-        run: python3 probes/genesis0-gate1-hosted.py
+      - name: Checkout exact caller repository commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.genesis_lab_commit }}
+          fetch-depth: 1
+
+      - name: Verify checkout identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "${{ inputs.genesis_lab_commit }}"
+          printf 'caller_repository=%s\nexpected_commit=%s\nchecked_out_commit=%s\n' "${{ github.repository }}" "${{ inputs.genesis_lab_commit }}" "$actual" | tee genesis0-checkout-identity.txt
+
+      - name: Verify Genesis0 test inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          tests=(
+            genesis/experimental/semantic_kernel_v0/test_kernel.py
+            genesis/experimental/semantic_kernel_v0/test_cognitive_boundary.py
+            genesis/experimental/semantic_kernel_v0/test_effect_protocol.py
+            genesis/genesis0/test_core.py
+          )
+          for test_file in "${tests[@]}"; do
+            test -f "$test_file"
+          done
+          python3 -m pytest "${tests[@]}" --collect-only -q | tee genesis0-collection.txt
+          collected="$(grep -Eo '[0-9]+ tests? collected' genesis0-collection.txt | tail -1 | awk '{print $1}')"
+          test "$collected" = "48"
+          printf 'expected_test_count=48\ncollected_test_count=%s\n' "$collected" | tee genesis0-test-inventory.txt
+
+      - name: Execute exact Genesis0 Gate-1 test apparatus
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -m pytest \
+            genesis/experimental/semantic_kernel_v0/test_kernel.py \
+            genesis/experimental/semantic_kernel_v0/test_cognitive_boundary.py \
+            genesis/experimental/semantic_kernel_v0/test_effect_protocol.py \
+            genesis/genesis0/test_core.py \
+            -q | tee genesis0-pytest.txt
+
+      - name: Verify executable receipt completeness
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s genesis0-checkout-identity.txt
+          test -s genesis0-collection.txt
+          test -s genesis0-test-inventory.txt
+          test -s genesis0-pytest.txt
+          grep -Eq '48 passed|48 passed,' genesis0-pytest.txt
+          printf 'receipt_completeness=PASS\n' | tee genesis0-receipt-completeness.txt
+
+      - name: Upload exact Genesis0 execution receipt
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: genesis0-gate1-receipt-${{ github.run_id }}
+          path: |
+            genesis0-checkout-identity.txt
+            genesis0-collection.txt
+            genesis0-test-inventory.txt
+            genesis0-pytest.txt
+            genesis0-receipt-completeness.txt
+          if-no-files-found: error
