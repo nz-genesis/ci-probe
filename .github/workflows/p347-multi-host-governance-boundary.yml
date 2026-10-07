@@ -23,6 +23,7 @@ jobs:
       - name: Execute worker
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           P347_BRANCH: ${{ github.ref_name }}
           P347_OUT: worker-result.json
         run: python3 p347_multi_host_governance_boundary.py worker
@@ -45,6 +46,7 @@ jobs:
           printf 'AUTHORITY_SHA=%s\nHOST=%s\nRUNNER=ubuntu-24.04\n' "$GITHUB_SHA" "$(hostname)"
       - name: Execute authority mutation
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           P347_BRANCH: ${{ github.ref_name }}
           P347_OUT: authority-result.json
         run: python3 p347_multi_host_governance_boundary.py authority
@@ -67,6 +69,7 @@ jobs:
           python3 -m py_compile p347_multi_host_governance_boundary.py
       - name: Execute independent observation
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           P347_BRANCH: ${{ github.ref_name }}
           P347_OUT: observer-result.json
         run: python3 p347_multi_host_governance_boundary.py observer
