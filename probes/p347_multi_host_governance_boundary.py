@@ -11,10 +11,10 @@ BRANCH = os.environ["P347_BRANCH"]
 TOKEN = os.environ.get("GITHUB_TOKEN") or os.environ["GH_TOKEN"]
 RUN_ID = os.environ["GITHUB_RUN_ID"]
 BASE = f"{API}/repos/{REPO}"
-GOV_PATH = "probes/p347_state/governance.txt"
+GOV_PATH = f"probes/p347_state/governance-{RUN_ID}.txt"
 READY_PATH = f"probes/p347_state/worker-ready-{RUN_ID}.json"
 PREPARE_PATH = f"probes/p347_state/prepare-{RUN_ID}.json"
-EFFECT_PATH = "probes/p347_state/effect-seed.txt"
+EFFECT_PATH = f"probes/p347_state/effect-{RUN_ID}.txt"
 OUT = Path(os.environ.get("P347_OUT", "p347-result.json"))
 
 def api(method: str, path: str, payload: dict | None = None):
@@ -71,6 +71,12 @@ def unblock_api(receipt):
 
 def worker():
     me=identity()
+    initial_effect_status, initial_effect_body = put_text(EFFECT_PATH, "GENERATION=1\n")
+    if initial_effect_status != 201:
+        raise RuntimeError(f"initial effect seed failed: HTTP {initial_effect_status}: {initial_effect_body}")
+    initial_governance_status, initial_governance_body = put_text(GOV_PATH, "GENERATION=1\n")
+    if initial_governance_status != 201:
+        raise RuntimeError(f"initial governance seed failed: HTTP {initial_governance_status}: {initial_governance_body}")
     generation1,gate_sha=get_text(EFFECT_PATH)
     governance1,governance_sha=get_text(GOV_PATH)
     ready={"run_id":RUN_ID,"worker":me,"observed_generation":generation1,
