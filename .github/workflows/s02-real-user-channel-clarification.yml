@@ -1,0 +1,17 @@
+name: S02 Real User-Channel Clarification Control
+on:
+  push:
+    paths:
+      - probes/s02-real-user-channel-clarification.py
+      - probes/s02-clarification-channel-worker.py
+      - .github/workflows/s02-real-user-channel-clarification.yml
+jobs:
+  s02-control:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run real process-channel control
+        run: python probes/s02-real-user-channel-clarification.py
