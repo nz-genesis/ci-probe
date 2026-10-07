@@ -16,7 +16,7 @@ jobs:
   genesis0-gate1:
     runs-on: ubuntu-latest
     env:
-      GENESIS_LAB_COMMIT: ${{ github.event.inputs.genesis_lab_commit || '56913566e2f9ab4dbbf9407f12915dd26264fda3' }}
+      GENESIS_LAB_COMMIT: ${{ github.event.inputs.genesis_lab_commit || '1c49b9e654ddcce001556740a76a5a8ba9f4ad7a' }}
     steps:
       - uses: actions/checkout@v4
       - name: Run Genesis0 hosted executable probe
