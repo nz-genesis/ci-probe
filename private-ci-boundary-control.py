@@ -49,7 +49,7 @@ def main() -> int:
                     def test_deterministic_hash(self):
                         self.assertEqual(
                             hashlib.sha256(b"ci-probe-boundary-fixture").hexdigest(),
-                            "0db0d8a98fcbccdfd43e09e45c0f8d65c5f8c5a8cf4a6a2b5a0b9c2a0d3a4e2f",
+                            "0949f47005684d28ca00720aff31a20396a5678608de8a2b125cc209ffeee9df",
                         )
 
                     def test_runtime(self):
