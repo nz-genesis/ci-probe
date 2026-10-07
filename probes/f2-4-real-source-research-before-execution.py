@@ -3,13 +3,14 @@
 
 Genesis semantics/private source are intentionally excluded. The control proves
 only the generic property: real external source -> observed evidence -> derived
-candidate -> freshness revalidation -> real read-only execution -> artifact.
+candidate -> freshness revalidation -> real read-only execution -> artifact,
+plus an adversarial witness that stale evidence prevents an action attempt.
 """
 from __future__ import annotations
 
 import hashlib
-import json
 import http.server
+import json
 import re
 import threading
 import urllib.request
@@ -38,10 +39,15 @@ def fetch(url: str) -> tuple[str, str]:
 
 
 class MutableHandler(http.server.BaseHTTPRequestHandler):
-    body = b"the GET method is defined to be safe.\\n"
+    body = b"the GET method is defined to be safe.\n"
+    action_calls = 0
 
     def do_GET(self):
-        payload = self.body
+        if self.path == "/action":
+            type(self).action_calls += 1
+            payload = b"UNEXPECTED_ACTION_EXECUTION\n"
+        else:
+            payload = type(self).body
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
         self.send_header("Content-Length", str(len(payload)))
@@ -52,30 +58,48 @@ class MutableHandler(http.server.BaseHTTPRequestHandler):
         return
 
 
+def reset_mutable_handler() -> None:
+    MutableHandler.body = b"the GET method is defined to be safe.\n"
+    MutableHandler.action_calls = 0
+
+
 def run_stale_source_adversarial_case() -> dict:
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), MutableHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        url = f"http://127.0.0.1:{server.server_port}/source"
-        first_body, first_sha = fetch(url)
+        source_url = f"http://127.0.0.1:{server.server_port}/source"
+        action_url = f"http://127.0.0.1:{server.server_port}/action"
+
+        first_body, first_sha = fetch(source_url)
         assert "GET" in first_body
-        MutableHandler.body = b"the POST method is defined to be safe.\\n"
-        second_body, second_sha = fetch(url)
+
+        MutableHandler.body = b"the POST method is defined to be safe.\n"
+        second_body, second_sha = fetch(source_url)
         assert second_body != first_body
         assert second_sha != first_sha
-        execution_allowed = second_sha == first_sha
+
+        if second_sha == first_sha:
+            fetch(action_url)
+            execution_allowed = True
+        else:
+            execution_allowed = False
+
         assert execution_allowed is False
+        assert MutableHandler.action_calls == 0
+
         return {
             "status": "PASS",
             "property": "stale research is rejected before execution",
             "research_sha256": first_sha,
             "current_sha256": second_sha,
             "execution_allowed": execution_allowed,
+            "action_attempted": MutableHandler.action_calls > 0,
+            "action_calls": MutableHandler.action_calls,
         }
     finally:
-        MutableHandler.body = b"the GET method is defined to be safe.\\n"
         server.shutdown()
+        reset_mutable_handler()
 
 
 def main() -> None:
