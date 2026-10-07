@@ -9,7 +9,7 @@ It tests:
 1. deterministic calibration-data/test separation;
 2. isotonic calibration (PAVA);
 3. Clopper-Pearson upper confidence bound for selected error;
-4. maximum-retention threshold subject to a held-out calibration risk bound;
+4. cost-aware threshold subject to a held-out calibration risk bound;
 5. hard evidence-sufficiency gate;
 6. total-cost comparison including error penalty;
 7. explicit refusal to claim a statistical guarantee when exchangeability is
@@ -212,6 +212,39 @@ def choose_threshold(
     return best
 
 
+def choose_max_retention_threshold(
+    calibration: list[Case],
+    scores: list[float],
+    fitted: list[float],
+    alpha: float,
+    delta: float,
+    min_selected: int,
+) -> Selection:
+    candidates = sorted(
+        {
+            calibrated_probability(case.score, scores, fitted)
+            for case in calibration
+            if case.sufficient
+        }
+    )
+    best: Selection | None = None
+    for threshold in candidates:
+        selected = [
+            case for case in calibration
+            if case.sufficient
+            and calibrated_probability(case.score, scores, fitted) >= threshold
+        ]
+        if len(selected) < min_selected:
+            continue
+        errors = sum(not case.correct for case in selected)
+        upper_error = clopper_pearson_upper(errors, len(selected), delta)
+        if upper_error <= alpha and (best is None or len(selected) > best.selected):
+            best = Selection(threshold, len(selected), upper_error)
+    if best is None:
+        raise AssertionError("No admissible maximum-retention threshold")
+    return best
+
+
 def observed_selection(
     cases: list[Case],
     scores: list[float],
@@ -285,6 +318,9 @@ def main() -> None:
         id(case) for case in test
     )
 
+    max_retention = choose_max_retention_threshold(
+        calibration, scores, fitted, ALPHA, DELTA, MIN_SELECTED
+    )
     selection = choose_threshold(
         calibration,
         scores,
@@ -319,7 +355,14 @@ def main() -> None:
     controlled_cost = route_cost(
         test, scores, fitted, selection.threshold
     )
+    max_retention_cost = route_cost(
+        test, scores, fitted, max_retention.threshold
+    )
     raw_cost = naive_raw_cost(test, raw_threshold=0.90)
+
+    # Cost-aware constrained selection must never be worse than the
+    # maximum-retention policy over the same admissible candidate set.
+    assert controlled_cost <= max_retention_cost
 
     # A dominated alternative must never win when it has the same routing
     # decision and strictly higher cost.
@@ -352,6 +395,7 @@ def main() -> None:
     )
     print(
         f"raw_fixed_threshold_cost={raw_cost:.3f} "
+        f"max_retention_cost={max_retention_cost:.3f} "
         f"risk_controlled_cost={controlled_cost:.3f}"
     )
     print("insufficient_evidence_high_confidence=FAIL_CLOSED")
