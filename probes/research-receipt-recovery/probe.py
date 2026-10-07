@@ -38,7 +38,7 @@ def root_md(root_signers: list[CryptoSigner], timestamp: CryptoSigner, snapshot:
     r=Root(version=version,spec_version="1.0",expires=now+dt.timedelta(days=365),consistent_snapshot=False)
     root_ids=[]
     for signer in root_signers:
-        r.add_key(signer.public_key, signer.public_key.keyid)
+        r.add_key(signer.public_key, "root")
         root_ids.append(signer.public_key.keyid)
     for role, signer in (("timestamp",timestamp),("snapshot",snapshot),("targets",targets)):
         r.add_key(signer.public_key, role)
