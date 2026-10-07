@@ -1,0 +1,23 @@
+name: Genesis0 Gate 1 Hosted Verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      genesis_lab_commit:
+        description: "Exact genesis-lab commit to verify"
+        required: true
+        default: "56913566e2f9ab4dbbf9407f12915dd26264fda3"
+  push:
+    paths:
+      - probes/genesis0-gate1-hosted.py
+      - .github/workflows/genesis0-gate1-hosted.yml
+
+jobs:
+  genesis0-gate1:
+    runs-on: ubuntu-latest
+    env:
+      GENESIS_LAB_COMMIT: ${{ github.event.inputs.genesis_lab_commit || '56913566e2f9ab4dbbf9407f12915dd26264fda3' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Genesis0 hosted executable probe
+        run: python3 probes/genesis0-gate1-hosted.py
