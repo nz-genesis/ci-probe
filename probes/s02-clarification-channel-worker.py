@@ -28,4 +28,4 @@ for raw in sys.stdin:
                 out={"type":"executed","request_id":rid,"clarification_id":cid,"selected_index":m["selected_index"],"value":selected["value"]}
     else:
         out={"type":"protocol_error"}
-    sys.stdout.write(json.dumps(out,sort_keys=True)+"\\n"); sys.stdout.flush()
+    sys.stdout.write(json.dumps(out,sort_keys=True)+"\n"); sys.stdout.flush()
