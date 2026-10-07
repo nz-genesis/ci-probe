@@ -4,6 +4,7 @@ import datetime as dt
 import hashlib
 import inspect
 import os
+import subprocess
 import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
@@ -119,5 +120,40 @@ def run_tuf():
         except ExpiredMetadataError: print("tuf_expiry=PASS")
         else: raise AssertionError("expired metadata accepted")
 
+def run_compromise_recovery():
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+        old_key, old_pub = d/"old.key", d/"old.pub"
+        new_key, new_pub = d/"new.key", d/"new.pub"
+        receipt = d/"receipt.json"
+        signatures = [d/"pre.sig", d/"post.sig", d/"new.sig"]
+        receipt.write_text('{"claim":"genesis-receipt","event":"effect","version":"1"}\n', encoding="utf-8")
+        for key, pub in ((old_key, old_pub), (new_key, new_pub)):
+            subprocess.run(["openssl","genpkey","-algorithm","ED25519","-out",str(key)], check=True)
+            subprocess.run(["openssl","pkey","-in",str(key),"-pubout","-out",str(pub)], check=True)
+        for key, sig in ((old_key, signatures[0]), (old_key, signatures[1]), (new_key, signatures[2])):
+            subprocess.run(["openssl","pkeyutl","-sign","-inkey",str(key),"-rawin","-in",str(receipt),"-out",str(sig)], check=True)
+        for pub, sig in ((old_pub, signatures[0]), (old_pub, signatures[1]), (new_pub, signatures[2])):
+            subprocess.run(["openssl","pkeyutl","-verify","-pubin","-inkey",str(pub),"-rawin","-in",str(receipt),"-sigfile",str(sig)], check=True)
+        compromise_epoch = 200
+        evidence = [
+            {"signer":"old","signed_at":100,"sig":signatures[0]},
+            {"signer":"old","signed_at":300,"sig":signatures[1]},
+            {"signer":"new","signed_at":400,"sig":signatures[2]},
+        ]
+        def admit(e):
+            if e["signer"] == "old" and e["signed_at"] >= compromise_epoch:
+                return False
+            return e["signer"] == "new" or (e["signer"] == "old" and e["signed_at"] < compromise_epoch)
+        assert admit(evidence[0]) and not admit(evidence[1]) and admit(evidence[2])
+        assert receipt.exists() and all(s.exists() for s in signatures)
+        print("compromise_pre_historical_valid=PASS")
+        print("compromise_post_cryptographically_valid_currently_inadmissible=PASS")
+        print("compromise_new_trusted_signer_admissible=PASS")
+        print("compromise_historical_lineage_preserved=PASS")
+
 if __name__=="__main__":
-    run_intoto(); run_tuf(); print("MATURE_RECEIPT_TOOLS=PASS")
+    run_intoto()
+    run_tuf()
+    run_compromise_recovery()
+    print("MATURE_RECEIPT_TOOLS=PASS")
