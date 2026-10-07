@@ -1,0 +1,32 @@
+name: Trust Recovery Rotation Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "probes/research-receipt-trust-recovery/**"
+      - ".github/workflows/research-receipt-trust-recovery.yml"
+  pull_request:
+    paths:
+      - "probes/research-receipt-trust-recovery/**"
+      - ".github/workflows/research-receipt-trust-recovery.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  trust-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create isolated Python environment
+        run: python3 -m venv .venv
+      - name: Install exact mature Python tool
+        run: |
+          .venv/bin/python --version
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install "tuf==7.0.1" "securesystemslib==1.5.1"
+          .venv/bin/python -c "import importlib.metadata as m; assert m.version('tuf')=='7.0.1'; assert m.version('securesystemslib')=='1.5.1'"
+      - name: Execute compromise and recovery probe
+        run: .venv/bin/python probes/research-receipt-trust-recovery/probe.py
