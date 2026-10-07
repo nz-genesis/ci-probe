@@ -32,7 +32,7 @@ def main():
         assert ready
         resolved.update(ready); remaining-=set(ready)
     assert resolved==set(STAGES)
-    print('FULL_FUNCTIONAL_CORPUS=25')
+    print('FULL_FUNCTIONAL_CORPUS=24')
     print('BASE_CANDIDATE_ELEMENTS=7')
     print('FULL_TO_MINIMAL_OWNERSHIP_COVERAGE=PASS')
     print('MINIMAL_ACTION_BEARING_BOUNDARY=PASS')
