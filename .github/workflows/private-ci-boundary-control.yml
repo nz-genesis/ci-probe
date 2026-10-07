@@ -1,0 +1,30 @@
+name: Private CI Boundary Control
+
+on:
+  push:
+    paths:
+      - private-ci-boundary-control.py
+      - .github/workflows/private-ci-boundary-control.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  boundary-control:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify checkout identity
+        run: |
+          test "${GITHUB_SHA}" = "$(git rev-parse HEAD)"
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run generic boundary control probe
+        run: python private-ci-boundary-control.py
