@@ -1,7 +1,8 @@
 name: Genesis P347 Multi-Host Governance Boundary
 on:
-  pull_request:
-    types: [opened, synchronize]
+  push:
+    branches:
+      - research/p347-multi-host-governance-boundary-v0
   workflow_dispatch:
 permissions:
   contents: write
