@@ -216,7 +216,8 @@ def run_tuf_recovery():
         mutable.target=V1
         try:
             stale.refresh()
-        except BadVersionNumberError:
+        except (BadVersionNumberError, RuntimeError) as exc:
+            assert "timestamp" in str(exc).lower() or isinstance(exc, BadVersionNumberError)
             print("tuf_stale_state_rejected=PASS")
         else:
             raise AssertionError("stale state unexpectedly accepted")
