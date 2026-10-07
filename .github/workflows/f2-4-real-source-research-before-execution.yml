@@ -33,3 +33,5 @@ jobs:
             f2-4-real-source-control-result.json
             f24-real-source-result.txt
           if-no-files-found: error
+
+# Trigger: include stale-source adversarial witness.
