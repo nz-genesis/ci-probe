@@ -93,3 +93,5 @@ if __name__=="__main__":
 # Control revision: trigger after workflow installation.
 
 # Hosted receipt trigger: no semantic behavior change.
+
+# Public-first execution receipt trigger: no semantic behavior change.
