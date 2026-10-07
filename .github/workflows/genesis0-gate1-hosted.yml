@@ -6,7 +6,7 @@ on:
       genesis_lab_commit:
         description: "Exact genesis-lab commit to verify"
         required: true
-        default: "56913566e2f9ab4dbbf9407f12915dd26264fda3"
+        default: "1c49b9e654ddcce001556740a76a5a8ba9f4ad7a"
   push:
     paths:
       - probes/genesis0-gate1-hosted.py
