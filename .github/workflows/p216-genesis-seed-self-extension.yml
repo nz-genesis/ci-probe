@@ -1,0 +1,16 @@
+name: P216 Genesis Seed Self Extension
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - probes/p216-genesis-seed-self-extension.py
+      - .github/workflows/p216-genesis-seed-self-extension.yml
+
+jobs:
+  p216:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run P216 bounded executable probe
+        run: python3 probes/p216-genesis-seed-self-extension.py
