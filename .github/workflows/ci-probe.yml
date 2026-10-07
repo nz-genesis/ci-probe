@@ -148,6 +148,13 @@ jobs:
           name: p213-execution-evidence-${{ github.sha }}
           path: p213-probe-output.txt
           if-no-files-found: error
+
+      - name: Execute P388 public-safe selection-conditioned risk-control probe
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 p388_selection_conditioned_risk_control.py | tee p388-probe-output.txt
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
