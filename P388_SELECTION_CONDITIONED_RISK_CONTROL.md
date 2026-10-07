@@ -45,3 +45,10 @@ It does not prove:
 ## Required private correspondence step
 
 After the exact public run, private Genesis research must re-fetch the exact commit, workflow run, job, steps and logs and assess correspondence to the private P1 mechanism without importing private corpus into the public repository.
+
+
+## Canonical execution owner
+
+P388 is executed by the repository-level .github/workflows/ci-probe.yml substrate workflow. The earlier experiment-specific P388 workflow was removed to avoid duplicate ownership and accidental double-counting.
+
+A future P388 execution claim must cite the exact ci-probe.yml run/job/step and its p388-probe-output.txt artifact.
