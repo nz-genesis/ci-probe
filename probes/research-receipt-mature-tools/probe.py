@@ -125,32 +125,68 @@ def run_compromise_recovery():
         d = Path(td)
         old_key, old_pub = d/"old.key", d/"old.pub"
         new_key, new_pub = d/"new.key", d/"new.pub"
-        receipt = d/"receipt.json"
-        signatures = [d/"pre.sig", d/"post.sig", d/"new.sig"]
-        receipt.write_text('{"claim":"genesis-receipt","event":"effect","version":"1"}\n', encoding="utf-8")
+        receipts = [
+            ("pre", d/"pre.json", 100, old_key, d/"pre.sig"),
+            ("post", d/"post.json", 300, old_key, d/"post.sig"),
+            ("recovered", d/"recovered.json", 400, new_key, d/"recovered.sig"),
+        ]
         for key, pub in ((old_key, old_pub), (new_key, new_pub)):
             subprocess.run(["openssl","genpkey","-algorithm","ED25519","-out",str(key)], check=True)
             subprocess.run(["openssl","pkey","-in",str(key),"-pubout","-out",str(pub)], check=True)
-        for key, sig in ((old_key, signatures[0]), (old_key, signatures[1]), (new_key, signatures[2])):
-            subprocess.run(["openssl","pkeyutl","-sign","-inkey",str(key),"-rawin","-in",str(receipt),"-out",str(sig)], check=True)
-        for pub, sig in ((old_pub, signatures[0]), (old_pub, signatures[1]), (new_pub, signatures[2])):
-            subprocess.run(["openssl","pkeyutl","-verify","-pubin","-inkey",str(pub),"-rawin","-in",str(receipt),"-sigfile",str(sig)], check=True)
+
+        for name, receipt, signed_at, key, sig in receipts:
+            receipt.write_text(
+                '{"claim":"genesis-receipt","event":"effect","version":"1","signed_at":%d}\n' % signed_at,
+                encoding="utf-8",
+            )
+            subprocess.run(
+                ["openssl","pkeyutl","-sign","-inkey",str(key),"-rawin","-in",str(receipt),"-out",str(sig)],
+                check=True,
+            )
+
+        for name, receipt, signed_at, key, sig in receipts:
+            pub = old_pub if key == old_key else new_pub
+            subprocess.run(
+                ["openssl","pkeyutl","-verify","-pubin","-inkey",str(pub),"-rawin",
+                 "-in",str(receipt),"-sigfile",str(sig)],
+                check=True,
+            )
+
         compromise_epoch = 200
         evidence = [
-            {"signer":"old","signed_at":100,"sig":signatures[0]},
-            {"signer":"old","signed_at":300,"sig":signatures[1]},
-            {"signer":"new","signed_at":400,"sig":signatures[2]},
+            {"id":"pre","signer":"old","signed_at":100,"receipt":receipts[0][1]},
+            {"id":"post","signer":"old","signed_at":300,"receipt":receipts[1][1]},
+            {"id":"recovered","signer":"new","signed_at":400,"receipt":receipts[2][1]},
         ]
+
         def admit(e):
             if e["signer"] == "old" and e["signed_at"] >= compromise_epoch:
                 return False
             return e["signer"] == "new" or (e["signer"] == "old" and e["signed_at"] < compromise_epoch)
-        assert admit(evidence[0]) and not admit(evidence[1]) and admit(evidence[2])
-        assert receipt.exists() and all(s.exists() for s in signatures)
+
+        assert admit(evidence[0]) is True
+        assert admit(evidence[1]) is False
+        assert admit(evidence[2]) is True
+
+        # Red Team: changing the signed compromise boundary after signing must fail verification.
+        tampered = d/"tampered.json"
+        tampered.write_text(
+            receipts[1][1].read_text(encoding="utf-8").replace('"signed_at":300','"signed_at":100'),
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            ["openssl","pkeyutl","-verify","-pubin","-inkey",str(old_pub),"-rawin",
+             "-in",str(tampered),"-sigfile",str(receipts[1][4])],
+            capture_output=True,
+        )
+        assert result.returncode != 0
+
+        assert all(r.exists() and s.exists() for _, r, _, _, s in receipts)
         print("compromise_pre_historical_valid=PASS")
         print("compromise_post_cryptographically_valid_currently_inadmissible=PASS")
         print("compromise_new_trusted_signer_admissible=PASS")
         print("compromise_historical_lineage_preserved=PASS")
+        print("compromise_signed_boundary_tamper_rejected=PASS")
 
 if __name__=="__main__":
     run_intoto()
