@@ -1,0 +1,34 @@
+name: Mature Receipt Recovery Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "probes/research-receipt-recovery/**"
+      - ".github/workflows/research-receipt-recovery.yml"
+  pull_request:
+    paths:
+      - "probes/research-receipt-recovery/**"
+      - ".github/workflows/research-receipt-recovery.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create isolated Python environment
+        run: python3 -m venv .venv
+      - name: Install exact mature tools
+        run: |
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install "in-toto==3.1.0" "tuf==7.0.1" "sigstore==4.5.0"
+          .venv/bin/python -c "import importlib.metadata as m; assert m.version('in-toto')=='3.1.0'; assert m.version('tuf')=='7.0.1'; assert m.version('sigstore')=='4.5.0'"
+      - name: Execute recovery probe
+        run: .venv/bin/python probes/research-receipt-recovery/probe.py
+      - name: Verify deterministic state-space receipt
+        run: .venv/bin/python probes/research-receipt-recovery/probe.py | tee recovery-receipt.txt
