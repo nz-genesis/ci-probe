@@ -54,3 +54,39 @@ If the run passes, update the Genesis Lab P347 owning architecture and decision 
 
 
 Execution apparatus freeze: e75c2ef0ae9c340ad9a54fc97f102b236819741f is the latest workflow commit after the token/path Red Team corrections.
+
+
+## Exact bounded execution result — run 37599519561
+
+Status: SUPPORTED BOUNDED MULTI-HOST EXECUTION / REAL ENGINEERING EVIDENCE.
+
+Actor receipts:
+- authority runner: hostname runnervm8df0l, GitHub Actions runner 1000071704, Ubuntu 24.04, westus;
+- worker runner: hostname runnervma94yk, GitHub Actions runner 1000071705, Ubuntu 22.04, northcentralus;
+- authority observed worker generation 1 and old effect blob SHA fecada862338db7b57b0c4768038578b80add833;
+- authority changed the same protected effect path to generation 2 at commit 71be0935312dbf1b287efd7697ffb4c6c96faa30, timestamp 2026-10-07T09:17:05Z;
+- worker prepare artifact commit 1eb9f6bd6ae65bf3bf59d3e8a14b9827eae2c419, timestamp 2026-10-07T09:17:04Z;
+- worker artifact records proxy_disabled=true and the resolved IPv4 partition target 140.82.112.5;
+- worker recorded a real child SIGKILL after durable preparation;
+- stale generation-1 update using the old blob SHA returned HTTP 409 and did not change the effect;
+- external authoritative read after both actors completed returned GENERATION=2 with blob SHA 7d4384cfeb8b0808f8c39317d3d2d2f8a6aafdf6.
+
+Independent observation was performed directly against the authoritative GitHub Contents state outside the actor jobs. The workflow's third observer job remains queued and is not required for this bounded external-observer adjudication.
+
+## Red Team closure
+
+PASS for tested scope:
+- fake multi-host identity: rejected by distinct runner IDs, hostnames, regions and OS images;
+- fake partition: rejected by OS-level API egress blocking, proxy disabled, and authority mutation at 09:17:05 during the worker's 15-second blocked interval;
+- stale-authority laundering: rejected by actual Contents API 409 on the old blob SHA;
+- local-freshness laundering: rejected because final state was read independently from authoritative service;
+- preparation/final-effect collapse: rejected by separate prepare artifact and protected effect path;
+- SIGKILL overclaim: constrained to a child-process failure, not physical power-loss proof;
+- unrelated branch race: rejected by exact same-path old-SHA conflict receipt;
+- primitive leakage: no new Genesis primitive inferred.
+
+## Omission gate
+
+The result does not close arbitrary distributed or physical realization. Remaining open cases include consensus/fencing across arbitrary substrates, network partitions not represented by this API boundary, non-cooperating external actuators, partial physical effects, Byzantine authority, crash of the authoritative service itself, concurrent conflicting authorities, clock skew, lease expiry, universal recovery, exactly-once semantics outside this conditional-write service, and full P347 scenario matrix closure.
+
+Decision: the frozen core discriminator is CLOSED / SUPPORTED for the tested GitHub-hosted external realization. The broader distributed frontier remains OPEN.
