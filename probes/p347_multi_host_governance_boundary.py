@@ -24,8 +24,9 @@ def api(method: str, path: str, payload: dict | None = None):
     if payload is not None:
         headers["Content-Type"]="application/json"
     req=urllib.request.Request(BASE+path,data=data,headers=headers,method=method)
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     try:
-        with urllib.request.urlopen(req,timeout=20) as r:
+        with opener.open(req, timeout=20) as r:
             raw=r.read().decode()
             return r.status, json.loads(raw) if raw else {}
     except urllib.error.HTTPError as e:
@@ -53,15 +54,20 @@ def identity():
             "job":os.environ.get("GITHUB_JOB"),"run_id":RUN_ID}
 
 def block_api():
-    addrs=sorted({x.split()[0] for x in subprocess.check_output(
-        ["getent","ahostsv4","api.github.com"],text=True).splitlines() if x.split() and "." in x.split()[0]})
-    for addr in addrs:
+    lines=subprocess.check_output(["getent","ahosts","api.github.com"],text=True).splitlines()
+    ipv4=sorted({x.split()[0] for x in lines if x.split() and "." in x.split()[0]})
+    ipv6=sorted({x.split()[0] for x in lines if x.split() and ":" in x.split()[0]})
+    for addr in ipv4:
         subprocess.run(["sudo","iptables","-A","OUTPUT","-p","tcp","-d",addr,"--dport","443","-j","REJECT"],check=True)
-    return addrs
+    for addr in ipv6:
+        subprocess.run(["sudo","ip6tables","-A","OUTPUT","-p","tcp","-d",addr,"--dport","443","-j","REJECT"],check=True)
+    return {"ipv4":ipv4,"ipv6":ipv6,"proxy_disabled":True}
 
-def unblock_api(addrs):
-    for addr in addrs:
+def unblock_api(receipt):
+    for addr in receipt["ipv4"]:
         subprocess.run(["sudo","iptables","-D","OUTPUT","-p","tcp","-d",addr,"--dport","443","-j","REJECT"],check=False)
+    for addr in receipt["ipv6"]:
+        subprocess.run(["sudo","ip6tables","-D","OUTPUT","-p","tcp","-d",addr,"--dport","443","-j","REJECT"],check=False)
 
 def worker():
     me=identity()
