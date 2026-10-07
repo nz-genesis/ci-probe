@@ -9,21 +9,20 @@ permissions:
 jobs:
   worker:
     name: p347-worker-a
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 8
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: \${{ github.sha }}
-          fetch-depth: 1
-      - name: Verify exact triggering SHA
+      - name: Fetch exact frozen probe
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          test "\$(git rev-parse HEAD)" = "\$GITHUB_SHA"
-          printf 'WORKER_SHA=%s\nHOST=%s\n' "\$GITHUB_SHA" "\$(hostname)"
+          gh api "/repos/${GITHUB_REPOSITORY}/contents/probes/p347_multi_host_governance_boundary.py?ref=${GITHUB_SHA}" --jq '.content' | tr -d '\n' | base64 -d > p347_multi_host_governance_boundary.py
+          python3 -m py_compile p347_multi_host_governance_boundary.py
+          printf 'WORKER_SHA=%s\nHOST=%s\nRUNNER=ubuntu-22.04\n' "$GITHUB_SHA" "$(hostname)"
       - name: Execute worker
         env:
-          P347_BRANCH: \${{ github.ref_name }}
+          P347_BRANCH: ${{ github.ref_name }}
           P347_OUT: worker-result.json
         run: python3 probes/p347_multi_host_governance_boundary.py worker
       - uses: actions/upload-artifact@v4
@@ -35,18 +34,17 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: \${{ github.sha }}
-          fetch-depth: 1
-      - name: Verify exact triggering SHA
+      - name: Fetch exact frozen probe
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          test "\$(git rev-parse HEAD)" = "\$GITHUB_SHA"
-          printf 'AUTHORITY_SHA=%s\nHOST=%s\n' "\$GITHUB_SHA" "\$(hostname)"
+          gh api "/repos/${GITHUB_REPOSITORY}/contents/probes/p347_multi_host_governance_boundary.py?ref=${GITHUB_SHA}" --jq '.content' | tr -d '\n' | base64 -d > p347_multi_host_governance_boundary.py
+          python3 -m py_compile p347_multi_host_governance_boundary.py
+          printf 'AUTHORITY_SHA=%s\nHOST=%s\nRUNNER=ubuntu-24.04\n' "$GITHUB_SHA" "$(hostname)"
       - name: Execute authority mutation
         env:
-          P347_BRANCH: \${{ github.ref_name }}
+          P347_BRANCH: ${{ github.ref_name }}
           P347_OUT: authority-result.json
         run: python3 probes/p347_multi_host_governance_boundary.py authority
       - uses: actions/upload-artifact@v4
@@ -59,13 +57,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: \${{ github.ref_name }}
-          fetch-depth: 1
+      - name: Fetch exact frozen probe
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh api "/repos/${GITHUB_REPOSITORY}/contents/probes/p347_multi_host_governance_boundary.py?ref=${GITHUB_SHA}" --jq '.content' | tr -d '\n' | base64 -d > p347_multi_host_governance_boundary.py
+          python3 -m py_compile p347_multi_host_governance_boundary.py
       - name: Execute independent observation
         env:
-          P347_BRANCH: \${{ github.ref_name }}
+          P347_BRANCH: ${{ github.ref_name }}
           P347_OUT: observer-result.json
         run: python3 probes/p347_multi_host_governance_boundary.py observer
       - uses: actions/download-artifact@v4
