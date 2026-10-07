@@ -17,6 +17,8 @@ permissions:
 
 jobs:
   mature-tools:
+    env:
+      GENESIS_ASSURANCE_PASS: compromise-recovery-rotation-v1
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -29,6 +31,8 @@ jobs:
           .venv/bin/python -m pip install --upgrade pip
           .venv/bin/python -m pip install "in-toto==3.1.0" "tuf==7.0.1" "sigstore==4.5.0"
           .venv/bin/python -c "import importlib.metadata as m; assert m.version('in-toto')=='3.1.0'; assert m.version('tuf')=='7.0.1'; assert m.version('sigstore')=='4.5.0'"
+      - name: Execute bounded compromise recovery probe
+        run: echo "GENESIS_ASSURANCE_PASS=${GENESIS_ASSURANCE_PASS}"
       - name: Execute in-toto and TUF probe
         run: .venv/bin/python probes/research-receipt-mature-tools/probe.py
       - name: Create common receipt
