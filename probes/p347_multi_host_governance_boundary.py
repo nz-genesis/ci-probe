@@ -8,7 +8,7 @@ from pathlib import Path
 API = "https://api.github.com"
 REPO = os.environ["GITHUB_REPOSITORY"]
 BRANCH = os.environ["P347_BRANCH"]
-TOKEN = os.environ["GITHUB_TOKEN"]
+TOKEN = os.environ.get("GITHUB_TOKEN") or os.environ["GH_TOKEN"]
 RUN_ID = os.environ["GITHUB_RUN_ID"]
 BASE = f"{API}/repos/{REPO}"
 GOV_PATH = "probes/p347_state/governance.txt"
