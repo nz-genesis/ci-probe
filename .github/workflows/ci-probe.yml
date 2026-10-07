@@ -174,5 +174,16 @@ jobs:
           path: ci-probe-result.txt
           if-no-files-found: error
 
+      - name: Execute P452 public-safe generic execution control
+        run: python3 probes/p452-generic-execution-control.py
+
+      - name: Upload P452 generic execution control evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p452-generic-control
+          path: p452-generic-control-result.json
+          if-no-files-found: error
+
 # P212: competing objectives/trade-offs are tested as State/Transition composition; no Objective/Goal/Tradeoff/Utility/Planner primitive is asserted.
 # P213: partial-order/incomparable objectives are tested as State relation + Transition + existing Authority/Constraint boundaries; no new primitive is asserted.
