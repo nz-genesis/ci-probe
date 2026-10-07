@@ -1,0 +1,20 @@
+name: P214 Skill Praxis Conformance Control
+
+on:
+  push:
+    paths:
+      - probes/p214-skill-praxis-conformance.py
+      - .github/workflows/p214-skill-praxis-conformance.yml
+
+jobs:
+  p214-skill-praxis:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run real Skill to Praxis conformance probe
+        run: python probes/p214-skill-praxis-conformance.py
