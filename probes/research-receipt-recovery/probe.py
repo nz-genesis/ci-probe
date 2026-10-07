@@ -33,12 +33,16 @@ def sign(md: Metadata, signer: CryptoSigner, append: bool = True) -> bytes:
     md.sign(signer, append=append)
     return md.to_bytes(JSONSerializer())
 
-def root_md(keys: dict[str, CryptoSigner], root_ids: list[str], threshold: int, version: int) -> Metadata:
+def root_md(root_signers: list[CryptoSigner], timestamp: CryptoSigner, snapshot: CryptoSigner, targets: CryptoSigner, threshold: int, version: int) -> Metadata:
     now=dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
     r=Root(version=version,spec_version="1.0",expires=now+dt.timedelta(days=365),consistent_snapshot=False)
-    for role in ("root","timestamp","snapshot","targets"):
-        r.add_key(keys[role].public_key, role)
-        r.roles[role]=Role([keys[role].public_key.keyid],1)
+    root_ids=[]
+    for signer in root_signers:
+        r.add_key(signer.public_key, signer.public_key.keyid)
+        root_ids.append(signer.public_key.keyid)
+    for role, signer in (("timestamp",timestamp),("snapshot",snapshot),("targets",targets)):
+        r.add_key(signer.public_key, role)
+        r.roles[role]=Role([signer.public_key.keyid],1)
     r.roles["root"]=Role(root_ids,threshold)
     return Metadata(r)
 
@@ -149,22 +153,12 @@ def run_tuf_recovery():
     snapshot=CryptoSigner.generate_ed25519()
     targets=CryptoSigner.generate_ed25519()
 
-    def role_keys(root_signers):
-        return {
-            "root": root_signers[0],
-            "timestamp": timestamp,
-            "snapshot": snapshot,
-            "targets": targets,
-        }
-
     # v1 has A+B as root threshold.
-    v1keys=role_keys([a,b])
-    v1=root_md(v1keys,[a.public_key.keyid,b.public_key.keyid],2,1)
+    v1=root_md([a,b],timestamp,snapshot,targets,2,1)
     # v2 has B+D as root threshold. Old-root threshold requires A+B;
     # new-root threshold requires B+D.
-    v2keys=role_keys([b,d])
-    v2=root_md(v2keys,[b.public_key.keyid,d.public_key.keyid],2,2)
-    v3=root_md(v2keys,[b.public_key.keyid,d.public_key.keyid],2,3)
+    v2=root_md([b,d],timestamp,snapshot,targets,2,2)
+    v3=root_md([b,d],timestamp,snapshot,targets,2,3)
 
     # Attack: compromised A alone cannot authorize root v2.
     malicious_v2=signed_root(v2,[a])
