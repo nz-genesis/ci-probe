@@ -1,0 +1,35 @@
+name: F2.4 Real-Source Research-Before-Execution Control
+
+on:
+  push:
+    paths:
+      - probes/f2-4-real-source-research-before-execution.py
+      - .github/workflows/f2-4-real-source-research-before-execution.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  f2-4-real-source-control:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run real-source research-before-execution control
+        run: python probes/f2-4-real-source-research-before-execution.py
+      - name: Upload raw F2.4 control receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: f2-4-real-source-control-result
+          path: |
+            f2-4-real-source-control-result.json
+            f24-real-source-result.txt
+          if-no-files-found: error
