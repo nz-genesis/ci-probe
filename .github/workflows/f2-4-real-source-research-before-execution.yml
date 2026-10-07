@@ -30,7 +30,7 @@ jobs:
         with:
           name: f2-4-real-source-control-result
           path: |
-            f2-4-real-source-control-result.json
+            f24-real-source-control-result.json
             f24-real-source-result.txt
           if-no-files-found: error
 
