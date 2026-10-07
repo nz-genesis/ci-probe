@@ -30,5 +30,7 @@ jobs:
           .venv/bin/python -c "import importlib.metadata as m; assert m.version('in-toto')=='3.1.0'; assert m.version('tuf')=='7.0.1'; assert m.version('sigstore')=='4.5.0'"
       - name: Execute recovery probe
         run: .venv/bin/python probes/research-receipt-recovery/probe.py
-      - name: Verify deterministic state-space receipt
+      - name: Preserve execution receipt
         run: .venv/bin/python probes/research-receipt-recovery/probe.py | tee recovery-receipt.txt
+      - name: Verify execution receipt
+        run: grep -E "RECOVERY_PROBE=PASS|recovery_state_space=4/4" recovery-receipt.txt
