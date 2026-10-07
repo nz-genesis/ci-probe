@@ -91,3 +91,5 @@ if __name__=="__main__":
     main()
 
 # Control revision: trigger after workflow installation.
+
+# Hosted receipt trigger: no semantic behavior change.
