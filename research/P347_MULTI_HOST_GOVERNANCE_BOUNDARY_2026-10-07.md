@@ -51,3 +51,6 @@ INCONCLUSIVE until raw actor receipts, final authoritative state, distinct runne
 ## Downstream rule
 
 If the run passes, update the Genesis Lab P347 owning architecture and decision ledger. Apparatus failures are repaired without changing semantic expectations. A stale effect that succeeds after the authority generation change is a material challenge to the current boundary and requires reduction analysis.
+
+
+Execution apparatus freeze: e75c2ef0ae9c340ad9a54fc97f102b236819741f is the latest workflow commit after the token/path Red Team corrections.
