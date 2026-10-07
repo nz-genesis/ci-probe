@@ -1,0 +1,33 @@
+name: P452 Generic Execution Control
+
+on:
+  push:
+    paths:
+      - probes/p452-generic-execution-control.py
+      - .github/workflows/p452-generic-execution-control.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p452-generic-control:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run generic P452 execution control
+        run: python probes/p452-generic-execution-control.py
+      - name: Upload raw control receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: p452-generic-control-result
+          path: p452-generic-control-result.json
+          if-no-files-found: error
