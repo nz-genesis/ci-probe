@@ -4,9 +4,12 @@ on:
   push:
     branches:
       - research/p347-external-authority-v0
+      - research/p347-external-authority-execution-v1
+  workflow_dispatch:
 
 permissions:
   contents: read
+
 
 jobs:
   authority-contract:
