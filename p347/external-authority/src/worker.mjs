@@ -183,6 +183,14 @@ export class P347Authority extends DurableObject {
 export default {
   async fetch(request, env) {
     const id = env.P347_AUTHORITY.idFromName("singleton");
-    return env.P347_AUTHORITY.get(id).fetch(request);
+    try {
+      return await env.P347_AUTHORITY.get(id).fetch(request);
+    } catch (error) {
+      return json({
+        error: "durable_object_exception",
+        detail: String(error?.message ?? error),
+        name: String(error?.name ?? "Error"),
+      }, 500);
+    }
   },
 };
