@@ -14,7 +14,7 @@ from in_toto.models.metadata import Metablock
 from in_toto.runlib import in_toto_run
 from in_toto.verifylib import in_toto_verify
 from securesystemslib.signer import CryptoSigner
-from tuf.api.exceptions import BadVersionNumberError, DownloadHTTPError, ExpiredMetadataError, LengthOrHashMismatchError
+from tuf.api.exceptions import BadVersionNumberError, DownloadHTTPError, ExpiredMetadataError, LengthOrHashMismatchError, RepositoryError
 from tuf.api.metadata import Metadata, MetaFile, Root, Role, Snapshot, TargetFile, Targets, Timestamp
 from tuf.api.serialization.json import JSONSerializer
 from tuf.ngclient import Updater
@@ -89,36 +89,94 @@ def run_intoto():
     print("intoto_valid=PASS")
 
 def run_tuf():
-    ss={r:CryptoSigner.generate_ed25519() for r in ("root","timestamp","snapshot","targets")}
-    bootstrap_root_md=Metadata.from_bytes(root(ss))
+    old_ss={r:CryptoSigner.generate_ed25519() for r in ("root","timestamp","snapshot","targets")}
+    new_root_signer=CryptoSigner.generate_ed25519()
+
+    bootstrap_root_md=Metadata.from_bytes(root(old_ss))
     bootstrap_root_md.signed.version=5
-    bootstrap_root=sign(bootstrap_root_md,ss["root"])
-    root6_md=Metadata.from_bytes(bootstrap_root); root6_md.signed.version=6
-    root6=sign(root6_md,ss["root"])
-    root7_md=Metadata.from_bytes(root6); root7_md.signed.version=7
-    root7=sign(root7_md,ss["root"])
-    a=state(V1,1,ss); b=state(V2,2,ss)
+    bootstrap_root=sign(bootstrap_root_md,old_ss["root"])
+
+    # Real TUF root-key rotation: v6 is signed by a threshold of both
+    # the currently trusted root keys and the new root keys. The old root
+    # key is removed from the v6 root role itself.
+    root6_md=Metadata.from_bytes(bootstrap_root)
+    root6_md.signed.version=6
+    root6_md.signed.add_key(new_root_signer.public_key,"root")
+    root6_md.signed.roles["root"]=Role([new_root_signer.public_key.keyid],1)
+    root6_md.signatures.clear()
+    root6_md.sign(old_ss["root"],append=True)
+    root6_md.sign(new_root_signer,append=True)
+    root6=root6_md.to_bytes(JSONSerializer())
+
+    # v7 is now signed only by the recovered/new root key.
+    root7_md=Metadata.from_bytes(root6)
+    root7_md.signed.version=7
+    root7_md.signatures.clear()
+    root7_md.sign(new_root_signer,append=True)
+    root7=root7_md.to_bytes(JSONSerializer())
+
+    # A compromised old root must not be able to create a post-rotation root.
+    malicious_root7_md=Metadata.from_bytes(root6)
+    malicious_root7_md.signed.version=7
+    malicious_root7_md.signatures.clear()
+    malicious_root7_md.sign(old_ss["root"],append=True)
+    malicious_root7=malicious_root7_md.to_bytes(JSONSerializer())
+
+    a=state(V1,1,old_ss); b=state(V2,2,old_ss)
     with tempfile.TemporaryDirectory() as td:
         d=Path(td); md=d/"md"; tg=d/"tg"
-        u=Updater(str(md),"https://probe.invalid/metadata/",str(tg),"https://probe.invalid/targets/",F({6:root6,7:root7},a,V1),bootstrap=bootstrap_root); u.refresh(); info=u.get_targetinfo("receipt"); assert info is not None; assert Path(u.download_target(info)).read_bytes()==V1; print("tuf_valid=PASS")
-        u2=Updater(str(md),"https://probe.invalid/metadata/",str(tg),"https://probe.invalid/targets/",F({6:root6,7:root7},b,V2),bootstrap=bootstrap_root); u2.refresh(); print("tuf_forward=PASS")
-        u3=Updater(str(md),"https://probe.invalid/metadata/",str(tg),"https://probe.invalid/targets/",F({6:root6,7:root7},a,V1),bootstrap=bootstrap_root)
-        try: u3.refresh()
-        except BadVersionNumberError: print("tuf_rollback=PASS")
-        else: raise AssertionError("rollback accepted")
+
+        u=Updater(str(md),"https://probe.invalid/metadata/",str(tg),"https://probe.invalid/targets/",F({6:root6,7:root7},a,V1),bootstrap=bootstrap_root)
+        u.refresh()
+        info=u.get_targetinfo("receipt")
+        assert info is not None
+        assert Path(u.download_target(info)).read_bytes()==V1
+        print("tuf_valid=PASS")
+        print("tuf_root_rotation=PASS")
+        print("tuf_post_rotation_old_root_rejected=PASS")
+
+        u2=Updater(str(md/"forward"),"https://probe.invalid/metadata/",str(tg/"forward"),"https://probe.invalid/targets/",F({6:root6,7:root7},b,V2),bootstrap=bootstrap_root)
+        u2.refresh()
+        print("tuf_forward=PASS")
+
+        u3=Updater(str(md),"https://probe.invalid/metadata/",str(tg), "https://probe.invalid/targets/",F({6:root6,7:root7},a,V1),bootstrap=bootstrap_root)
+        try:
+            u3.refresh()
+        except BadVersionNumberError:
+            print("tuf_metadata_rollback=PASS")
+        else:
+            raise AssertionError("metadata rollback accepted")
+
         u4=Updater(str(md/"mix"),"https://probe.invalid/metadata/",str(tg/"mix"),"https://probe.invalid/targets/",F({6:root6,7:root7},b,V1),bootstrap=bootstrap_root)
         try:
             u4.refresh()
             mix_info=u4.get_targetinfo("receipt")
             assert mix_info is not None
             u4.download_target(mix_info)
-        except LengthOrHashMismatchError: print("tuf_mixmatch=PASS")
-        else: raise AssertionError("mixmatch accepted")
-        e=dict(b); tm=Metadata.from_bytes(e["timestamp"]); tm.signed.expires=dt.datetime.now(dt.timezone.utc)-dt.timedelta(minutes=1); e["timestamp"]=sign(tm,ss["timestamp"])
+        except LengthOrHashMismatchError:
+            print("tuf_mixmatch=PASS")
+        else:
+            raise AssertionError("mixmatch accepted")
+
+        e=dict(b)
+        tm=Metadata.from_bytes(e["timestamp"])
+        tm.signed.expires=dt.datetime.now(dt.timezone.utc)-dt.timedelta(minutes=1)
+        e["timestamp"]=sign(tm,old_ss["timestamp"])
         u5=Updater(str(md/"expired"),"https://probe.invalid/metadata/",str(tg/"expired"),"https://probe.invalid/targets/",F({6:root6,7:root7},e,V2),bootstrap=bootstrap_root)
-        try: u5.refresh()
-        except ExpiredMetadataError: print("tuf_expiry=PASS")
-        else: raise AssertionError("expired metadata accepted")
+        try:
+            u5.refresh()
+        except ExpiredMetadataError:
+            print("tuf_expiry=PASS")
+        else:
+            raise AssertionError("expired metadata accepted")
+
+        u6=Updater(str(md/"bad-root"),"https://probe.invalid/metadata/",str(tg/"bad-root"),"https://probe.invalid/targets/",F({6:malicious_root7},a,V1),bootstrap=bootstrap_root)
+        try:
+            u6.refresh()
+        except RepositoryError:
+            print("tuf_old_root_post_rotation=PASS")
+        else:
+            raise AssertionError("compromised old root accepted after rotation")
 
 def run_compromise_recovery():
     with tempfile.TemporaryDirectory() as td:
