@@ -1,8 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
+ORG="${P347_GITHUB_ORG:-nz-genesis}"
 REPO="${P347_GITHUB_REPO:-nz-genesis/ci-probe}"
 LABEL="${P347_RUNNER_LABEL:-p347-mac}"
+RUNNER_GROUP_ID="${P347_RUNNER_GROUP_ID:-3}"
 ROOT="${P347_RUNNER_ROOT:-$HOME/.p347-mac-runner}"
 RUNNER_NAME="${P347_RUNNER_NAME:-$(scutil --get ComputerName 2>/dev/null || hostname)-p347}"
 
@@ -18,6 +20,11 @@ do
     break
   fi
 done
+
+if [[ ! "$RUNNER_GROUP_ID" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: P347_RUNNER_GROUP_ID must be a numeric runner group id."
+  exit 2
+fi
 
 if [[ -z "$GH_BIN" ]]; then
   echo "ERROR: GitHub CLI (gh) is required."
@@ -35,7 +42,9 @@ mkdir -p "$ROOT"
 cd "$ROOT"
 
 echo "== P347 Mac JIT runner bootstrap =="
+echo "Organization: $ORG"
 echo "Repository: $REPO"
+echo "Runner group id: $RUNNER_GROUP_ID"
 echo "Runner label: $LABEL"
 echo "Runner root: $ROOT"
 echo "Runner name: $RUNNER_NAME"
@@ -74,9 +83,10 @@ echo
 
 while true; do
   JIT_CONFIG="$(
-    gh api --method POST \
+    "$GH_BIN" api --method POST \
       -H 'Accept: application/vnd.github+json' \
-      "repos/$REPO/actions/runners/generate-jitconfig" \
+      "orgs/$ORG/actions/runners/generate-jitconfig" \
+      -F "runner_group_id=$RUNNER_GROUP_ID" \
       -f "name=$RUNNER_NAME" \
       -f "labels[]=self-hosted" \
       -f "labels[]=macOS" \
