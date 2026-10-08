@@ -1,0 +1,38 @@
+name: P347 Differential Realization
+
+on:
+  push:
+    branches:
+      - research/p347-mac-execution-matrix-v0
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p347-differential-realization
+  cancel-in-progress: false
+
+jobs:
+  linux:
+    name: hosted Linux reference
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ github.sha }}', fetch-depth: 1 }
+      - run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - run: python3 probes/p347_differential_realization.py | tee differential-linux.txt
+      - uses: actions/upload-artifact@v4
+        with: { name: p347-differential-linux-${{ github.sha }}, path: differential-linux.txt }
+  mac:
+    name: physical Mac reference
+    runs-on: [self-hosted, macOS, p347-mac]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ github.sha }}', fetch-depth: 1 }
+      - run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - run: python3 probes/p347_differential_realization.py | tee differential-mac.txt
+      - uses: actions/upload-artifact@v4
+        with: { name: p347-differential-mac-${{ github.sha }}, path: differential-mac.txt }
