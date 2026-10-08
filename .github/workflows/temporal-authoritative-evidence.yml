@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'temporal_authoritative_evidence.py'
+      - 'r5-recursive-authority-closure-v2/verify.py'
       - '.github/workflows/temporal-authoritative-evidence.yml'
   workflow_dispatch:
 
@@ -14,3 +15,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Execute bounded probe
         run: python3 temporal_authoritative_evidence.py
+      - name: Execute Genesis R5 Pass 2 exhaustive probe
+        run: python3 r5-recursive-authority-closure-v2/verify.py
