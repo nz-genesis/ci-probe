@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - research/p347-external-authority-v0
-      - research/p347-external-authority-execution-v3
+      - research/p347-external-authority-execution-v4
   workflow_dispatch:
 
 permissions:
@@ -34,7 +34,7 @@ jobs:
 
   external-authority-execution:
     name: real external authority execution
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-execution-v3' }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-execution-v4' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -68,7 +68,21 @@ jobs:
               }, f)
           PY
           chmod 600 .p347-secrets.json
+          set +e
           npx --yes wrangler@4.149.0 deploy --temporary --strict --secrets-file .p347-secrets.json --var "P347_SOURCE_VERSION:$GITHUB_SHA" > deployment.raw.txt 2>&1
+          deploy_rc=$?
+          set -e
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          raw=Path("deployment.raw.txt").read_text(errors="replace")
+          safe=re.sub(r'https://dash\.cloudflare\.com/claim-preview\?claimToken=[^\s]+', 'https://dash.cloudflare.com/claim-preview?claimToken=[REDACTED]', raw)
+          safe=re.sub(r'(?i)(P347_ADMIN_TOKEN|P347_EFFECT_TOKEN)[=:][^\s]+', r'\1=[REDACTED]', safe)
+          Path("deployment-diagnostic.txt").write_text(safe,encoding="utf-8")
+          print(safe[-12000:])
+          PY
+          printf '%s\n' "$deploy_rc" > deployment.exit-code.txt
+          test "$deploy_rc" -eq 0
           grep -Eo 'https://[A-Za-z0-9._-]+\.workers\.dev' deployment.raw.txt | tail -1 > authority_url.txt
           test -s authority_url.txt
           python3 - <<'PY'
@@ -106,17 +120,17 @@ jobs:
                   with urlopen(req,timeout=30) as r: return r.status,json.loads(r.read().decode())
               except HTTPError as e: return e.code,json.loads(e.read().decode())
           evidence={"probe":"P347_EXTERNAL_AUTHORITY_REAL_EXECUTION_V2","observed_at":datetime.now(timezone.utc).isoformat(),"source_version":source,"wrangler_version":os.environ.get("P347_WRANGLER_VERSION","4.149.0"),"authority_url":url,"cases":[]}
-          s,b=call("GET","/v1/state"); evidence["cases"].append({"name":"fresh_state","status":s,"body":b}); assert s==200 and b["generation"]==1
-          s,b=call("POST","/v1/admin/mutate",admin,body={}); evidence["cases"].append({"name":"authority_mutation","status":s,"body":b}); assert s==200 and b["generation"]==2
+          s,b=call("GET","/v1/state"); evidence["cases"].append({"name":"fresh_state","status":s,"body":b}); require("fresh_state", s==200 and b.get("generation")==1, s, b)
+          s,b=call("POST","/v1/admin/mutate",admin,body={}); evidence["cases"].append({"name":"authority_mutation","status":s,"body":b}); require("authority_mutation", s==200 and b.get("generation")==2, s, b)
           h={"Idempotency-Key":"p347-real-e1","X-Request-Fingerprint":"fingerprint-1"}
-          s,b=call("POST","/v1/effects",effect,{"generation":1,"payload":{"amount":1}},h); evidence["cases"].append({"name":"stale_generation_reject","status":s,"body":b}); assert s==409 and b["reason"]=="STALE_REJECT"
+          s,b=call("POST","/v1/effects",effect,{"generation":1,"payload":{"amount":1}},h); evidence["cases"].append({"name":"stale_generation_reject","status":s,"body":b}); require("stale_generation_reject", s==409 and b.get("reason")=="STALE_REJECT", s, b)
           current={"generation":2,"payload":{"amount":1}}
-          s,b=call("POST","/v1/effects",effect,current,h); evidence["cases"].append({"name":"new_effect","status":s,"body":b}); assert s==201 and b["duplicate"] is False
+          s,b=call("POST","/v1/effects",effect,current,h); evidence["cases"].append({"name":"new_effect","status":s,"body":b}); require("new_effect", s==201 and b.get("duplicate") is False, s, b)
           eid=b["effect_id"]
-          s,b=call("POST","/v1/effects",effect,current,h); evidence["cases"].append({"name":"same_key_same_payload_retry","status":s,"body":b}); assert s==200 and b["duplicate"] is True and b["effect_id"]==eid
+          s,b=call("POST","/v1/effects",effect,current,h); evidence["cases"].append({"name":"same_key_same_payload_retry","status":s,"body":b}); require("same_key_same_payload_retry", s==200 and b.get("duplicate") is True and b.get("effect_id")==eid, s, b)
           h2={"Idempotency-Key":"p347-real-e1","X-Request-Fingerprint":"fingerprint-2"}
-          s,b=call("POST","/v1/effects",effect,current,h2); evidence["cases"].append({"name":"same_key_different_payload_conflict","status":s,"body":b}); assert s==409 and b["reason"]=="CONFLICT"
-          s,b=call("GET","/v1/effects/"+eid); evidence["cases"].append({"name":"fresh_effect_reobservation","status":s,"body":b}); assert s==200 and b["effect_id"]==eid and b["outcome"]=="OBSERVED_SUCCESS"
+          s,b=call("POST","/v1/effects",effect,current,h2); evidence["cases"].append({"name":"same_key_different_payload_conflict","status":s,"body":b}); require("same_key_different_payload_conflict", s==409 and b.get("reason")=="CONFLICT", s, b)
+          s,b=call("GET","/v1/effects/"+eid); evidence["cases"].append({"name":"fresh_effect_reobservation","status":s,"body":b}); require("fresh_effect_reobservation", s==200 and b.get("effect_id")==eid and b.get("outcome")=="OBSERVED_SUCCESS", s, b)
           evidence["result"]="PASS"
           Path("p347-external-authority-evidence.json").write_text(json.dumps(evidence,indent=2,sort_keys=True)+"\n",encoding="utf-8")
           print("P347_EXTERNAL_AUTHORITY_REAL_EXECUTION=PASS")
