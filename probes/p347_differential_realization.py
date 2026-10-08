@@ -10,7 +10,7 @@ def run(*args):
 def digest(x):
     return hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
-contract={
+contract={  # exact shared contract for Linux/Mac comparison
   'name':'P347_DIFFERENTIAL_REALIZATION_V1',
   'version':1,
   'operation':'observe_runtime_identity_and_canonical_contract',
