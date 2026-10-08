@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - research/p347-external-authority-v0
-      - research/p347-external-authority-execution-v1
+      - research/p347-external-authority-execution-v2
   workflow_dispatch:
 
 permissions:
@@ -31,7 +31,7 @@ jobs:
 
   external-authority-execution:
     name: real external authority execution
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-execution-v1' }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-execution-v2' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -47,25 +47,31 @@ jobs:
           test "$actual" = "$GITHUB_SHA"
       - name: Verify current Wrangler deployment contract
         run: npx --yes wrangler@4.102.0 --version
-      - name: Deploy temporary external authority
+      - name: Deploy temporary external authority with one version
         working-directory: p347/external-authority
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4.102.0 deploy --temporary --var "P347_SOURCE_VERSION:$GITHUB_SHA" > deployment.raw.txt 2>&1
+          python3 - <<'PY'
+          import json, secrets
+          with open(".p347-secrets.json","w",encoding="utf-8") as f:
+              json.dump({
+                  "P347_ADMIN_TOKEN": secrets.token_hex(32),
+                  "P347_EFFECT_TOKEN": secrets.token_hex(32),
+              }, f)
+          PY
+          chmod 600 .p347-secrets.json
+          npx --yes wrangler@4.102.0 deploy --temporary --strict --secrets-file .p347-secrets.json --var "P347_SOURCE_VERSION:$GITHUB_SHA" > deployment.raw.txt 2>&1
           grep -Eo 'https://[A-Za-z0-9._-]+\.workers\.dev' deployment.raw.txt | tail -1 > authority_url.txt
           test -s authority_url.txt
-      - name: Create ephemeral authority secrets without exposing values
-        working-directory: p347/external-authority
-        shell: bash
-        run: |
-          set -euo pipefail
-          admin_token="$(openssl rand -hex 32)"
-          effect_token="$(openssl rand -hex 32)"
-          printf '%s' "$admin_token" | npx --yes wrangler@4.102.0 secret put P347_ADMIN_TOKEN >/dev/null
-          printf '%s' "$effect_token" | npx --yes wrangler@4.102.0 secret put P347_EFFECT_TOKEN >/dev/null
-          printf '%s' "$admin_token" > admin_token.tmp
-          printf '%s' "$effect_token" > effect_token.tmp
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path(".p347-secrets.json").read_text())
+          Path("admin_token.tmp").write_text(data["P347_ADMIN_TOKEN"])
+          Path("effect_token.tmp").write_text(data["P347_EFFECT_TOKEN"])
+          Path(".p347-secrets.json").unlink()
+          PY
           chmod 600 admin_token.tmp effect_token.tmp
       - name: Execute real external authority discriminator
         working-directory: p347/external-authority
@@ -112,7 +118,7 @@ jobs:
       - name: Remove local ephemeral credentials
         if: always()
         working-directory: p347/external-authority
-        run: rm -f admin_token.tmp effect_token.tmp
+        run: rm -f .p347-secrets.json admin_token.tmp effect_token.tmp
       - name: Upload sanitized external-authority evidence
         if: always()
         uses: actions/upload-artifact@v4
