@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nz-genesis-p347-authority",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-10-08",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "P347_AUTHORITY",
+        "class_name": "P347Authority"
+      }
+    ]
+  },
+  "exports": {
+    "P347Authority": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  },
+  "vars": {
+    "P347_SOURCE_VERSION": "configured-at-deploy"
+  }
+}
