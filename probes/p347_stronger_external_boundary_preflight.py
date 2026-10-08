@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """P347+ public execution-surface preflight.
 
+Public-run trigger revision: v0.1.
+
 This probe proves only that a public CI run can expose independent runner
 identity and the local capabilities needed by the stronger experiment. It
 must never be interpreted as external-authority or packet-witness evidence.
