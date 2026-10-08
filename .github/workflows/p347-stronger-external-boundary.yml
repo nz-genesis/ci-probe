@@ -3,6 +3,7 @@ name: P347 Stronger External Boundary
 on:
   push:
     branches:
+      - main
       - research/p347-stronger-external-boundary-v0
   workflow_dispatch:
 
