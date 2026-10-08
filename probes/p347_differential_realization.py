@@ -30,4 +30,5 @@ result={
 print(json.dumps(result,indent=2,sort_keys=True))
 print('P347_DIFFERENTIAL_CONTRACT_SHA256='+result['contract_sha256'])
 if not result['observation']['git_sha_matches_trigger']: raise SystemExit('P347_DIFFERENTIAL=FAIL_CHECKOUT')
-print('P347_DIFFERENTIAL_REALIZATION=PASS')
+print('P347_DIFFERENTIAL_REALIZATION=PASS
+')
