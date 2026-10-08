@@ -6,6 +6,10 @@ on:
       - research/p347-external-authority-v0
       - research/p347-external-authority-execution-v2
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -20,7 +24,7 @@ jobs:
       - name: Checkout exact triggering commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
       - name: Verify exact checkout
         run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
@@ -31,7 +35,7 @@ jobs:
 
   external-authority-execution:
     name: real external authority execution
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-execution-v2' }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && ((github.event_name == 'push' && github.ref == 'refs/heads/research/p347-external-authority-execution-v2') || (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'research/p347-external-authority-execution-v2' && github.event.pull_request.head.repo.full_name == 'nz-genesis/ci-probe')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -44,7 +48,9 @@ jobs:
         run: |
           set -euo pipefail
           actual="$(git rev-parse HEAD)"
-          test "$actual" = "$GITHUB_SHA"
+          expected="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          test "$actual" = "$expected"
+          printf 'SOURCE_VERSION=%s\n' "$expected"
       - name: Verify current Wrangler deployment contract
         run: npx --yes wrangler@4.102.0 --version
       - name: Deploy temporary external authority with one version
@@ -61,7 +67,8 @@ jobs:
               }, f)
           PY
           chmod 600 .p347-secrets.json
-          npx --yes wrangler@4.102.0 deploy --temporary --strict --secrets-file .p347-secrets.json --var "P347_SOURCE_VERSION:$GITHUB_SHA" > deployment.raw.txt 2>&1
+          source_version="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          npx --yes wrangler@4.102.0 deploy --temporary --strict --secrets-file .p347-secrets.json --var "P347_SOURCE_VERSION:$source_version" > deployment.raw.txt 2>&1
           grep -Eo 'https://[A-Za-z0-9._-]+\.workers\.dev' deployment.raw.txt | tail -1 > authority_url.txt
           test -s authority_url.txt
           python3 - <<'PY'
@@ -88,7 +95,7 @@ jobs:
           url=base.joinpath("authority_url.txt").read_text().strip()
           admin=base.joinpath("admin_token.tmp").read_text().strip()
           effect=base.joinpath("effect_token.tmp").read_text().strip()
-          source=os.environ["GITHUB_SHA"]
+          source="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
           def call(method,path,token=None,body=None,extra=None):
               headers={"accept":"application/json"}
               if token: headers["authorization"]="Bearer "+token
