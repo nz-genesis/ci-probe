@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - research/p347-external-authority-v0
-      - research/p347-external-authority-execution-v5
+      - research/p347-external-authority-execution-v6
   workflow_dispatch:
 
 permissions:
@@ -34,7 +34,7 @@ jobs:
 
   external-authority-execution:
     name: real external authority execution
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-execution-v5' }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-execution-v6' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -111,7 +111,7 @@ jobs:
           effect=base.joinpath("effect_token.tmp").read_text().strip()
           source=os.environ["GITHUB_SHA"]
           def call(method,path,token=None,body=None,extra=None):
-              headers={"accept":"application/json"}
+              headers={"accept":"application/json","user-agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36","accept-language":"en-US,en;q=0.9"}
               if token: headers["authorization"]="Bearer "+token
               if body is not None: headers["content-type"]="application/json"
               if extra: headers.update(extra)
