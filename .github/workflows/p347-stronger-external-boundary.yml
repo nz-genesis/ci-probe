@@ -1,0 +1,86 @@
+name: P347 Stronger External Boundary
+
+on:
+  push:
+    branches:
+      - research/p347-stronger-external-boundary-v0
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight-worker-a:
+    name: p347-worker-a-preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify exact checkout
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run stronger-boundary preflight
+        env:
+          P347_EXTERNAL_AUTHORITY_URL: ${{ vars.P347_EXTERNAL_AUTHORITY_URL }}
+          P347_NETWORK_WITNESS_ID: ${{ vars.P347_NETWORK_WITNESS_ID }}
+        run: python3 probes/p347_stronger_external_boundary_preflight.py
+      - name: Upload preflight evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: p347-stronger-worker-a-${{ github.sha }}
+          path: p347-stronger-preflight.json
+          if-no-files-found: error
+
+  preflight-worker-b:
+    name: p347-worker-b-preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify exact checkout
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run stronger-boundary preflight
+        env:
+          P347_EXTERNAL_AUTHORITY_URL: ${{ vars.P347_EXTERNAL_AUTHORITY_URL }}
+          P347_NETWORK_WITNESS_ID: ${{ vars.P347_NETWORK_WITNESS_ID }}
+        run: python3 probes/p347_stronger_external_boundary_preflight.py
+      - name: Upload preflight evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: p347-stronger-worker-b-${{ github.sha }}
+          path: p347-stronger-preflight.json
+          if-no-files-found: error
+
+  preflight-authority:
+    name: p347-authority-preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify exact checkout
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run stronger-boundary preflight
+        env:
+          P347_EXTERNAL_AUTHORITY_URL: ${{ vars.P347_EXTERNAL_AUTHORITY_URL }}
+          P347_NETWORK_WITNESS_ID: ${{ vars.P347_NETWORK_WITNESS_ID }}
+        run: python3 probes/p347_stronger_external_boundary_preflight.py
+      - name: Upload preflight evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: p347-stronger-authority-${{ github.sha }}
+          path: p347-stronger-preflight.json
+          if-no-files-found: error
