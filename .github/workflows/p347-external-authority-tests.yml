@@ -1,0 +1,26 @@
+name: P347 External Authority Tests
+
+on:
+  push:
+    branches:
+      - research/p347-external-authority-v0
+
+permissions:
+  contents: read
+
+jobs:
+  authority-contract:
+    name: external authority contract
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-v0' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run deterministic authority contract tests
+        working-directory: p347/external-authority
+        run: npm test
