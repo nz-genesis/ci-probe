@@ -44,26 +44,33 @@ export class P347Authority extends DurableObject {
     );
   }
 
-  async currentState() {
-    const generation = Number(this.ctx.storage.sql
+  currentGeneration() {
+    return Number(this.ctx.storage.sql
       .exec("SELECT value FROM meta WHERE key = 'generation'")
       .one().value);
-    const effectCount = Number(this.ctx.storage.sql
+  }
+
+  effectCount() {
+    return Number(this.ctx.storage.sql
       .exec("SELECT COUNT(*) AS count FROM effects")
       .one().count);
-    const digest = await sha256Hex(canonicalState(generation, effectCount));
+  }
+
+  async currentState() {
+    const generation = this.currentGeneration();
+    const effectCount = this.effectCount();
+    const digest = await sha256Hex(JSON.stringify({ generation }));
     return { generation, effect_count: effectCount, state_digest: digest };
   }
 
-  async mutate() {
-    const current = await this.currentState();
-    const next = current.generation + 1;
+  mutate() {
+    const next = this.currentGeneration() + 1;
     this.ctx.storage.sql.exec("UPDATE meta SET value = ? WHERE key = 'generation'", String(next));
-    return this.currentState();
+    return next;
   }
 
-  async effect(body, headers) {
-    const current = await this.currentState();
+  effect(body, headers) {
+    const currentGeneration = this.currentGeneration();
     const effectId = headers.get("Idempotency-Key") || body.effect_id;
     const fingerprint = headers.get("X-Request-Fingerprint");
     const requestedGeneration = body.generation;
@@ -77,7 +84,7 @@ export class P347Authority extends DurableObject {
       : null;
 
     const decision = classifyEffect({
-      currentGeneration: current.generation,
+      currentGeneration,
       requestedGeneration,
       existing,
       effectId,
@@ -85,11 +92,7 @@ export class P347Authority extends DurableObject {
     });
 
     if (decision.status === 201) {
-      const effectDigest = await sha256Hex(JSON.stringify({
-        effect_id: effectId,
-        generation: requestedGeneration,
-        payload: body.payload ?? null,
-      }));
+      const effectDigest = fingerprint;
       this.ctx.storage.sql.exec(
         "INSERT INTO effects(effect_id, fingerprint, generation, effect_digest, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
         effectId,
@@ -145,10 +148,11 @@ export class P347Authority extends DurableObject {
       if (!this.env.P347_ADMIN_TOKEN || token !== `Bearer ${this.env.P347_ADMIN_TOKEN}`) {
         return json({ error: "forbidden" }, 403);
       }
+      const generation = this.mutate();
       return json({
         authority: "P347_EXTERNAL_AUTHORITY",
         source_version: this.env.P347_SOURCE_VERSION ?? "unversioned",
-        ...(await this.mutate()),
+        generation,
       });
     }
 
