@@ -74,6 +74,13 @@ jobs:
           print("sigstore_transparency=PASS")
           PY
 
+      - name: Collect final receipt evidence
+        if: always()
+        run: |
+          cp -f receipt.json artifacts/receipt.json 2>/dev/null || true
+          cp -f receipt.json.sigstore.json artifacts/receipt.json.sigstore.json 2>/dev/null || true
+          cp -f mutated.json artifacts/mutated.json 2>/dev/null || true
+
       - name: Upload execution receipt
         if: always()
         uses: actions/upload-artifact@v4
