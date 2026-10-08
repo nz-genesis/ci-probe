@@ -1,17 +1,18 @@
 # P347 N100 witness — физический протокол
 
-## 0. Аудит capture harness — обязательное ограничение
+## 0. Capture harness v2 — контракт и ограничения
 
-Перед физическим использованием проверен текущий `capture.py` (blob `57b53f2976220048e529a69ec284ccf8e9976e0a`) и его тест `test_witness.py` (blob `e82901f863396907259a3e20bf7161a61e382723`). Обнаружены три ограничения:
+Harness v2 теперь:
+- строит BPF filter по `--actor-ip` и одному или нескольким `--target-ip`, полученным из Mac-side application/socket trace, а не из DNS-результата N100;
+- принимает только пустой run-specific capture directory;
+- считает раннее завершение `tcpdump` ошибкой;
+- отклоняет pcap без packet payload;
+- сохраняет durable metadata с actor/target provenance и SHA-256;
+- `manifest.py` проверяет обязательные файлы, hashes, start/stop event boundaries и отсутствие раннего выхода.
 
-1. `capture.py` разрешает `--target-host` через DNS на N100 и строит BPF filter только по полученным N100 IP. Это может не совпасть с remote IP, фактически использованным Mac actor для Cloudflare/Workers endpoint, и создать ложный пустой capture.
-2. Скрипт использует фиксированный файл `witness.pcap` и принимает уже существующий `--capture-dir`; он не требует пустого каталога. Старый pcap может остаться в каталоге и загрязнить последующий результат, если новая запись не создала/не перезаписала файл корректно.
-3. Если `tcpdump` завершается сразу после запуска, скрипт не проверяет раннее завершение до истечения полного `--duration`, задерживая обнаружение отказа.
+Контрактные тесты проверяют filter provenance, literal IP validation, fail-closed поведение каталога и manifest. Они не являются физическим packet-witness evidence. Физическое подтверждение появляется только после реального capture на N100 и корреляции с Mac-side trace.
 
-Текущий `test_witness.py` проверяет только SHA-256 helper; перечисленные инварианты не покрыты тестами. Это не отменяет уже определённую topology gate, но **не позволяет считать результат `capture.py` admissible physical evidence до исправления и проверки этих дефектов**.
-
-Для ближайшего topology-visibility preflight используй ручную команду из раздела 2 с фактическими `<MAC_IP>` и `<AUTHORITY_IP>`, установленными по Mac-side trace. Сначала докажи, что N100 видит именно известный Mac → authority flow; не интерпретируй пустой capture как packet loss. Перед первой faulted run capture harness должен быть исправлен, покрыт соответствующими проверками и запущен из нового пустого каталога.
-
+Перед full capture сначала выполнить ручной visibility preflight из раздела 2. Не запускай fault injection, пока не получено `WITNESS_VISIBILITY = VERIFIED_BOUNDED`.
 
 ## На N100
 
@@ -31,13 +32,21 @@
     sudo mkdir -p /var/tmp/p347-n100-witness
     sudo chmod 700 /var/tmp/p347-n100-witness
 
-Запуск, заменив <INTERFACE> и <AUTHORITY_HOST> реальными значениями:
+После успешного visibility preflight, из корня точного checkout `ci-probe`, создай новый пустой каталог для каждой попытки:
 
-    sudo python3 p347/n100-witness/capture.py --interface <INTERFACE> --capture-dir /var/tmp/p347-n100-witness --target-host <AUTHORITY_HOST> --target-port 443 --duration 600
+    RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
+    CAPTURE_DIR="/var/tmp/p347-n100-witness/${RUN_ID}"
+    sudo mkdir -m 700 -p "$CAPTURE_DIR"
+
+Запуск, используя `MAC_IP` и `AUTHORITY_IP`, установленные из Mac-side trace, и фактический интерфейс N100:
+
+    sudo python3 p347/n100-witness/capture.py --interface "$INTERFACE" --capture-dir "$CAPTURE_DIR" --target-host "$AUTHORITY_HOST" --actor-ip "$MAC_IP" --target-ip "$AUTHORITY_IP" --target-port 443 --duration 600
+
+Если Mac-side trace показывает несколько фактических remote IP, повтори `--target-ip <IP>` для каждого IP. Не подставляй DNS-ответ, полученный на N100, вместо адреса, наблюдавшегося на Mac.
 
 После capture:
 
-    sudo python3 p347/n100-witness/manifest.py /var/tmp/p347-n100-witness
+    sudo python3 p347/n100-witness/manifest.py "$CAPTURE_DIR"
 
 Сначала сохраняется полный raw directory, только потом проводится анализ.
 
@@ -71,9 +80,13 @@ Apple прямо отмечает, что promiscuous capture на отдель�
 
 Затем, после того как известны <MAC_IP> и <AUTHORITY_IP>, выполнить:
 
-    sudo tcpdump -i <INTERFACE> -nn -c 20 'host <MAC_IP> and host <AUTHORITY_IP> and tcp port 443'
+    sudo timeout --signal=INT 30s tcpdump -i <INTERFACE> -nn -s 0 'host <MAC_IP> and host <AUTHORITY_IP> and tcp port 443'
 
-Параллельно на Mac выполнить несколько безопасных baseline HTTPS requests к external authority и сохранить Mac-side trace.
+Параллельно на Mac выполнить три baseline HTTPS requests к тому же authority URL и сохранить каждый фактический `remote_ip`:
+
+    for i in 1 2 3; do curl --http1.1 --connect-timeout 10 --max-time 20 -sS -o /dev/null -w "remote_ip=%{remote_ip} remote_port=%{remote_port} http_code=%{http_code}\n" "${P347_EXTERNAL_AUTHORITY_URL}/v1/state"; done
+
+Выполняй это во время 30-секундного N100 capture. Если `timeout` вернул код 124, это только означает истечение окна; оцени вывод tcpdump и проверь, что пакеты известного Mac → authority flow действительно присутствуют. Нулевой capture означает `WITNESS_VISIBILITY = UNVERIFIED`, не packet loss.
 
 ### Admission rule
 
