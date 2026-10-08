@@ -84,11 +84,11 @@ import re, sys
 from pathlib import Path
 
 raw = Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace")
-matches = re.findall(r"https://[A-Za-z0-9.-]+\\.workers\\.dev", raw)
+matches = re.findall(r"https://[A-Za-z0-9.-]+\.workers\.dev", raw)
 if not matches:
     raise SystemExit("No workers.dev URL found; inspect the private raw deployment log")
 output = Path(sys.argv[2])
-output.write_text(matches[-1] + "\\n", encoding="utf-8")
+output.write_text(matches[-1] + "\n", encoding="utf-8")
 output.chmod(0o600)
 PY
 P347_EXTERNAL_AUTHORITY_URL="$(cat "$SECRET_DIR/authority-url")"
