@@ -3,6 +3,8 @@
   "name": "nz-genesis-p347-authority",
   "main": "src/worker.mjs",
   "compatibility_date": "2026-10-08",
+  "workers_dev": true,
+  "preview_urls": true,
   "durable_objects": {
     "bindings": [
       {
