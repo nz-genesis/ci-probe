@@ -40,3 +40,24 @@ jobs:
           name: p347-mac-execution-matrix-${{ github.sha }}
           path: p347-mac-execution-matrix.json
           if-no-files-found: error
+
+
+  differential-linux:
+    name: hosted Linux differential reference
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run identical differential contract
+        run: python3 probes/p347_differential_realization.py | tee differential-linux.txt
+      - name: Upload Linux differential evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: p347-differential-linux-${{ github.sha }}
+          path: differential-linux.txt
