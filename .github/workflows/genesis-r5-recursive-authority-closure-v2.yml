@@ -1,7 +1,9 @@
 name: Genesis R5 Recursive Authority Closure Pass 2
 on:
   push:
-    branches: [research/r5-recursive-authority-closure-v2]
+    branches:
+      - main
+      - research/r5-recursive-authority-closure-v2
   pull_request:
     branches: [main]
     paths:
