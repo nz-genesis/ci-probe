@@ -1,0 +1,24 @@
+name: Genesis Full vs Minimal Architecture Plan
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "probes/genesis-full-vs-minimal-architecture-plan/**"
+      - ".github/workflows/research-genesis-full-vs-minimal-architecture-plan.yml"
+  pull_request:
+    paths:
+      - "probes/genesis-full-vs-minimal-architecture-plan/**"
+      - ".github/workflows/research-genesis-full-vs-minimal-architecture-plan.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  architecture-plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute bounded architecture verifier
+        run: python3 probes/genesis-full-vs-minimal-architecture-plan/verifier.py
