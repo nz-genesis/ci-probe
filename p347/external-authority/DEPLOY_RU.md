@@ -1,5 +1,14 @@
 # P347 external authority — deployment contract
 
+## Current verified toolchain — 2026-10-09
+
+For this bounded P347 experiment, Wrangler `4.149.0` is the verified release baseline. The official release was published at `2026-10-08T18:33:04Z`, and v9 run `37847810217` executed on that version with readiness PASS and seven semantic cases PASS. Release record: https://github.com/cloudflare/workers-sdk/releases/tag/wrangler%404.149.0
+
+Do not treat `4.148.0` as current for this research pass: it was used by later v10-v12 runs after `4.149.0` had already been published. Those failures remain run-specific negative genealogy; they do not invalidate the v9 receipt or prove a universal version defect.
+
+Because `wrangler deploy --temporary` creates a time-limited external account (the claim window is 60 minutes), a physical N100 witness run must use a freshly deployed live authority and be coordinated within its live window. Do not reuse the URL from an expired historical artifact. The current-tool semantic discriminator need not be repeated merely to refresh the URL; record exact source/version, readiness and the new deployment identity.
+
+
 ## Цель
 
 Развернуть authority **вне GitHub** с exact source provenance и без помещения admin credential в repository.
@@ -8,7 +17,7 @@
 
 ## Требования
 
-- Wrangler 4.102.0+;
+- Wrangler `4.149.0` for the current verified experiment; re-run the Freshness Gate before changing the pin.
 - Cloudflare Worker + SQLite-backed Durable Object;
 - P347_ADMIN_TOKEN и P347_EFFECT_TOKEN хранятся только как Worker secrets;
 - source version передаётся через --var P347_SOURCE_VERSION:<exact-commit>;
