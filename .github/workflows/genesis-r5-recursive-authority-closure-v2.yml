@@ -1,0 +1,18 @@
+name: Genesis R5 Recursive Authority Closure Pass 2
+on:
+  push:
+    branches:
+      - main
+      - research/r5-recursive-authority-closure-v2
+  pull_request:
+    branches: [main]
+    paths:
+      - r5-recursive-authority-closure-v2/**
+      - .github/workflows/genesis-r5-recursive-authority-closure-v2.yml
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run exhaustive R5 verifier
+        run: python3 r5-recursive-authority-closure-v2/verify.py
