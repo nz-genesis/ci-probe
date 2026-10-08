@@ -48,6 +48,10 @@ jobs:
           set -euo pipefail
           actual="$(git rev-parse HEAD)"
           test "$actual" = "$GITHUB_SHA"
+      - name: Run external authority contract tests
+        working-directory: p347/external-authority
+        run: npm test
+
       - name: Verify current Wrangler deployment contract
         run: npx --yes wrangler@4.149.0 --version
       - name: Validate Wrangler configuration without deployment
