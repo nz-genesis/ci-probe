@@ -1,0 +1,25 @@
+name: IR-V3 Blind Bundle Validator
+
+on:
+  pull_request:
+    paths:
+      - "independent-replication/verify_blind_bundle.py"
+      - "independent-replication/test_verify_blind_bundle.py"
+      - "independent-replication/challenge-v3.json"
+      - ".github/workflows/ir-v3-bundle-validator.yml"
+  push:
+    branches:
+      - "research/ir-v3-bundle-admission-validator-v0"
+    paths:
+      - "independent-replication/verify_blind_bundle.py"
+      - "independent-replication/test_verify_blind_bundle.py"
+      - "independent-replication/challenge-v3.json"
+      - ".github/workflows/ir-v3-bundle-validator.yml"
+
+jobs:
+  validator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run IR-V3 bundle validator regression tests
+        run: python3 independent-replication/test_verify_blind_bundle.py
