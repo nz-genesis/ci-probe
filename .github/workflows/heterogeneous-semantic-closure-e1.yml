@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'heterogeneous_semantic_closure_e1_redesigned.py'
+      - 'e1-multiroot-rotation-conflict-v1/verify.py'
       - '.github/workflows/heterogeneous-semantic-closure-e1.yml'
   workflow_dispatch:
 
@@ -15,3 +16,5 @@ jobs:
         uses: actions/checkout@v4
       - name: Run E1 bounded closure probe
         run: python3 heterogeneous_semantic_closure_e1_redesigned.py
+      - name: Run E1 multi-root rotation/conflict probe
+        run: python3 e1-multiroot-rotation-conflict-v1/verify.py
