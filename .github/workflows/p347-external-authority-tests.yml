@@ -1,4 +1,4 @@
-name: P347 External Authority Tests # trigger current-tool execution v12
+name: P347 External Authority Tests # trigger current-tool execution v12 / post-merge
 
 on:
   push:
