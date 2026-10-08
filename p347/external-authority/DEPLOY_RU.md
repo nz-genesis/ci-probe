@@ -10,7 +10,7 @@
 
 - Wrangler 4.102.0+;
 - Cloudflare Worker + SQLite-backed Durable Object;
-- P347_ADMIN_TOKEN хранится только как Worker secret;
+- P347_ADMIN_TOKEN и P347_EFFECT_TOKEN хранятся только как Worker secrets;
 - source version передаётся через --var P347_SOURCE_VERSION:<exact-commit>;
 - deployment URL фиксируется в experiment evidence;
 - после deployment сначала выполняются только smoke/contract checks;
@@ -39,6 +39,7 @@ Admin token создаётся отдельно и **никогда не зап�
 
 ~~~
 npx wrangler secret put P347_ADMIN_TOKEN
+npx wrangler secret put P347_EFFECT_TOKEN
 ~~~
 
 После этого проверить mutation через HTTPS. Не помещать Bearer token в shell history или evidence:
