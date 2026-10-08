@@ -27,80 +27,100 @@ Because `wrangler deploy --temporary` creates a time-limited external account (t
 
 ## Deployment — reproducible temporary authority
 
-The source checkout used for the authority must be exact. For the current bounded baseline, use the v9 source SHA that passed the seven-case discriminator:
+Keep one terminal session open while running these blocks so the local variables remain available. The authority source checkout must be exact. For the current bounded baseline, use the v9 source SHA that passed the seven-case discriminator.
 
-    git clone https://github.com/nz-genesis/ci-probe.git "$HOME/ci-probe-p347-authority"
-    cd "$HOME/ci-probe-p347-authority"
-    git checkout e63c138ffe833f028a6942c82704c2303d1313c1
-    git rev-parse HEAD
+~~~bash
+git clone https://github.com/nz-genesis/ci-probe.git "$HOME/ci-probe-p347-authority"
+cd "$HOME/ci-probe-p347-authority"
+git checkout e63c138ffe833f028a6942c82704c2303d1313c1
+SOURCE_SHA="$(git rev-parse HEAD)"
+test "$SOURCE_SHA" = "e63c138ffe833f028a6942c82704c2303d1313c1"
+printf 'SOURCE_SHA=%s\n' "$SOURCE_SHA"
+~~~
 
-The last command must print exactly `e63c138ffe833f028a6942c82704c2303d1313c1`.
+Create private secret storage outside the repository. This generates random tokens locally; the values are not printed and the files are not placed in Git.
 
-Create private secret storage outside the repository. These commands generate random tokens locally; they do not print them or put them in Git:
+~~~bash
+umask 077
+SECRET_DIR="$HOME/.local/share/p347-authority"
+mkdir -p "$SECRET_DIR"
+chmod 700 "$SECRET_DIR"
+python3 - "$SECRET_DIR" <<'PY'
+import json, secrets, sys
+from pathlib import Path
 
-    umask 077
-    SECRET_DIR="$HOME/.local/share/p347-authority"
-    mkdir -p "$SECRET_DIR"
-    chmod 700 "$SECRET_DIR"
-    python3 - "$SECRET_DIR" <<'PY'
-    import json, secrets, sys
-    from pathlib import Path
-    root = Path(sys.argv[1])
-    admin = secrets.token_urlsafe(32)
-    effect = secrets.token_urlsafe(32)
-    (root / "secrets.json").write_text(json.dumps({
-        "P347_ADMIN_TOKEN": admin,
-        "P347_EFFECT_TOKEN": effect
-    }), encoding="utf-8")
-    (root / "admin-token").write_text(admin, encoding="utf-8")
-    (root / "effect-token").write_text(effect, encoding="utf-8")
-    for name in ("secrets.json", "admin-token", "effect-token"):
-        (root / name).chmod(0o600)
-    PY
+root = Path(sys.argv[1])
+admin = secrets.token_urlsafe(32)
+effect = secrets.token_urlsafe(32)
+(root / "secrets.json").write_text(json.dumps({
+    "P347_ADMIN_TOKEN": admin,
+    "P347_EFFECT_TOKEN": effect
+}), encoding="utf-8")
+(root / "admin-token").write_text(admin, encoding="utf-8")
+(root / "effect-token").write_text(effect, encoding="utf-8")
+for name in ("secrets.json", "admin-token", "effect-token"):
+    (root / name).chmod(0o600)
+PY
+~~~
 
-Deploy from the exact source checkout. Pin Wrangler; do not use an unversioned `npx wrangler` command:
+Deploy from the exact source checkout. Do not use an unpinned `npx wrangler` command.
 
-    SOURCE_SHA="$(git rev-parse HEAD)"
-    cd p347/external-authority
-    npx --yes wrangler@4.149.0 --version
-    npx --yes wrangler@4.149.0 deploy --dry-run --strict
-    npx --yes wrangler@4.149.0 deploy --temporary --strict --secrets-file "$SECRET_DIR/secrets.json" --var "P347_SOURCE_VERSION:$SOURCE_SHA" > "$SECRET_DIR/deployment.raw.txt" 2>&1
+~~~bash
+set -euo pipefail
+npx --yes wrangler@4.149.0 --version
+cd p347/external-authority
+npx --yes wrangler@4.149.0 deploy --dry-run --strict
+npx --yes wrangler@4.149.0 deploy --temporary --strict \
+  --secrets-file "$SECRET_DIR/secrets.json" \
+  --var "P347_SOURCE_VERSION:$SOURCE_SHA" \
+  > "$SECRET_DIR/deployment.raw.txt" 2>&1
+~~~
 
 `deployment.raw.txt` contains a temporary-account claim URL and must stay inside the private directory; never commit or share it. Extract the Worker URL locally:
 
-    python3 - "$SECRET_DIR/deployment.raw.txt" "$SECRET_DIR/authority-url" <<'PY'
-    import re, sys
-    from pathlib import Path
-    raw = Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace")
-    matches = re.findall(r"https://[A-Za-z0-9.-]+\\.workers\\.dev", raw)
-    if not matches:
-        raise SystemExit("No workers.dev URL found; inspect the private raw deployment log")
-    Path(sys.argv[2]).write_text(matches[-1] + "\\n", encoding="utf-8")
-    Path(sys.argv[2]).chmod(0o600)
-    PY
+~~~bash
+python3 - "$SECRET_DIR/deployment.raw.txt" "$SECRET_DIR/authority-url" <<'PY'
+import re, sys
+from pathlib import Path
 
-Verify read-only readiness and exact source provenance:
+raw = Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace")
+matches = re.findall(r"https://[A-Za-z0-9.-]+\\.workers\\.dev", raw)
+if not matches:
+    raise SystemExit("No workers.dev URL found; inspect the private raw deployment log")
+output = Path(sys.argv[2])
+output.write_text(matches[-1] + "\\n", encoding="utf-8")
+output.chmod(0o600)
+PY
+P347_EXTERNAL_AUTHORITY_URL="$(cat "$SECRET_DIR/authority-url")"
+printf 'P347_EXTERNAL_AUTHORITY_URL=%s\n' "$P347_EXTERNAL_AUTHORITY_URL"
+~~~
 
-    P347_EXTERNAL_AUTHORITY_URL="$(cat "$SECRET_DIR/authority-url")"
-    curl --fail-with-body --connect-timeout 10 --max-time 20 -sS "$P347_EXTERNAL_AUTHORITY_URL/v1/state" | tee "$SECRET_DIR/state-before.json"
-    python3 - "$SECRET_DIR/state-before.json" <<'PY'
-    import json, sys
-    from pathlib import Path
-    state = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-    expected = "e63c138ffe833f028a6942c82704c2303d1313c1"
-    assert state.get("source_version") == expected, state
-    assert state.get("generation") == 1, state
-    assert state.get("effect_count") == 0, state
-    print("P347_READINESS_AND_SOURCE_PROVENANCE=PASS")
-    PY
+Verify read-only readiness and exact source provenance. This must not mutate authority state.
 
-After successful deployment and source verification, remove only the redundant secret bundle; retain the two mode-0600 token files for the planned physical experiment:
+~~~bash
+set -euo pipefail
+curl --fail-with-body --connect-timeout 10 --max-time 20 -sS \
+  "$P347_EXTERNAL_AUTHORITY_URL/v1/state" \
+  | tee "$SECRET_DIR/state-before.json"
+python3 - "$SECRET_DIR/state-before.json" <<'PY'
+import json, sys
+from pathlib import Path
 
-    rm -f "$SECRET_DIR/secrets.json"
+state = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+expected = "e63c138ffe833f028a6942c82704c2303d1313c1"
+assert state.get("source_version") == expected, state
+assert state.get("generation") == 1, state
+assert state.get("effect_count") == 0, state
+print("P347_READINESS_AND_SOURCE_PROVENANCE=PASS")
+PY
+rm -f "$SECRET_DIR/secrets.json"
+~~~
 
-**Do not call `/v1/admin/mutate` or `/v1/effects` during deployment smoke checks.** The physical test needs a fresh baseline with generation 1 and effect count 0. Mutation/effect calls are allowed only after the N100 capture and Mac application trace are running and the physical experiment has reached its planned step.
+Retain `admin-token` and `effect-token` with mode `0600` for the planned physical experiment. Never paste their contents into a command, chat, Git, or evidence log.
 
-The temporary account is time-limited (claim window 60 minutes). Coordinate the N100 visibility preflight within that window. Do not reuse the URL from an expired historical artifact. Keep the deployment URL, source SHA, Worker version ID, readiness response and timestamps in private experiment evidence; redact the claim URL and credentials from any shareable copy.
+**Do not call `/v1/admin/mutate` or `/v1/effects` during deployment smoke checks.** The physical test needs a fresh baseline with generation 1 and effect count 0. Mutation/effect calls are allowed only after the N100 capture and Mac application trace are running and the experiment reaches its planned step.
+
+The temporary account is time-limited (claim window 60 minutes). Coordinate the N100 visibility preflight within that window. Do not reuse a URL from an expired historical artifact. Keep the deployment URL, source SHA, Worker version ID, readiness response and timestamps in private experiment evidence; redact the claim URL and credentials from any shareable copy.
 
 ## Evidence boundary
 
