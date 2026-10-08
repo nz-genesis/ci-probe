@@ -115,6 +115,19 @@ def run_tuf():
     root7_md.sign(new_root_signer,append=True)
     root7=root7_md.to_bytes(JSONSerializer())
 
+    # Bind a real receipt signer to the post-rotation TUF trust root. This is
+    # deliberately separate from the OpenSSL receipt test: it proves that a
+    # receipt signed by the recovered root key is actually admitted by the
+    # rotated root trust state, rather than merely by an unrelated policy list.
+    recovered_receipt = (
+        b'{"claim":"genesis-receipt","event":"effect","signed_at":400,'
+        b'"signer_keyid":"' + new_root_signer.public_key.keyid.encode() + b'"}\\n'
+    )
+    recovered_signature = new_root_signer.sign(recovered_receipt)
+    new_root_signer.public_key.verify_signature(recovered_signature,recovered_receipt)
+    assert recovered_signature.keyid in root7_md.signed.roles["root"].keyids
+    print("tuf_recovered_receipt_bound_to_rotated_root=PASS")
+
     # A compromised old root must not be able to create a post-rotation root.
     malicious_root7_md=Metadata.from_bytes(root6)
     malicious_root7_md.signed.version=7
