@@ -128,6 +128,15 @@ def run_tuf():
     assert recovered_signature.keyid in root7_md.signed.roles["root"].keyids
     print("tuf_recovered_receipt_bound_to_rotated_root=PASS")
 
+    old_receipt = (
+        b'{"claim":"genesis-receipt","event":"effect","signed_at":300,'
+        b'"signer_keyid":"' + old_ss["root"].public_key.keyid.encode() + b'"}\\n'
+    )
+    old_receipt_signature = old_ss["root"].sign(old_receipt)
+    old_ss["root"].public_key.verify_signature(old_receipt_signature,old_receipt)
+    assert old_receipt_signature.keyid not in root7_md.signed.roles["root"].keyids
+    print("tuf_old_receipt_post_rotation_inadmissible=PASS")
+
     # A compromised old root must not be able to create a post-rotation root.
     malicious_root7_md=Metadata.from_bytes(root6)
     malicious_root7_md.signed.version=7
