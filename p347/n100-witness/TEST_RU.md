@@ -184,7 +184,7 @@ Mac-side PF может использоваться как experimental fault me
 1. baseline без fault;
 2. verify N100 visibility;
 3. start N100 raw capture;
-4. start Mac application trace;
+4. start the tested Mac actor/application trace and record the actual remote IP;
 5. establish correlation ID;
 6. initiate one consequential effect;
 7. activate a narrowly scoped, reversible response-drop window;
@@ -203,11 +203,14 @@ Mac-side PF может использоваться как experimental fault me
 До первой faulted run должны существовать одновременно:
 
 - N100 topology-visibility evidence;
-- Mac baseline application trace;
+- dedicated Mac actor script, tested against the real external authority and emitting the correlated application trace;
+- Mac baseline application trace with actual local/remote IPs;
 - N100 raw pcap;
 - witness manifest;
 - authority-side trace;
 - exact source/version identity;
 - synchronized wall/monotonic timing.
+
+**Mac actor implementation gap:** текущий repository tree не содержит dedicated P347 actor, который выполняет consequential effect, сохраняет timeout как `UNKNOWN`, затем делает fresh observation, same-key retry и conflict check. Существующая Mac execution matrix проверяет host identity/capabilities, но не заменяет этот actor. Read-only `curl /v1/state` достаточен только для topology-visibility preflight; он не разрешает faulted physical run. Сначала implement and test actor through the public CI probe, then use it against the fresh temporary authority.
 
 Если хотя бы один обязательный поток отсутствует, faulted run остаётся APPARATUS-ONLY / NOT ADMITTED.
