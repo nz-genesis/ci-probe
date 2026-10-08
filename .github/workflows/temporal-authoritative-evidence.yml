@@ -5,6 +5,7 @@ on:
     paths:
       - 'temporal_authoritative_evidence.py'
       - 'r5-recursive-authority-closure-v2/verify.py'
+      - 'r5-independent-reconstruction-v1/verify.py'
       - '.github/workflows/temporal-authoritative-evidence.yml'
   workflow_dispatch:
 
@@ -17,3 +18,5 @@ jobs:
         run: python3 temporal_authoritative_evidence.py
       - name: Execute Genesis R5 Pass 2 exhaustive probe
         run: python3 r5-recursive-authority-closure-v2/verify.py
+      - name: Execute Genesis R5 independent neutral reconstruction
+        run: python3 r5-independent-reconstruction-v1/verify.py
