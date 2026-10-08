@@ -77,10 +77,10 @@ export class P347Authority extends DurableObject {
     if (!fingerprint) return { status: 400, body: { error: "missing_request_fingerprint" } };
 
     const existing = effectId
-      ? this.ctx.storage.sql.exec(
+      ? (this.ctx.storage.sql.exec(
           "SELECT effect_id, fingerprint, generation, effect_digest FROM effects WHERE effect_id = ?",
           effectId
-        ).one()
+        ).toArray()[0] ?? null)
       : null;
 
     const decision = classifyEffect({

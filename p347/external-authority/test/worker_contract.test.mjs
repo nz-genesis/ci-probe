@@ -24,3 +24,11 @@ test("generation mutation path has no async interleaving gap", () => {
   assert.equal(body.includes("await "), false);
   assert.ok(body.includes("UPDATE meta SET value"));
 });
+
+
+test("effect lookup tolerates absent idempotency record", () => {
+  const body = methodBody("effect");
+  assert.match(body, /SELECT effect_id, fingerprint, generation, effect_digest FROM effects WHERE effect_id = \?/);
+  assert.match(body, /toArray\(\)\[0\] \?\? null/);
+  assert.doesNotMatch(body, /SELECT effect_id, fingerprint, generation, effect_digest FROM effects WHERE effect_id = \?[\s\S]*?\.one\(\)/);
+});
