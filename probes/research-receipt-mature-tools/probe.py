@@ -135,7 +135,7 @@ def run_tuf():
         print("tuf_root_rotation=PASS")
         print("tuf_post_rotation_old_root_rejected=PASS")
 
-        u2=Updater(str(md/"forward"),"https://probe.invalid/metadata/",str(tg/"forward"),"https://probe.invalid/targets/",F({6:root6,7:root7},b,V2),bootstrap=bootstrap_root)
+        u2=Updater(str(md),"https://probe.invalid/metadata/",str(tg),"https://probe.invalid/targets/",F({6:root6,7:root7},b,V2),bootstrap=bootstrap_root)
         u2.refresh()
         print("tuf_forward=PASS")
 
