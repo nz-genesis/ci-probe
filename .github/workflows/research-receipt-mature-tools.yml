@@ -1,6 +1,7 @@
 name: Mature Receipt Tool Probe
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -33,8 +34,12 @@ jobs:
           .venv/bin/python -c "import importlib.metadata as m; assert m.version('in-toto')=='3.1.0'; assert m.version('tuf')=='7.0.1'; assert m.version('sigstore')=='4.5.0'"
       - name: Execute bounded compromise recovery probe
         run: echo "GENESIS_ASSURANCE_PASS=${GENESIS_ASSURANCE_PASS}"
-      - name: Execute in-toto and TUF probe
-        run: .venv/bin/python probes/research-receipt-mature-tools/probe.py
+      - name: Prepare execution receipt
+        run: mkdir -p artifacts && { date -u +%Y-%m-%dT%H:%M:%SZ; git rev-parse HEAD; .venv/bin/python --version; .venv/bin/pip show in-toto tuf sigstore; } | tee artifacts/environment.txt
+      - name: Execute in-toto and compromise recovery probe
+        run: |
+          set -o pipefail
+          .venv/bin/python probes/research-receipt-mature-tools/probe.py | tee artifacts/probe.log
       - name: Create common receipt
         run: printf '%s\n' '{"claim":"mature-tool-receipt","source":"system-A","version":"1","scope":"bounded"}' > receipt.json
       - name: Sign with Sigstore keyless OIDC
@@ -68,3 +73,11 @@ jobs:
           assert b.get("verificationMaterial",{}).get("tlogEntries")
           print("sigstore_transparency=PASS")
           PY
+
+      - name: Upload execution receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mature-receipt-assurance-${{ github.run_id }}
+          path: artifacts/
+          if-no-files-found: warn
