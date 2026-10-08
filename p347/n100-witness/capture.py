@@ -35,16 +35,22 @@ def main():
     if tcpdump is None: raise RuntimeError("tcpdump is required")
     host_filter=" or ".join(f"host {ip}" for ip in ips)
     cmd=[tcpdump,"-i",a.interface,"-nn","-s","0","-w",str(pcap),f"({host_filter})","and",f"port {a.target_port}"]
-    proc=subprocess.Popen(cmd,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,text=True)
+    stderr_path=out/"tcpdump-stderr.txt"
+    stderr_file=stderr_path.open("w",encoding="utf-8")
+    proc=subprocess.Popen(cmd,stdout=subprocess.DEVNULL,stderr=stderr_file,text=True)
     try: time.sleep(a.duration)
     finally:
         proc.send_signal(signal.SIGINT)
         try: proc.wait(timeout=10)
         except subprocess.TimeoutExpired: proc.kill(); proc.wait(timeout=5)
+        finally: stderr_file.close()
     append_event(events,"capture_stop",returncode=proc.returncode)
-    if not pcap.exists(): raise RuntimeError("tcpdump produced no pcap")
+    if proc.returncode not in (0, 130):
+        raise RuntimeError(f"tcpdump failed with return code {proc.returncode}; see {stderr_path}")
+    if not pcap.exists() or pcap.stat().st_size < 24:
+        raise RuntimeError("tcpdump produced no valid pcap")
     meta.write_text(json.dumps({"schema":"p347-n100-witness-v1","host":socket.gethostname(),
         "interface":a.interface,"target_host":a.target_host,"target_port":a.target_port,
-        "target_ips":ips,"pcap_sha256":sha256(pcap),"events_sha256":sha256(events)},indent=2,sort_keys=True)+"\n")
+        "target_ips":ips,"tcpdump_filter":"host("+" or ".join(ips)+f") and port {a.target_port}","pcap_sha256":sha256(pcap),"events_sha256":sha256(events),"tcpdump_stderr_sha256":sha256(stderr_path)},indent=2,sort_keys=True)+"\n")
     print(f"pcap={pcap}\npcap_sha256={sha256(pcap)}\nevents_sha256={sha256(events)}")
 if __name__=="__main__": raise SystemExit(main())
