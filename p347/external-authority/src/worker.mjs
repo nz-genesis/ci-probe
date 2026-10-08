@@ -157,6 +157,10 @@ export class P347Authority extends DurableObject {
     }
 
     if (request.method === "POST" && url.pathname === "/v1/effects") {
+      const token = request.headers.get("Authorization");
+      if (!this.env.P347_EFFECT_TOKEN || token !== `Bearer ${this.env.P347_EFFECT_TOKEN}`) {
+        return json({ error: "forbidden" }, 403);
+      }
       try {
         const body = await textBody(request);
         const result = await this.effect(body, request.headers);
