@@ -14,7 +14,6 @@ on:
 permissions:
   contents: read
 
-
 jobs:
   authority-contract:
     name: external authority contract
@@ -24,7 +23,7 @@ jobs:
       - name: Checkout exact triggering commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 1
       - name: Verify exact checkout
         run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
@@ -32,17 +31,16 @@ jobs:
         working-directory: p347/external-authority
         run: npm test
 
-
   external-authority-execution:
     name: real external authority execution
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && ((github.event_name == 'push' && github.ref == 'refs/heads/research/p347-external-authority-execution-v2') || (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'research/p347-external-authority-execution-v2' && github.event.pull_request.head.repo.full_name == 'nz-genesis/ci-probe')) }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && ((github.event_name == 'push' && github.ref == 'refs/heads/research/p347-external-authority-execution-v2') || (github.event_name == 'pull_request' && github.pull_request.head.ref == 'research/p347-external-authority-execution-v2' && github.event.pull_request.head.repo.full_name == 'nz-genesis/ci-probe')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout exact triggering commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
       - name: Verify exact checkout
         run: |
@@ -60,11 +58,8 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           import json, secrets
-          with open(".p347-secrets.json","w",encoding="utf-8") as f:
-              json.dump({
-                  "P347_ADMIN_TOKEN": secrets.token_hex(32),
-                  "P347_EFFECT_TOKEN": secrets.token_hex(32),
-              }, f)
+          with open('.p347-secrets.json','w',encoding='utf-8') as f:
+              json.dump({'P347_ADMIN_TOKEN': secrets.token_hex(32), 'P347_EFFECT_TOKEN': secrets.token_hex(32)}, f)
           PY
           chmod 600 .p347-secrets.json
           source_version="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
@@ -75,22 +70,22 @@ jobs:
           python3 - <<'PY'
           import re
           from pathlib import Path
-          raw=Path("deployment.raw.txt").read_text(errors="replace")
-          safe=re.sub(r"https://dash\\.cloudflare\\.com/claim-preview\\?claimToken=[^\\s]+", "https://dash.cloudflare.com/claim-preview?claimToken=[REDACTED]", raw)
-          safe=re.sub(r"(?i)(P347_ADMIN_TOKEN|P347_EFFECT_TOKEN)[=:][^\\s]+", r"\\1=[REDACTED]", safe)
-          Path("deployment-diagnostic.txt").write_text(safe,encoding="utf-8")
+          raw=Path('deployment.raw.txt').read_text(errors='replace')
+          safe=re.sub(r'https://dash\.cloudflare\.com/claim-preview\?claimToken=[^\s]+', 'https://dash.cloudflare.com/claim-preview?claimToken=[REDACTED]', raw)
+          safe=re.sub(r'(?i)(P347_ADMIN_TOKEN|P347_EFFECT_TOKEN)[=:][^\s]+', r'\1=[REDACTED]', safe)
+          Path('deployment-diagnostic.txt').write_text(safe,encoding='utf-8')
           print(safe[-12000:])
           PY
           test "$deploy_rc" -eq 0
-          grep -Eo "https://[A-Za-z0-9._-]+\\.workers\\.dev" deployment.raw.txt | tail -1 > authority_url.txt
+          grep -Eo 'https://[A-Za-z0-9._-]+\.workers\.dev' deployment.raw.txt | tail -1 > authority_url.txt
           test -s authority_url.txt
           python3 - <<'PY'
           import json
           from pathlib import Path
-          data=json.loads(Path(".p347-secrets.json").read_text())
-          Path("admin_token.tmp").write_text(data["P347_ADMIN_TOKEN"])
-          Path("effect_token.tmp").write_text(data["P347_EFFECT_TOKEN"])
-          Path(".p347-secrets.json").unlink()
+          data=json.loads(Path('.p347-secrets.json').read_text())
+          Path('admin_token.tmp').write_text(data['P347_ADMIN_TOKEN'])
+          Path('effect_token.tmp').write_text(data['P347_EFFECT_TOKEN'])
+          Path('.p347-secrets.json').unlink()
           PY
           chmod 600 admin_token.tmp effect_token.tmp
       - name: Execute real external authority discriminator
@@ -99,41 +94,41 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json, os
+          import json
           from datetime import datetime, timezone
           from pathlib import Path
           from urllib.request import Request, urlopen
           from urllib.error import HTTPError
           base=Path.cwd()
-          url=base.joinpath("authority_url.txt").read_text().strip()
-          admin=base.joinpath("admin_token.tmp").read_text().strip()
-          effect=base.joinpath("effect_token.tmp").read_text().strip()
-          source="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          url=base.joinpath('authority_url.txt').read_text().strip()
+          admin=base.joinpath('admin_token.tmp').read_text().strip()
+          effect=base.joinpath('effect_token.tmp').read_text().strip()
+          source='${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}'
           def call(method,path,token=None,body=None,extra=None):
-              headers={"accept":"application/json"}
-              if token: headers["authorization"]="Bearer "+token
-              if body is not None: headers["content-type"]="application/json"
+              headers={'accept':'application/json'}
+              if token: headers['authorization']='Bearer '+token
+              if body is not None: headers['content-type']='application/json'
               if extra: headers.update(extra)
               req=Request(url+path,method=method,headers=headers,data=None if body is None else json.dumps(body).encode())
               try:
                   with urlopen(req,timeout=30) as r: return r.status,json.loads(r.read().decode())
               except HTTPError as e: return e.code,json.loads(e.read().decode())
-          evidence={"probe":"P347_EXTERNAL_AUTHORITY_REAL_EXECUTION_V1","observed_at":datetime.now(timezone.utc).isoformat(),"source_version":source,"authority_url":url,"cases":[]}
-          s,b=call("GET","/v1/state"); evidence["cases"].append({"name":"fresh_state","status":s,"body":b}); assert s==200 and b["generation"]==1
-          s,b=call("POST","/v1/admin/mutate",admin,body={}); evidence["cases"].append({"name":"authority_mutation","status":s,"body":b}); assert s==200 and b["generation"]==2
-          h={"Idempotency-Key":"p347-real-e1","X-Request-Fingerprint":"fingerprint-1"}
-          s,b=call("POST","/v1/effects",effect,{"generation":1,"payload":{"amount":1}},h); evidence["cases"].append({"name":"stale_generation_reject","status":s,"body":b}); assert s==409 and b["reason"]=="STALE_REJECT"
-          current={"generation":2,"payload":{"amount":1}}
-          s,b=call("POST","/v1/effects",effect,current,h); evidence["cases"].append({"name":"new_effect","status":s,"body":b}); assert s==201 and b["duplicate"] is False
-          eid=b["effect_id"]
-          s,b=call("POST","/v1/effects",effect,current,h); evidence["cases"].append({"name":"same_key_same_payload_retry","status":s,"body":b}); assert s==200 and b["duplicate"] is True and b["effect_id"]==eid
-          h2={"Idempotency-Key":"p347-real-e1","X-Request-Fingerprint":"fingerprint-2"}
-          s,b=call("POST","/v1/effects",effect,current,h2); evidence["cases"].append({"name":"same_key_different_payload_conflict","status":s,"body":b}); assert s==409 and b["reason"]=="CONFLICT"
-          s,b=call("GET","/v1/effects/"+eid); evidence["cases"].append({"name":"fresh_effect_reobservation","status":s,"body":b}); assert s==200 and b["effect_id"]==eid and b["outcome"]=="OBSERVED_SUCCESS"
-          evidence["result"]="PASS"
-          Path("p347-external-authority-evidence.json").write_text(json.dumps(evidence,indent=2,sort_keys=True)+"\n",encoding="utf-8")
-          print("P347_EXTERNAL_AUTHORITY_REAL_EXECUTION=PASS")
-          print("cases=7/7")
+          evidence={'probe':'P347_EXTERNAL_AUTHORITY_REAL_EXECUTION_V1','observed_at':datetime.now(timezone.utc).isoformat(),'source_version':source,'authority_url':url,'cases':[]}
+          s,b=call('GET','/v1/state'); evidence['cases'].append({'name':'fresh_state','status':s,'body':b}); assert s==200 and b['generation']==1
+          s,b=call('POST','/v1/admin/mutate',admin,body={}); evidence['cases'].append({'name':'authority_mutation','status':s,'body':b}); assert s==200 and b['generation']==2
+          h={'Idempotency-Key':'p347-real-e1','X-Request-Fingerprint':'fingerprint-1'}
+          s,b=call('POST','/v1/effects',effect,{'generation':1,'payload':{'amount':1}},h); evidence['cases'].append({'name':'stale_generation_reject','status':s,'body':b}); assert s==409 and b['reason']=='STALE_REJECT'
+          current={'generation':2,'payload':{'amount':1}}
+          s,b=call('POST','/v1/effects',effect,current,h); evidence['cases'].append({'name':'new_effect','status':s,'body':b}); assert s==201 and b['duplicate'] is False
+          eid=b['effect_id']
+          s,b=call('POST','/v1/effects',effect,current,h); evidence['cases'].append({'name':'same_key_same_payload_retry','status':s,'body':b}); assert s==200 and b['duplicate'] is True and b['effect_id']==eid
+          h2={'Idempotency-Key':'p347-real-e1','X-Request-Fingerprint':'fingerprint-2'}
+          s,b=call('POST','/v1/effects',effect,current,h2); evidence['cases'].append({'name':'same_key_different_payload_conflict','status':s,'body':b}); assert s==409 and b['reason']=='CONFLICT'
+          s,b=call('GET','/v1/effects/'+eid); evidence['cases'].append({'name':'fresh_effect_reobservation','status':s,'body':b}); assert s==200 and b['effect_id']==eid and b['outcome']=='OBSERVED_SUCCESS'
+          evidence['result']='PASS'
+          Path('p347-external-authority-evidence.json').write_text(json.dumps(evidence,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          print('P347_EXTERNAL_AUTHORITY_REAL_EXECUTION=PASS')
+          print('cases=7/7')
           PY
       - name: Remove local ephemeral credentials
         if: always()
@@ -147,151 +142,4 @@ jobs:
           path: |
             p347/external-authority/deployment-diagnostic.txt
             p347/external-authority/p347-external-authority-evidence.json
-          if-no-files-found: ignoreame: P347 External Authority Tests
-
-on:
-  push:
-    branches:
-      - research/p347-external-authority-v0
-      - research/p347-external-authority-execution-v2
-  workflow_dispatch:
-  pull_request:
-    branches:
-      - main
-    types: [opened, synchronize, reopened]
-
-permissions:
-  contents: read
-
-
-jobs:
-  authority-contract:
-    name: external authority contract
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-v0' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout exact triggering commit
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 1
-      - name: Verify exact checkout
-        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-      - name: Run deterministic authority contract tests
-        working-directory: p347/external-authority
-        run: npm test
-
-
-  external-authority-execution:
-    name: real external authority execution
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && ((github.event_name == 'push' && github.ref == 'refs/heads/research/p347-external-authority-execution-v2') || (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'research/p347-external-authority-execution-v2' && github.event.pull_request.head.repo.full_name == 'nz-genesis/ci-probe')) }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout exact triggering commit
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 1
-      - name: Verify exact checkout
-        run: |
-          set -euo pipefail
-          actual="$(git rev-parse HEAD)"
-          expected="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
-          test "$actual" = "$expected"
-          printf 'SOURCE_VERSION=%s\n' "$expected"
-      - name: Verify current Wrangler deployment contract
-        run: npx --yes wrangler@4.102.0 --version
-      - name: Deploy temporary external authority with one version
-        working-directory: p347/external-authority
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json, secrets
-          with open(".p347-secrets.json","w",encoding="utf-8") as f:
-              json.dump({
-                  "P347_ADMIN_TOKEN": secrets.token_hex(32),
-                  "P347_EFFECT_TOKEN": secrets.token_hex(32),
-              }, f)
-          PY
-          chmod 600 .p347-secrets.json
-          source_version="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
-          set +e
-          npx --yes wrangler@4.102.0 deploy --temporary --strict --secrets-file .p347-secrets.json --var "P347_SOURCE_VERSION:$source_version" > deployment.raw.txt 2>&1
-          deploy_rc=$?
-          set -e
-          python3 - <<'PY'
-          import re
-          from pathlib import Path
-          raw=Path("deployment.raw.txt").read_text(errors="replace")
-          safe=re.sub(r"https://dash\\.cloudflare\\.com/claim-preview\\?claimToken=[^\\s]+", "https://dash.cloudflare.com/claim-preview?claimToken=[REDACTED]", raw)
-          safe=re.sub(r"(?i)(P347_ADMIN_TOKEN|P347_EFFECT_TOKEN)[=:][^\\s]+", r"\\1=[REDACTED]", safe)
-          Path("deployment-diagnostic.txt").write_text(safe,encoding="utf-8")
-          print(safe[-12000:])
-          PY
-          test "$deploy_rc" -eq 0
-          grep -Eo "https://[A-Za-z0-9._-]+\\.workers\\.dev" deployment.raw.txt | tail -1 > authority_url.txt
-          test -s authority_url.txt
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          data=json.loads(Path(".p347-secrets.json").read_text())
-          Path("admin_token.tmp").write_text(data["P347_ADMIN_TOKEN"])
-          Path("effect_token.tmp").write_text(data["P347_EFFECT_TOKEN"])
-          Path(".p347-secrets.json").unlink()
-          PY
-          chmod 600 admin_token.tmp effect_token.tmp
-      - name: Execute real external authority discriminator
-        working-directory: p347/external-authority
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json, os
-          from datetime import datetime, timezone
-          from pathlib import Path
-          from urllib.request import Request, urlopen
-          from urllib.error import HTTPError
-          base=Path.cwd()
-          url=base.joinpath("authority_url.txt").read_text().strip()
-          admin=base.joinpath("admin_token.tmp").read_text().strip()
-          effect=base.joinpath("effect_token.tmp").read_text().strip()
-          source="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
-          def call(method,path,token=None,body=None,extra=None):
-              headers={"accept":"application/json"}
-              if token: headers["authorization"]="Bearer "+token
-              if body is not None: headers["content-type"]="application/json"
-              if extra: headers.update(extra)
-              req=Request(url+path,method=method,headers=headers,data=None if body is None else json.dumps(body).encode())
-              try:
-                  with urlopen(req,timeout=30) as r: return r.status,json.loads(r.read().decode())
-              except HTTPError as e: return e.code,json.loads(e.read().decode())
-          evidence={"probe":"P347_EXTERNAL_AUTHORITY_REAL_EXECUTION_V1","observed_at":datetime.now(timezone.utc).isoformat(),"source_version":source,"authority_url":url,"cases":[]}
-          s,b=call("GET","/v1/state"); evidence["cases"].append({"name":"fresh_state","status":s,"body":b}); assert s==200 and b["generation"]==1
-          s,b=call("POST","/v1/admin/mutate",admin,body={}); evidence["cases"].append({"name":"authority_mutation","status":s,"body":b}); assert s==200 and b["generation"]==2
-          h={"Idempotency-Key":"p347-real-e1","X-Request-Fingerprint":"fingerprint-1"}
-          s,b=call("POST","/v1/effects",effect,{"generation":1,"payload":{"amount":1}},h); evidence["cases"].append({"name":"stale_generation_reject","status":s,"body":b}); assert s==409 and b["reason"]=="STALE_REJECT"
-          current={"generation":2,"payload":{"amount":1}}
-          s,b=call("POST","/v1/effects",effect,current,h); evidence["cases"].append({"name":"new_effect","status":s,"body":b}); assert s==201 and b["duplicate"] is False
-          eid=b["effect_id"]
-          s,b=call("POST","/v1/effects",effect,current,h); evidence["cases"].append({"name":"same_key_same_payload_retry","status":s,"body":b}); assert s==200 and b["duplicate"] is True and b["effect_id"]==eid
-          h2={"Idempotency-Key":"p347-real-e1","X-Request-Fingerprint":"fingerprint-2"}
-          s,b=call("POST","/v1/effects",effect,current,h2); evidence["cases"].append({"name":"same_key_different_payload_conflict","status":s,"body":b}); assert s==409 and b["reason"]=="CONFLICT"
-          s,b=call("GET","/v1/effects/"+eid); evidence["cases"].append({"name":"fresh_effect_reobservation","status":s,"body":b}); assert s==200 and b["effect_id"]==eid and b["outcome"]=="OBSERVED_SUCCESS"
-          evidence["result"]="PASS"
-          Path("p347-external-authority-evidence.json").write_text(json.dumps(evidence,indent=2,sort_keys=True)+"\n",encoding="utf-8")
-          print("P347_EXTERNAL_AUTHORITY_REAL_EXECUTION=PASS")
-          print("cases=7/7")
-          PY
-      - name: Remove local ephemeral credentials
-        if: always()
-        working-directory: p347/external-authority
-        run: rm -f .p347-secrets.json admin_token.tmp effect_token.tmp
-      - name: Upload sanitized external-authority evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: p347-external-authority-real-${{ github.sha }}
-          path: p347/external-authority/p347-external-authority-evidence.json
-          if-no-files-found: error
+          if-no-files-found: ignore
