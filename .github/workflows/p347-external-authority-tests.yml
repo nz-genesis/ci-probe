@@ -225,3 +225,5 @@ jobs:
             p347/external-authority/p347-external-authority-failure.json
             p347/external-authority/readiness.json
           if-no-files-found: ignore
+
+# trigger-only freshness routing pass 2026-10-09
