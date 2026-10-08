@@ -33,6 +33,14 @@ jobs:
           printf 'GITHUB_SHA=%s\nCHECKED_OUT_SHA=%s\n' "$GITHUB_SHA" "$actual"
       - name: Run Mac execution matrix probe
         run: python3 probes/p347_mac_execution_matrix.py
+      - name: Run identical differential contract
+        run: python3 probes/p347_differential_realization.py | tee differential-mac.txt
+      - name: Upload Mac differential evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: p347-differential-mac-${{ github.sha }}
+          path: differential-mac.txt
+
       - name: Upload raw Mac execution matrix
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
