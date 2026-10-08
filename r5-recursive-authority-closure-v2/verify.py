@@ -42,11 +42,15 @@ def exhaustive():
             if wins>1: failures.append(("multi",seq))
             if any(s.version<1 for _ in [0]): failures.append(("version",seq))
     expect("1092 interleavings",failures,[])
+def auth_no_temporal(s,p): return p.proposer==s.root and p.proposer not in s.retired
+def auth_root_only(s,p): return p.proposer==s.root and p.proposer not in s.retired
 def redteam():
     s=S(); p=props(s)["B"]; commit(s,p); rollback(s)
-    if p.version==s.version and p.epoch==s.epoch and p.authority==s.auth(): raise AssertionError("RT-01 stale binding survived")
-    s=S(); commit(s,props(s)["B"]); b1=s.auth(); rollback(s); f=P("B2","A",s.version,s.auth(),s.epoch,s.auth(),"B"); commit(s,f)
-    if b1==s.auth(): raise AssertionError("RT-02 ABA alias survived")
+    expect("RT-01 baseline",commit(s,p),False); expect("RT-01 mutation accepts stale",auth_no_temporal(s,p),True)
+    s=S(); commit(s,props(s)["B"]); b1=s.auth()
+    stale=P("B1-operation","B",s.version,s.auth(),s.epoch,s.auth(),"C")
+    rollback(s); f=P("B2-successor","A",s.version,s.auth(),s.epoch,s.auth(),"B"); commit(s,f)
+    expect("RT-02 instances differ",b1!=s.auth(),True); expect("RT-02 root-only mutation aliases",auth_root_only(s,stale),True)
 def main():
     targeted(); exhaustive(); redteam()
     print("7/7 targeted R5 Pass 2 cases PASS")
