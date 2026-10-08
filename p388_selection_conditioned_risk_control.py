@@ -9,7 +9,7 @@ It tests:
 1. deterministic calibration-data/test separation;
 2. isotonic calibration (PAVA);
 3. Clopper-Pearson upper confidence bound for selected error;
-4. maximum-retention threshold subject to a held-out calibration risk bound;
+4. cost-aware threshold subject to a held-out calibration risk bound;
 5. hard evidence-sufficiency gate;
 6. total-cost comparison including error penalty;
 7. explicit refusal to claim a statistical guarantee when exchangeability is
@@ -162,6 +162,9 @@ def choose_threshold(
     alpha: float,
     delta: float,
     min_selected: int,
+    cheap_cost: float,
+    strong_cost: float,
+    severe_error_cost: float,
 ) -> Selection:
     candidates = sorted(
         {
@@ -171,6 +174,7 @@ def choose_threshold(
         }
     )
     best: Selection | None = None
+    best_cost = math.inf
 
     for threshold in candidates:
         selected = [
@@ -183,13 +187,61 @@ def choose_threshold(
             continue
         errors = sum(not case.correct for case in selected)
         upper_error = clopper_pearson_upper(errors, len(selected), delta)
-        if upper_error <= alpha and (
-            best is None or len(selected) > best.selected
-        ):
-            best = Selection(threshold, len(selected), upper_error)
+        if upper_error <= alpha:
+            # Among risk-admissible selectors, minimize the observed
+            # calibration routing cost. This is deliberately cost-aware;
+            # maximum retention is not equivalent to minimum total cost.
+            total_cost = 0.0
+            selected_ids = {id(case) for case in selected}
+            for case in calibration:
+                if id(case) in selected_ids:
+                    total_cost += cheap_cost
+                    if not case.correct:
+                        total_cost += severe_error_cost
+                else:
+                    total_cost += strong_cost
+            if best is None:
+                best = Selection(threshold, len(selected), upper_error)
+                best_cost = total_cost
+            elif total_cost < best_cost:
+                best = Selection(threshold, len(selected), upper_error)
+                best_cost = total_cost
 
     if best is None:
         raise AssertionError("No admissible risk-controlled threshold")
+    return best
+
+
+def choose_max_retention_threshold(
+    calibration: list[Case],
+    scores: list[float],
+    fitted: list[float],
+    alpha: float,
+    delta: float,
+    min_selected: int,
+) -> Selection:
+    candidates = sorted(
+        {
+            calibrated_probability(case.score, scores, fitted)
+            for case in calibration
+            if case.sufficient
+        }
+    )
+    best: Selection | None = None
+    for threshold in candidates:
+        selected = [
+            case for case in calibration
+            if case.sufficient
+            and calibrated_probability(case.score, scores, fitted) >= threshold
+        ]
+        if len(selected) < min_selected:
+            continue
+        errors = sum(not case.correct for case in selected)
+        upper_error = clopper_pearson_upper(errors, len(selected), delta)
+        if upper_error <= alpha and (best is None or len(selected) > best.selected):
+            best = Selection(threshold, len(selected), upper_error)
+    if best is None:
+        raise AssertionError("No admissible maximum-retention threshold")
     return best
 
 
@@ -266,6 +318,9 @@ def main() -> None:
         id(case) for case in test
     )
 
+    max_retention = choose_max_retention_threshold(
+        calibration, scores, fitted, ALPHA, DELTA, MIN_SELECTED
+    )
     selection = choose_threshold(
         calibration,
         scores,
@@ -273,6 +328,9 @@ def main() -> None:
         alpha=ALPHA,
         delta=DELTA,
         min_selected=MIN_SELECTED,
+        cheap_cost=CHEAP_COST,
+        strong_cost=STRONG_COST,
+        severe_error_cost=SEVERE_ERROR_COST,
     )
 
     selected, errors, test_risk = observed_selection(
@@ -280,8 +338,8 @@ def main() -> None:
     )
     if selected == 0:
         raise AssertionError("risk-controlled selector selected nothing")
-    # This fixture is deliberately constructed so the held-out test remains
-    # inside the target risk envelope. This is a fixture result, not a theorem.
+    # The fixture is expected to remain inside the target risk envelope.
+    # This is an empirical fixture result, not a theorem.
     assert test_risk <= ALPHA
 
     # Hard evidence gate: high confidence can never compensate for insufficient
@@ -297,7 +355,14 @@ def main() -> None:
     controlled_cost = route_cost(
         test, scores, fitted, selection.threshold
     )
+    max_retention_cost = route_cost(
+        test, scores, fitted, max_retention.threshold
+    )
     raw_cost = naive_raw_cost(test, raw_threshold=0.90)
+
+    # Cost-aware constrained selection must never be worse than the
+    # maximum-retention policy over the same admissible candidate set.
+    assert controlled_cost <= max_retention_cost
 
     # A dominated alternative must never win when it has the same routing
     # decision and strictly higher cost.
@@ -330,6 +395,7 @@ def main() -> None:
     )
     print(
         f"raw_fixed_threshold_cost={raw_cost:.3f} "
+        f"max_retention_cost={max_retention_cost:.3f} "
         f"risk_controlled_cost={controlled_cost:.3f}"
     )
     print("insufficient_evidence_high_confidence=FAIL_CLOSED")

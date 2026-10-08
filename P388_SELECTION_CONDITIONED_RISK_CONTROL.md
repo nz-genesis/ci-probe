@@ -45,3 +45,18 @@ It does not prove:
 ## Required private correspondence step
 
 After the exact public run, private Genesis research must re-fetch the exact commit, workflow run, job, steps and logs and assess correspondence to the private P1 mechanism without importing private corpus into the public repository.
+
+
+## Corrective closure — 2026-10-07
+
+The first hosted P388 execution was intentionally treated as evidence, not as a success claim. It exposed a real optimization defect: the original selector maximized retention under the risk constraint, while the same run produced raw_fixed_threshold_cost=660 versus risk_controlled_cost=860.
+
+This is a false-economy counterexample, not evidence that calibrated risk control is cost-superior.
+
+Corrective action:
+- threshold selection is now explicitly cost-aware among risk-admissible candidates;
+- the executable probe retains the maximum-retention selector as a baseline;
+- the corrected selector must not have higher held-out fixture cost than that maximum-retention baseline;
+- the raw fixed-threshold baseline remains informational only because it has no corresponding selection-conditioned risk control.
+
+The correction is deliberately kept as a bounded mechanism change; no Genesis primitive or canonical threshold is introduced.
