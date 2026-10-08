@@ -6,15 +6,28 @@ LABEL="${P347_RUNNER_LABEL:-p347-mac}"
 ROOT="${P347_RUNNER_ROOT:-$HOME/.p347-mac-runner}"
 RUNNER_NAME="${P347_RUNNER_NAME:-$(scutil --get ComputerName 2>/dev/null || hostname)-p347}"
 
-if ! command -v gh >/dev/null 2>&1; then
+GH_BIN=""
+for candidate in \
+  "$(command -v gh 2>/dev/null || true)" \
+  "/opt/homebrew/bin/gh" \
+  "/usr/local/bin/gh" \
+  "$HOME/.local/bin/gh"
+do
+  if [[ -n "$candidate" && -x "$candidate" ]]; then
+    GH_BIN="$candidate"
+    break
+  fi
+done
+
+if [[ -z "$GH_BIN" ]]; then
   echo "ERROR: GitHub CLI (gh) is required."
   echo "Install it, authenticate once with: gh auth login"
   exit 2
 fi
 
-if ! gh auth status >/dev/null 2>&1; then
-  echo "ERROR: gh is not authenticated."
-  echo "Run: gh auth login"
+if ! "$GH_BIN" auth status >/dev/null 2>&1; then
+  echo "ERROR: gh is not authenticated for the LaunchAgent user."
+  echo "Run: gh auth login as the same macOS user."
   exit 2
 fi
 
@@ -34,7 +47,7 @@ case "$ARCH" in
   *) echo "ERROR: unsupported macOS architecture: $ARCH"; exit 2 ;;
 esac
 
-RELEASE_JSON="$(gh api repos/actions/runner/releases/latest)"
+RELEASE_JSON="$("$GH_BIN" api repos/actions/runner/releases/latest)"
 VERSION="$(printf '%s' "$RELEASE_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"].lstrip("v"))')"
 ASSET_NAME="$(printf '%s' "$RELEASE_JSON" | python3 -c 'import json,sys; d=json.load(sys.stdin); a=[x["name"] for x in d["assets"] if "osx-'$ASSET_ARCH'" in x["name"] and x["name"].endswith(".tar.gz")]; print(a[0] if a else "")')"
 
