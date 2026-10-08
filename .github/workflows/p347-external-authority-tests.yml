@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - research/p347-external-authority-v0
-      - research/p347-external-authority-execution-v1
+      - research/p347-external-authority-execution-v2
   workflow_dispatch:
 
 permissions:
@@ -31,7 +31,7 @@ jobs:
 
   external-authority-execution:
     name: real external authority execution
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-execution-v1' }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-execution-v2' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -47,24 +47,6 @@ jobs:
           test "$actual" = "$GITHUB_SHA"
       - name: Verify current Wrangler deployment contract
         run: npx --yes wrangler@4.102.0 --version
-      - name: Prepare one-version external authority deployment
-        working-directory: p347/external-authority
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json, secrets
-          from pathlib import Path
-          data={"P347_ADMIN_TOKEN":secrets.token_hex(32),"P347_EFFECT_TOKEN":secrets.token_hex(32)}
-          Path(".p347-secrets.json").write_text(json.dumps(data),encoding="utf-8")
-          Path("admin_token.tmp").write_text(data["P347_ADMIN_TOKEN"])
-          Path("effect_token.tmp").write_text(data["P347_EFFECT_TOKEN"])
-          PY
-          chmod 600 .p347-secrets.json admin_token.tmp effect_token.tmp
-          npx --yes wrangler@4.102.0 deploy --temporary --strict --secrets-file .p347-secrets.json --var "P347_SOURCE_VERSION:$GITHUB_SHA" > deployment.raw.txt 2>&1
-          grep -Eo 'https://[A-Za-z0-9._-]+\.workers\.dev' deployment.raw.txt | tail -1 > authority_url.txt
-          test -s authority_url.txt
-          rm -f .p347-secrets.json
       - name: Deploy temporary external authority with one version
         working-directory: p347/external-authority
         shell: bash
