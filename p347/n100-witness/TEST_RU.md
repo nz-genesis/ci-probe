@@ -14,23 +14,45 @@ Harness v2 теперь:
 
 Перед full capture сначала выполнить ручной visibility preflight из раздела 2. Не запускай fault injection, пока не получено `WITNESS_VISIBILITY = VERIFIED_BOUNDED`.
 
+## Подготовка точного checkout на N100
+
+Все команды ниже выполняются в терминале N100. Нужны SSH/локальный терминал, `sudo` и доступ в интернет. Для reproducibility используй проверенный capture/manifest/test code baseline:
+
+~~~bash
+set -euo pipefail
+REPO_DIR="$HOME/ci-probe-p347-witness"
+if [ ! -d "$REPO_DIR/.git" ]; then
+  git clone https://github.com/nz-genesis/ci-probe.git "$REPO_DIR"
+fi
+cd "$REPO_DIR"
+git fetch origin
+git checkout --detach e73f3ac90f44a8cb3e3c1ca4d43d3fba345acaf1
+test "$(git rev-parse HEAD)" = "e73f3ac90f44a8cb3e3c1ca4d43d3fba345acaf1"
+printf 'WITNESS_SOURCE_SHA=%s\n' "$(git rev-parse HEAD)"
+python3 --version
+if ! command -v tcpdump >/dev/null 2>&1; then
+  sudo apt-get update
+  sudo apt-get install -y tcpdump
+fi
+tcpdump --version
+~~~
+
+Не запускай capture из неизвестного checkout и не используй старый capture directory. Если `git clone` или `git checkout` завершается ошибкой, остановись и сохрани точный текст ошибки.
+
 ## На N100
 
-    uname -a
-    cat /etc/os-release
-    hostname
-    ip -br addr
-    ip route
-    command -v tcpdump
-    tcpdump --version
-    python3 --version
-    timedatectl status
-    chronyc tracking || true
-
-Создать:
-
-    sudo mkdir -p /var/tmp/p347-n100-witness
-    sudo chmod 700 /var/tmp/p347-n100-witness
+~~~bash
+uname -a
+cat /etc/os-release
+hostname
+ip -br link
+ip -br addr
+ip route
+ip neigh
+timedatectl status
+chronyc tracking || true
+sudo -n true && echo "SUDO_OK" || echo "SUDO_REQUIRES_PASSWORD"
+~~~
 
 После успешного visibility preflight, из корня точного checkout `ci-probe`, создай новый пустой каталог для каждой попытки:
 
@@ -78,15 +100,50 @@ Apple прямо отмечает, что promiscuous capture на отдель�
 
     ip -br link
 
-Затем, после того как известны <MAC_IP> и <AUTHORITY_IP>, выполнить:
+### Mac-side IP discovery — выполнить на Mac до N100 capture
 
-    sudo timeout --signal=INT 30s tcpdump -i <INTERFACE> -nn -s 0 'host <MAC_IP> and host <AUTHORITY_IP> and tcp port 443'
+Используй URL, полученный из свежего deploy по `p347/external-authority/DEPLOY_RU.md`. На Mac в терминале:
 
-Параллельно на Mac выполнить три baseline HTTPS requests к тому же authority URL и сохранить каждый фактический `remote_ip`:
+~~~bash
+export P347_EXTERNAL_AUTHORITY_URL="$(cat "$HOME/.local/share/p347-authority/authority-url")"
+AUTHORITY_IP="$(curl --ipv4 --http1.1 --connect-timeout 10 --max-time 20 -sS -o /dev/null -w '%{remote_ip}' "${P347_EXTERNAL_AUTHORITY_URL}/v1/state")"
+MAC_IFACE="$(route -n get "$AUTHORITY_IP" | awk '/interface:/{print $2}')"
+MAC_IP="$(ipconfig getifaddr "$MAC_IFACE")"
+AUTHORITY_HOST="${P347_EXTERNAL_AUTHORITY_URL#https://}"
+printf 'MAC_IFACE=%s\nMAC_IP=%s\nAUTHORITY_HOST=%s\nAUTHORITY_IP=%s\n' "$MAC_IFACE" "$MAC_IP" "$AUTHORITY_HOST" "$AUTHORITY_IP"
+~~~
 
-    for i in 1 2 3; do curl --http1.1 --connect-timeout 10 --max-time 20 -sS -o /dev/null -w "remote_ip=%{remote_ip} remote_port=%{remote_port} http_code=%{http_code}\n" "${P347_EXTERNAL_AUTHORITY_URL}/v1/state"; done
+Если authority URL хранится не в этом каталоге, задай `P347_EXTERNAL_AUTHORITY_URL` вручную. Не печатай и не передавай token files. `AUTHORITY_IP` — это remote IP, наблюдавшийся на Mac, а не DNS-ответ N100.
 
-Выполняй это во время 30-секундного N100 capture. Если `timeout` вернул код 124, это только означает истечение окна; оцени вывод tcpdump и проверь, что пакеты известного Mac → authority flow действительно присутствуют. Нулевой capture означает `WITNESS_VISIBILITY = UNVERIFIED`, не packet loss.
+### Visibility capture — два терминала
+
+1. На N100 выбери интерфейс, который реально получает mirror traffic или находится на forwarding path. Нельзя автоматически выбирать default-route interface и предполагать, что он видит Mac unicast. Если switch mirroring не настроен и N100 не является forwarding path, остановись: visibility не доказана.
+2. На N100 задай значения из вывода Mac и запусти capture. Этот preflight намеренно фильтрует по Mac IP и TCP/443, чтобы не пропустить другой Cloudflare edge IP; на время 30 секунд закрой браузеры и не запускай другие сетевые действия.
+
+~~~bash
+INTERFACE="<имя интерфейса из ip -br link>"
+MAC_IP="<MAC_IP из Mac-side вывода>"
+RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
+OUT="$HOME/p347-n100-visibility-${RUN_ID}.txt"
+set +e
+set -o pipefail
+sudo timeout --signal=INT 30s tcpdump -i "$INTERFACE" -nn -s 0 -tttt "host $MAC_IP and tcp port 443" 2>&1 | tee "$OUT"
+CAPTURE_EXIT=$?
+set +o pipefail
+printf 'VISIBILITY_CAPTURE_EXIT=%s\nOUTPUT=%s\n' "$CAPTURE_EXIT" "$OUT"
+~~~
+
+3. Пока команда выше работает, на Mac запусти три read-only requests в том же терминале:
+
+~~~bash
+for i in 1 2 3; do
+  curl --ipv4 --http1.1 --connect-timeout 10 --max-time 20 -sS -o /dev/null \
+    -w "request=$i remote_ip=%{remote_ip} remote_port=%{remote_port} http_code=%{http_code}\n" \
+    "${P347_EXTERNAL_AUTHORITY_URL}/v1/state"
+done
+~~~
+
+Сравни каждый `remote_ip` с destination IP в N100 tcpdump output. Если IP меняется между запросами, сохрани все IP и используй их в full capture как повторяющиеся `--target-ip` параметры. `VISIBILITY_CAPTURE_EXIT=124` означает, что окно завершилось по timeout; само по себе это не ошибка и не доказательство потери. Важно, чтобы output содержал packets известного Mac → authority flow, а Mac-side trace подтверждал эти же запросы. Нулевой capture означает `WITNESS_VISIBILITY = UNVERIFIED`, не packet loss.
 
 ### Admission rule
 
