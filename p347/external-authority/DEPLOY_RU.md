@@ -30,10 +30,18 @@ Because `wrangler deploy --temporary` creates a time-limited external account (t
 Keep one terminal session open while running these blocks so the local variables remain available. The authority source checkout must be exact. For the current bounded baseline, use the v9 source SHA that passed the seven-case discriminator.
 
 ~~~bash
-git clone https://github.com/nz-genesis/ci-probe.git "$HOME/ci-probe-p347-authority"
-cd "$HOME/ci-probe-p347-authority"
-git checkout e63c138ffe833f028a6942c82704c2303d1313c1
-SOURCE_SHA="$(git rev-parse HEAD)"
+set -euo pipefail
+REPO_DIR="$HOME/ci-probe-p347-authority"
+if [ ! -d "$REPO_DIR/.git" ]; then
+  git clone https://github.com/nz-genesis/ci-probe.git "$REPO_DIR"
+fi
+git -C "$REPO_DIR" fetch origin
+test -z "$(git -C "$REPO_DIR" status --porcelain)" || {
+  echo "STOP: repository has local changes; preserve them and use a clean checkout."
+  exit 1
+}
+git -C "$REPO_DIR" checkout --detach e63c138ffe833f028a6942c82704c2303d1313c1
+SOURCE_SHA="$(git -C "$REPO_DIR" rev-parse HEAD)"
 test "$SOURCE_SHA" = "e63c138ffe833f028a6942c82704c2303d1313c1"
 printf 'SOURCE_SHA=%s\n' "$SOURCE_SHA"
 ~~~
@@ -67,8 +75,13 @@ Deploy from the exact source checkout. Do not use an unpinned `npx wrangler` com
 
 ~~~bash
 set -euo pipefail
+SECRET_DIR="$HOME/.local/share/p347-authority"
+test -f "$SECRET_DIR/secrets.json" || {
+  echo "STOP: rerun the private secret-generation block before deploying a fresh temporary authority."
+  exit 1
+}
 npx --yes wrangler@4.149.0 --version
-cd p347/external-authority
+cd "$REPO_DIR/p347/external-authority"
 npx --yes wrangler@4.149.0 deploy --dry-run --strict
 npx --yes wrangler@4.149.0 deploy --temporary --strict \
   --secrets-file "$SECRET_DIR/secrets.json" \
