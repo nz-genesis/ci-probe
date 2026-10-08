@@ -200,3 +200,104 @@ jobs:
 
 # P212: competing objectives/trade-offs are tested as State/Transition composition; no Objective/Goal/Tradeoff/Utility/Planner primitive is asserted.
 # P213: partial-order/incomparable objectives are tested as State relation + Transition + existing Authority/Constraint boundaries; no new primitive is asserted.
+
+
+  p347-worker:
+    if: github.ref_name == 'research/p347-multi-host-governance-boundary-v0'
+    name: p347-worker-a
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    permissions:
+      contents: write
+    steps:
+      - name: Fetch exact frozen P347 probe
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh api "/repos/${GITHUB_REPOSITORY}/contents/probes/p347_multi_host_governance_boundary.py?ref=${GITHUB_SHA}" --jq '.content' | tr -d '\n' | base64 -d > p347_multi_host_governance_boundary.py
+          python3 -m py_compile p347_multi_host_governance_boundary.py
+          printf 'WORKER_SHA=%s HOST=%s RUNNER=ubuntu-22.04\n' "$GITHUB_SHA" "$(hostname)"
+      - name: Execute P347 worker
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          P347_BRANCH: ${{ github.ref_name }}
+          P347_OUT: worker-result.json
+        run: python3 p347_multi_host_governance_boundary.py worker
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p347-worker-result
+          path: worker-result.json
+
+  p347-authority:
+    if: github.ref_name == 'research/p347-multi-host-governance-boundary-v0'
+    name: p347-authority-c
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    permissions:
+      contents: write
+    steps:
+      - name: Fetch exact frozen P347 probe
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh api "/repos/${GITHUB_REPOSITORY}/contents/probes/p347_multi_host_governance_boundary.py?ref=${GITHUB_SHA}" --jq '.content' | tr -d '\n' | base64 -d > p347_multi_host_governance_boundary.py
+          python3 -m py_compile p347_multi_host_governance_boundary.py
+          printf 'AUTHORITY_SHA=%s HOST=%s RUNNER=ubuntu-24.04\n' "$GITHUB_SHA" "$(hostname)"
+      - name: Execute P347 authority
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          P347_BRANCH: ${{ github.ref_name }}
+          P347_OUT: authority-result.json
+        run: python3 p347_multi_host_governance_boundary.py authority
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p347-authority-result
+          path: authority-result.json
+
+  p347-observer:
+    if: github.ref_name == 'research/p347-multi-host-governance-boundary-v0'
+    name: p347-independent-observer-b
+    needs: [p347-worker, p347-authority]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: write
+    steps:
+      - name: Fetch exact frozen P347 probe
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh api "/repos/${GITHUB_REPOSITORY}/contents/probes/p347_multi_host_governance_boundary.py?ref=${GITHUB_SHA}" --jq '.content' | tr -d '\n' | base64 -d > p347_multi_host_governance_boundary.py
+          python3 -m py_compile p347_multi_host_governance_boundary.py
+      - name: Execute independent P347 observer
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          P347_BRANCH: ${{ github.ref_name }}
+          P347_OUT: observer-result.json
+        run: python3 p347_multi_host_governance_boundary.py observer
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: p347-*-result
+          merge-multiple: true
+      - name: Verify P347 semantic boundary
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          worker=json.load(open("worker-result.json"))
+          authority=json.load(open("authority-result.json"))
+          observer=json.load(open("observer-result.json"))
+          assert worker["real_child_sigkill_observed"] is True
+          assert worker["stale_effect_rejected_409"] is True
+          assert authority["generation_after_mutation"] == 2
+          assert observer["authoritative_final_generation_2"] is True
+          assert observer["distinct_runner_hosts"] is True
+          print("P347_MULTI_HOST_CORE_BOUNDARY=PASS")
+          print("P347_STALE_AUTHORITY_REJECTION=PASS")
+          print("P347_REAL_PROCESS_CRASH_INTERLEAVING=PASS")
+          print("P347_INDEPENDENT_OBSERVER=PASS")
+          print("P347_VERDICT=SUPPORTED_BOUNDED_MULTI_HOST_EXECUTION")
+          PY
