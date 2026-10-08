@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - research/p347-external-authority-v0
-      - research/p347-external-authority-execution-v8
+      - research/p347-external-authority-execution-v9
   workflow_dispatch:
 
 permissions:
@@ -34,7 +34,7 @@ jobs:
 
   external-authority-execution:
     name: real external authority execution
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-execution-v8' }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-execution-v9' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -168,10 +168,23 @@ jobs:
               if token: headers["authorization"]="Bearer "+token
               if body is not None: headers["content-type"]="application/json"
               if extra: headers.update(extra)
-              req=Request(url+path,method=method,headers=headers,data=None if body is None else json.dumps(body).encode())
-              try:
-                  with urlopen(req,timeout=30) as r: return r.status,json.loads(r.read().decode())
-              except HTTPError as e: return e.code,json.loads(e.read().decode())
+              for attempt in range(1,16):
+                  req=Request(url+path,method=method,headers=headers,data=None if body is None else json.dumps(body).encode())
+                  try:
+                      with urlopen(req,timeout=30) as r:
+                          return r.status,json.loads(r.read().decode())
+                  except HTTPError as e:
+                      try:
+                          body_json=json.loads(e.read().decode())
+                      except Exception:
+                          body_json={"raw":e.read().decode(errors="replace")}
+                      if e.code in (1042,523) and attempt < 15:
+                          print(f"transport_retry path={path} status={e.code} attempt={attempt}")
+                          import time
+                          time.sleep(2)
+                          continue
+                      return e.code,body_json
+              raise RuntimeError("unreachable")
           evidence={"probe":"P347_EXTERNAL_AUTHORITY_REAL_EXECUTION_V4","observed_at":datetime.now(timezone.utc).isoformat(),"source_version":source,"wrangler_version":os.environ.get("P347_WRANGLER_VERSION","4.149.0"),"authority_url":url,"cases":[]}
           def require(name, condition, status, body):
               print("CASE", name, "status=", status, "body=", json.dumps(body, sort_keys=True))
