@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - research/p347-external-authority-v0
-      - research/p347-external-authority-execution-v6
+      - research/p347-external-authority-execution-v7
   workflow_dispatch:
 
 permissions:
@@ -34,7 +34,7 @@ jobs:
 
   external-authority-execution:
     name: real external authority execution
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-execution-v6' }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-execution-v7' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -94,6 +94,55 @@ jobs:
           Path(".p347-secrets.json").unlink()
           PY
           chmod 600 admin_token.tmp effect_token.tmp
+      - name: Wait for external authority readiness
+        working-directory: p347/external-authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, time
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+          from urllib.error import HTTPError, URLError
+          url=Path("authority_url.txt").read_text().strip()
+          expected=os.environ["GITHUB_SHA"]
+          headers={
+              "accept":"application/json",
+              "user-agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+              "accept-language":"en-US,en;q=0.9",
+          }
+          attempts=[]
+          ready=False
+          for attempt in range(1,31):
+              status=None
+              body=None
+              try:
+                  req=Request(url+"/v1/state",method="GET",headers=headers)
+                  with urlopen(req,timeout=10) as r:
+                      status=r.status
+                      body=json.loads(r.read().decode())
+              except HTTPError as e:
+                  status=e.code
+                  try:
+                      body=json.loads(e.read().decode())
+                  except Exception:
+                      body={"raw":e.read().decode(errors="replace")}
+              except URLError as e:
+                  body={"error":str(e)}
+              attempts.append({"attempt":attempt,"status":status,"body":body})
+              print(json.dumps(attempts[-1],sort_keys=True))
+              if status==200 and body.get("authority")=="P347_EXTERNAL_AUTHORITY":
+                  if body.get("source_version") != expected:
+                      raise SystemExit("readiness source_version mismatch")
+                  ready=True
+                  break
+              if status not in (1042,404):
+                  break
+              time.sleep(2)
+          Path("readiness.json").write_text(json.dumps({"url":url,"expected_source_version":expected,"ready":ready,"attempts":attempts},indent=2,sort_keys=True)+"\n",encoding="utf-8")
+          if not ready:
+              raise SystemExit("external authority did not become ready within 60 seconds")
+
       - name: Execute real external authority discriminator
         working-directory: p347/external-authority
         shell: bash
@@ -157,4 +206,5 @@ jobs:
             p347/external-authority/deployment-diagnostic.txt
             p347/external-authority/p347-external-authority-evidence.json
             p347/external-authority/p347-external-authority-failure.json
+            p347/external-authority/readiness.json
           if-no-files-found: ignore
