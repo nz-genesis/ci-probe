@@ -163,6 +163,19 @@ jobs:
           path: p388-probe-output.txt
           if-no-files-found: error
 
+      - name: Execute P347 stronger external-boundary public preflight
+        env:
+          P347_EXTERNAL_AUTHORITY_URL: ${{ vars.P347_EXTERNAL_AUTHORITY_URL }}
+          P347_NETWORK_WITNESS_ID: ${{ vars.P347_NETWORK_WITNESS_ID }}
+        run: python3 probes/p347_stronger_external_boundary_preflight.py
+      - name: Upload P347 stronger preflight evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: p347-stronger-preflight-${{ github.sha }}
+          path: p347-stronger-preflight.json
+          if-no-files-found: error
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
