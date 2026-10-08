@@ -12,7 +12,7 @@ Endpoints:
 
 - `GET /v1/state` — authoritative generation + state digest;
 - `POST /v1/admin/mutate` — управляемая смена generation; требует `Authorization: Bearer ...`;
-- `POST /v1/effects` — consequential state change с обязательными `Idempotency-Key` и `X-Request-Fingerprint`;
+- `POST /v1/effects` — consequential state change с обязательными `Authorization`, `Idempotency-Key` и `X-Request-Fingerprint`;
 - `GET /v1/effects/<effect_id>` — fresh re-observation.
 
 Semantics:
