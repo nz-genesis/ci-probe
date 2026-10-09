@@ -11,7 +11,7 @@ Actor не активирует и не управляет fault injector. N100 
 - Сначала выполни read-only Mac↔N100 visibility preflight из p347/n100-witness/TEST_RU.md.
 - Разверни свежую external authority с точного source SHA eed787812545f80997e93a00266aee550a06e0b6 (run 37902065459, Wrangler 4.149.0). Не используй просроченный URL.
 - Секреты храни только вне Git: ~/.local/share/p347-authority/{authority-url,admin-token,effect-token}. Token files должны иметь mode 0600; URL-файл содержит только workers.dev URL, не claim URL.
-- Не печатай tokens, не включай их в evidence и не загружай секреты в публичные артефакты.
+- Не печатай tokens, не включай их в evidence и не загружай секреты в публичные артефакты. Actor передаёт Authorization через временный файл mode 0600, не через argv; файл удаляется после единственного curl-вызова.
 - Используй clean exact actor checkout; prepare остановится на dirty tree.
 
 ## 1. Точный checkout и тесты на Mac
@@ -73,7 +73,7 @@ python3 p347/mac-actor/actor.py reconcile --run-dir "$RUN_DIR"
 
 Actor выполняет fresh observation, один same-key/same-payload retry, same-key/different-payload conflict и финальное наблюдение. Если fresh observation UNKNOWN, actor останавливается до retry.
 
-lost_ack_recovery=VERIFIED_BOUNDED возможно только если первоначальный запрос был UNKNOWN, fresh observation до retry уже увидел эффект, retry вернул тот же effect как duplicate, конфликт отклонён, а финальное наблюдение подтвердило исходный эффект. Иначе статус NOT_EXERCISED.
+ambiguous_effect_recovery=VERIFIED_BOUNDED возможно только если первоначальный запрос был UNKNOWN, fresh observation до retry уже увидел эффект, retry вернул тот же effect как duplicate, конфликт отклонён, а финальное наблюдение подтвердило исходный эффект. Это доказывает восстановление после неоднозначного ответа на уровне actor, но не доказывает намеренную потерю ACK. lost_ack_exercised остаётся false до независимого fault-controller receipt и коррелированного N100 raw pcap/manifest.
 
 ## 5. Evidence
 

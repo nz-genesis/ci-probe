@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """P347 Mac actor. Never configures or activates the fault injector."""
-import argparse, hashlib, json, os, platform, secrets, stat, subprocess, sys, time, uuid
+import argparse, hashlib, json, os, platform, secrets, stat, subprocess, sys, tempfile, time, uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote
@@ -39,15 +39,21 @@ def request(url,method="GET",token=None,body=None,headers=None,timeout=20.0):
     cmd=["curl","--silent","--show-error","--ipv4","--http1.1","--connect-timeout","10",
          "--max-time",str(timeout),"--request",method.upper(),"--header","accept: application/json",
          "--header","user-agent: "+UA,"--write-out","\n"+META+"%{http_code}\t%{local_ip}\t%{remote_ip}\t%{remote_port}\t%{time_total}\n"]
-    if token: cmd += ["--header","authorization: Bearer "+token]
     if body is not None: cmd += ["--header","content-type: application/json","--data-binary","@-"]
     for k,v in (headers or {}).items():
         if any(c in k+v for c in "\r\n"): raise ValueError("newline in HTTP header")
         cmd += ["--header",k+": "+v]
     start,start_ns=utc(),time.monotonic_ns()
     try:
-        p=subprocess.run(cmd,input=None if body is None else canon(body),capture_output=True,text=True,timeout=timeout+5,check=False)
-        result=parse_curl(p.stdout,p.stderr,p.returncode)
+        with tempfile.TemporaryDirectory(prefix="p347-curl-") as temp_dir:
+            os.chmod(temp_dir,0o700)
+            if token:
+                auth_file=Path(temp_dir)/"authorization-header"
+                auth_file.write_text("authorization: Bearer "+token+"\n",encoding="utf-8")
+                auth_file.chmod(0o600)
+                cmd += ["--header","@"+str(auth_file)]
+            p=subprocess.run(cmd,input=None if body is None else canon(body),capture_output=True,text=True,timeout=timeout+5,check=False)
+            result=parse_curl(p.stdout,p.stderr,p.returncode)
     except (subprocess.TimeoutExpired,OSError) as e:
         result={"http_status":None,"local_ip":None,"remote_ip":None,"remote_port":None,"curl_elapsed_seconds":None,
                 "curl_exit":None,"transport_state":"UNKNOWN","response_body":None,"transport_error":type(e).__name__}
@@ -112,7 +118,7 @@ def prepare(a):
       "actor_platform":platform.platform(),"actor_source_version":sha,"source_version_expected":a.expected_source_version,
       "authority_url":url,"effect_id":eid,"stage":"PREPARING","started_at_utc":utc(),"calls":[],
       "fault_injector":{"owned_by_actor":False,"activated_by_actor":False,"receipt":None},
-      "claims":{"lost_ack_exercised":False,"physical_effect_admitted":False,"independent_witness_admitted":False}}
+      "claims":{"lost_ack_exercised":False,"ambiguous_effect_recovery_verified":False,"physical_effect_admitted":False,"independent_witness_admitted":False}}
     save(root,run)
     s=call(root,run,"initial_state","GET","/v1/state")
     require(s,200,lambda b:b.get("authority")=="P347_EXTERNAL_AUTHORITY" and b.get("source_version")==a.expected_source_version and b.get("generation")==1 and b.get("effect_count")==0,"initial_state")
@@ -174,14 +180,16 @@ def reconcile(a):
     final=call(root,run,"fresh_effect_reobservation","GET","/v1/effects/"+quote(eid,safe="")); fb=body(final)
     run["fresh_reobservation_pass"]=final["http_status"]==200 and fb.get("effect_id")==eid and fb.get("generation")==2 and fb.get("payload")=={"amount":1} and fb.get("fingerprint")==h["X-Request-Fingerprint"]
     unknown=run.get("initial_effect_outcome")=="UNKNOWN"
-    run["lost_ack_recovery"]="VERIFIED_BOUNDED" if unknown and present and retry_ok and run["conflict_pass"] and run["fresh_reobservation_pass"] else "NOT_EXERCISED"
-    run["claims"]["lost_ack_exercised"]=run["lost_ack_recovery"]=="VERIFIED_BOUNDED"
+    run["ambiguous_effect_recovery"]="VERIFIED_BOUNDED" if unknown and present and retry_ok and run["conflict_pass"] and run["fresh_reobservation_pass"] else "NOT_EXERCISED"
+    run["claims"]["ambiguous_effect_recovery_verified"]=run["ambiguous_effect_recovery"]=="VERIFIED_BOUNDED"
+    # Actor evidence alone cannot admit a lost ACK; that requires independent fault and packet-witness evidence.
+    run["claims"]["lost_ack_exercised"]=False
     run["claims"]["physical_effect_admitted"]=False; run["claims"]["independent_witness_admitted"]=False
     run["result"]="PASS" if run["same_key_retry_pass"] and run["conflict_pass"] and run["fresh_reobservation_pass"] else "FAIL"
     run["stage"]="RECONCILED"; run["completed_at_utc"]=utc(); save(root,run)
     print(json.dumps({"result":run["result"],"run_id":run["run_id"],"same_key_retry_pass":run["same_key_retry_pass"],
       "conflict_pass":run["conflict_pass"],"fresh_reobservation_pass":run["fresh_reobservation_pass"],
-      "lost_ack_recovery":run["lost_ack_recovery"],"physical_effect_admitted":False,"independent_witness_admitted":False,
+      "ambiguous_effect_recovery":run["ambiguous_effect_recovery"],"physical_effect_admitted":False,"independent_witness_admitted":False,
       "evidence":str(root/"actor-evidence.json")},sort_keys=True))
     return 0 if run["result"]=="PASS" else 1
 

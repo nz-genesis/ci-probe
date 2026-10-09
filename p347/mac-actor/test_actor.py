@@ -1,4 +1,5 @@
 import json, subprocess, unittest
+from pathlib import Path
 from unittest.mock import patch
 import actor
 
@@ -39,6 +40,10 @@ class MacActorContractTests(unittest.TestCase):
             result=actor.request("https://authority.example/v1/effects","POST",token,
                 {"generation":2,"payload":{"amount":1}},{"Idempotency-Key":"e1"},3)
         self.assertEqual(run.call_count,1)
+        command=run.call_args.args[0]
+        self.assertNotIn(token," ".join(command))
+        auth_ref=next(v[1:] for v in command if v.startswith("@"))
+        self.assertFalse(Path(auth_ref).exists())
         self.assertEqual(result["transport_state"],"UNKNOWN")
         self.assertNotIn(token,json.dumps(result))
         self.assertNotIn("authorization",json.dumps(result).lower())
@@ -50,16 +55,17 @@ class MacActorContractTests(unittest.TestCase):
         self.assertEqual(r["transport_state"],"HTTP_RESPONSE_OBSERVED")
 
     def test_actor_does_not_activate_fault_injector(self):
-        source=open(actor.__file__,encoding="utf-8").read()
+        source=Path(actor.__file__).read_text(encoding="utf-8")
         self.assertIn('"owned_by_actor":False',source)
         self.assertIn('"activated_by_actor":False',source)
         self.assertNotIn("pfctl",source)
         self.assertNotIn("iptables",source)
 
-    def test_lost_ack_claim_requires_unknown_and_observed_effect(self):
-        source=open(actor.__file__,encoding="utf-8").read()
+    def test_actor_recovery_does_not_claim_physical_lost_ack(self):
+        source=Path(actor.__file__).read_text(encoding="utf-8")
         self.assertIn('unknown and present and retry_ok',source)
-        self.assertIn('"NOT_EXERCISED"',source)
+        self.assertIn('run["claims"]["lost_ack_exercised"]=False',source)
+        self.assertIn('"ambiguous_effect_recovery_verified":False',source)
         self.assertIn('"physical_effect_admitted":False',source)
         self.assertIn('"independent_witness_admitted":False',source)
 
