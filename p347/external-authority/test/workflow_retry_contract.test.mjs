@@ -18,7 +18,7 @@ test("edge and ambiguous transport retries are bounded and limited to explicitly
   assert.match(workflow, /if retry_safe and attempt < 15:/);
   assert.match(workflow, /"transport_retry_events":transport_retry_events/);
   assert.match(workflow, /transport_error=False/);
-  assert.match(workflow, /if not transport_error and not \\(status == 404 and error_code == 1042\\) and not \\(status == 500 and error_code == 1104\\):/);
+  assert.match(workflow, /if not transport_error and not \(status == 404 and error_code == 1042\) and not \(status == 500 and error_code == 1104\):/);
 });
 
 test("authority mutation is not retried automatically", () => {
