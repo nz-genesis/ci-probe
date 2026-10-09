@@ -49,6 +49,13 @@ class VisibilityDiscoveryTests(unittest.TestCase):
         self.assertTrue(result["response_body"]["cloudflare_challenge_detected"])
         self.assertTrue(result["response_body"]["raw_body_redacted"])
         self.assertEqual(len(result["response_body"]["raw_body_sha256"]),64)
+        self.assertNotIn("safe_body_preview",result["response_body"])
+
+    def test_non_challenge_plain_text_error_has_bounded_safe_preview(self):
+        result=discovery.sanitize_result({"http_status":404,"response_body":{"raw":"not found"},"transport_state":"HTTP_RESPONSE_OBSERVED"})
+        self.assertTrue(result["response_body"]["raw_body_redacted"])
+        self.assertEqual(result["response_body"]["safe_body_preview"],"not found")
+        self.assertEqual(len(result["response_body"]["raw_body_sha256"]),64)
 
     def test_manual_runbook_and_workflow_share_triggering_source_pin(self):
         root=Path(__file__).resolve().parents[2]
