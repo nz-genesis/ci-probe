@@ -59,8 +59,9 @@ export class P347Authority extends DurableObject {
   async currentState() {
     const generation = this.currentGeneration();
     const effectCount = this.effectCount();
-    const state = canonicalState(generation, effectCount);
-    const digest = await sha256Hex(state);
+    // P347's recorded external contract intentionally hashes canonical {"generation":N}.
+    // effect_count is exposed separately and is not part of this generation token.
+    const digest = await sha256Hex(JSON.stringify({ generation }));
     return { generation, effect_count: effectCount, state_digest: digest };
   }
 
