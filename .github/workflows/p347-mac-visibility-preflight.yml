@@ -16,7 +16,7 @@ concurrency:
 jobs:
   deploy-authority:
     name: deploy temporary read-only authority
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-mac-actor-v0' }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-mac-actor-v0' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[P347-ROUTE-DIAG]') || contains(github.event.head_commit.message, '[P347-PHYSICAL-ARMED]')))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
