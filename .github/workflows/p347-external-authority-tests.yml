@@ -128,10 +128,11 @@ jobs:
                       body=json.loads(r.read().decode())
               except HTTPError as e:
                   status=e.code
+                  raw=e.read()
                   try:
-                      body=json.loads(e.read().decode())
+                      body=json.loads(raw.decode())
                   except Exception:
-                      body={"raw":e.read().decode(errors="replace")}
+                      body={"raw":raw.decode(errors="replace")}
               except URLError as e:
                   body={"error":str(e)}
               attempts.append({"attempt":attempt,"status":status,"body":body})
@@ -141,12 +142,16 @@ jobs:
                       raise SystemExit("readiness source_version mismatch")
                   ready=True
                   break
-              if status not in (1042,404,1104):
+              error_code=body.get("error_code") if isinstance(body,dict) else None
+              # Bounded deployment-propagation diagnostic only: retry known
+              # Cloudflare 1042/1104 responses for at most 60 seconds.
+              if not (status == 404 and error_code == 1042) and not (status == 500 and error_code == 1104):
                   break
               time.sleep(2)
           Path("readiness.json").write_text(json.dumps({"url":url,"expected_source_version":expected,"ready":ready,"attempts":attempts},indent=2,sort_keys=True)+"\n",encoding="utf-8")
           if not ready:
               raise SystemExit("external authority did not become ready within 60 seconds (including bounded 1104 propagation probe)")
+          PY
 
       - name: Execute real external authority discriminator
         working-directory: p347/external-authority
