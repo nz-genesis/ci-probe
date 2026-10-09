@@ -2,7 +2,7 @@
 
 ## Current verified toolchain — 2026-10-09
 
-For this bounded P347 experiment, Wrangler `4.149.0` is the verified release baseline. The official release was published at `2026-10-08T18:33:04Z`, and v9 run `37847810217` executed on that version with readiness PASS and seven semantic cases PASS. Release record: https://github.com/cloudflare/workers-sdk/releases/tag/wrangler%404.149.0
+For this bounded P347 experiment, Wrangler `4.149.0` is the verified release baseline. The official release was published at `2026-10-08T18:33:04Z`. The current idempotency-recovery source SHA `eed787812545f80997e93a00266aee550a06e0b6` passed run `37902065459`: contract tests 17/17 and real external-authority cases 7/7. The earlier v9 run `37847810217` on `e63c138ffe833f028a6942c82704c2303d1313c1` remains historical genealogy, not the source to use for the current Mac actor experiment. Release record: https://github.com/cloudflare/workers-sdk/releases/tag/wrangler%404.149.0
 
 Do not treat `4.148.0` as current for this research pass: it was used by later v10-v12 runs after `4.149.0` had already been published. Those failures remain run-specific negative genealogy; they do not invalidate the v9 receipt or prove a universal version defect.
 
@@ -40,9 +40,9 @@ test -z "$(git -C "$REPO_DIR" status --porcelain)" || {
   echo "STOP: repository has local changes; preserve them and use a clean checkout."
   exit 1
 }
-git -C "$REPO_DIR" checkout --detach e63c138ffe833f028a6942c82704c2303d1313c1
+git -C "$REPO_DIR" checkout --detach eed787812545f80997e93a00266aee550a06e0b6
 SOURCE_SHA="$(git -C "$REPO_DIR" rev-parse HEAD)"
-test "$SOURCE_SHA" = "e63c138ffe833f028a6942c82704c2303d1313c1"
+test "$SOURCE_SHA" = "eed787812545f80997e93a00266aee550a06e0b6"
 printf 'SOURCE_SHA=%s\n' "$SOURCE_SHA"
 ~~~
 
@@ -120,7 +120,7 @@ import json, sys
 from pathlib import Path
 
 state = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-expected = "e63c138ffe833f028a6942c82704c2303d1313c1"
+expected = "eed787812545f80997e93a00266aee550a06e0b6"
 assert state.get("source_version") == expected, state
 assert state.get("generation") == 1, state
 assert state.get("effect_count") == 0, state

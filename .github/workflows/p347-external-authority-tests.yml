@@ -6,6 +6,7 @@ on:
       - research/p347-external-authority-v0
       - research/p347-external-authority-execution-v12-current
       - research/p347-idempotency-recovery-hardening-2026-10-09
+      - research/p347-mac-actor-v0
   workflow_dispatch:
 
 permissions:
@@ -18,7 +19,7 @@ env:
 jobs:
   authority-contract:
     name: external authority contract
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-idempotency-recovery-hardening-2026-10-09' }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && (github.ref == 'refs/heads/research/p347-idempotency-recovery-hardening-2026-10-09' || github.ref == 'refs/heads/research/p347-mac-actor-v0') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact triggering commit
@@ -28,6 +29,8 @@ jobs:
           fetch-depth: 1
       - name: Verify exact checkout
         run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run dedicated Mac actor contract tests
+        run: python3 -m unittest discover -s p347/mac-actor -p 'test_*.py' -v
       - name: Run deterministic authority contract tests
         working-directory: p347/external-authority
         run: npm test
@@ -35,7 +38,7 @@ jobs:
 
   external-authority-execution:
     name: real external authority execution
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-idempotency-recovery-hardening-2026-10-09' }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && (github.ref == 'refs/heads/research/p347-idempotency-recovery-hardening-2026-10-09' || github.ref == 'refs/heads/research/p347-mac-actor-v0') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
