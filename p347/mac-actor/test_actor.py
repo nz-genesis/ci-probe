@@ -1,4 +1,4 @@
-import json, subprocess, unittest
+import json, subprocess, tempfile, unittest
 from pathlib import Path
 from unittest.mock import patch
 import actor
@@ -60,6 +60,42 @@ class MacActorContractTests(unittest.TestCase):
         self.assertIn('"activated_by_actor":False',source)
         self.assertNotIn("pfctl",source)
         self.assertNotIn("iptables",source)
+
+    def test_read_only_call_retries_known_edge_propagation_then_succeeds(self):
+        transient={"http_status":404,"transport_state":"HTTP_RESPONSE_OBSERVED",
+          "response_body":{"error_code":1042},"request_finished_utc":"t1",
+          "request_finished_monotonic_ns":1,"local_ip":None,"remote_ip":None,"remote_port":None}
+        success={"http_status":200,"transport_state":"HTTP_RESPONSE_OBSERVED",
+          "response_body":{"generation":1},"request_finished_utc":"t2",
+          "request_finished_monotonic_ns":2,"local_ip":"192.0.2.1","remote_ip":"198.51.100.2","remote_port":443}
+        with tempfile.TemporaryDirectory() as directory, patch("actor.call",side_effect=[transient,success]) as mocked, patch("actor.time.sleep"):
+            run={"authority_url":"https://authority.example","correlation_id":"c1","actor_host":"mac"}
+            result=actor.read_only(Path(directory),run,"state","/v1/state")
+            self.assertEqual(mocked.call_count,2)
+            self.assertEqual(result["http_status"],200)
+            self.assertEqual(len(run["safe_read_retry_events"]),1)
+
+    def test_read_only_call_does_not_retry_real_effect_absence(self):
+        absent={"http_status":404,"transport_state":"HTTP_RESPONSE_OBSERVED",
+          "response_body":{"error":"not_found"},"request_finished_utc":"t1",
+          "request_finished_monotonic_ns":1,"local_ip":None,"remote_ip":None,"remote_port":None}
+        with tempfile.TemporaryDirectory() as directory, patch("actor.call",return_value=absent) as mocked, patch("actor.time.sleep"):
+            run={"authority_url":"https://authority.example","correlation_id":"c1","actor_host":"mac"}
+            result=actor.read_only(Path(directory),run,"effect_observation","/v1/effects/e1")
+            self.assertEqual(mocked.call_count,1)
+            self.assertEqual(result["response_body"]["error"],"not_found")
+
+    def test_read_only_retry_budget_is_bounded(self):
+        unknown={"http_status":None,"transport_state":"UNKNOWN","response_body":None,
+          "request_finished_utc":"t1","request_finished_monotonic_ns":1,
+          "local_ip":None,"remote_ip":None,"remote_port":None}
+        with tempfile.TemporaryDirectory() as directory, patch("actor.call",return_value=unknown) as mocked, patch("actor.time.sleep") as sleep:
+            run={"authority_url":"https://authority.example","correlation_id":"c1","actor_host":"mac"}
+            result=actor.read_only(Path(directory),run,"state","/v1/state",max_attempts=5)
+            self.assertEqual(mocked.call_count,5)
+            self.assertEqual(sleep.call_count,4)
+            self.assertEqual(result["transport_state"],"UNKNOWN")
+            self.assertEqual(len(run["safe_read_retry_events"]),4)
 
     def test_actor_recovery_does_not_claim_physical_lost_ack(self):
         source=Path(actor.__file__).read_text(encoding="utf-8")

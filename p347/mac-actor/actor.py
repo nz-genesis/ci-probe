@@ -108,6 +108,25 @@ def call(root,run,name,method,path,token=None,payload=None,headers=None,timeout=
       "http_status":r["http_status"],"transport_state":r["transport_state"],"local_ip":r["local_ip"],"remote_ip":r["remote_ip"],"remote_port":r["remote_port"]})
     save(root,run); return r
 
+def read_only(root,run,name,path,timeout=10.0,max_attempts=5):
+    """Bounded retries for read-only calls only; consequential mutations are never retried here."""
+    for attempt in range(1,max_attempts+1):
+        result=call(root,run,name+"_attempt_"+str(attempt),"GET",path,timeout=timeout)
+        b=body(result); code=b.get("error_code")
+        retryable=(result.get("transport_state")=="UNKNOWN" or result.get("http_status")==523
+          or (result.get("http_status")==404 and code==1042)
+          or (result.get("http_status")==500 and code==1104))
+        if not retryable or attempt==max_attempts:
+            return result
+        record={"name":name,"attempt":attempt,"http_status":result.get("http_status"),
+          "transport_state":result.get("transport_state"),"cloudflare_error_code":code,"next_attempt":attempt+1}
+        run.setdefault("safe_read_retry_events",[]).append(record)
+        event(root,{"event":"safe_read_retry",**record})
+        save(root,run)
+        time.sleep(2)
+    raise RuntimeError("unreachable safe-read retry state")
+
+
 def prepare(a):
     root=Path(a.run_dir).expanduser().resolve(); root.mkdir(parents=True,mode=0o700,exist_ok=False); root.chmod(0o700)
     url=Path(a.authority_url_file).expanduser().read_text().strip().rstrip("/")
@@ -120,13 +139,13 @@ def prepare(a):
       "fault_injector":{"owned_by_actor":False,"activated_by_actor":False,"receipt":None},
       "claims":{"lost_ack_exercised":False,"ambiguous_effect_recovery_verified":False,"physical_effect_admitted":False,"independent_witness_admitted":False}}
     save(root,run)
-    s=call(root,run,"initial_state","GET","/v1/state")
+    s=read_only(root,run,"initial_state","/v1/state")
     require(s,200,lambda b:b.get("authority")=="P347_EXTERNAL_AUTHORITY" and b.get("source_version")==a.expected_source_version and b.get("generation")==1 and b.get("effect_count")==0,"initial_state")
     m=call(root,run,"authority_mutation","POST","/v1/admin/mutate",admin,{})
     if m.get("http_status")==200 and body(m).get("generation")==2: run["mutation_disposition"]="RESPONSE_OBSERVED"
     else:
         # Never retry a generation mutation; resolve only by a fresh read.
-        fresh=call(root,run,"mutation_fresh_state","GET","/v1/state")
+        fresh=read_only(root,run,"mutation_fresh_state","/v1/state")
         if fresh.get("http_status")!=200 or body(fresh).get("source_version")!=a.expected_source_version or body(fresh).get("generation")!=2:
             run["stage"]="STOPPED_MUTATION_AMBIGUOUS"; save(root,run); raise RuntimeError("mutation not confirmed by fresh state; do not retry")
         run["mutation_disposition"]="UNKNOWN_RESOLVED_BY_FRESH_STATE"
@@ -157,7 +176,7 @@ def reconcile(a):
     root=Path(a.run_dir).expanduser().resolve(); run=load(root)
     if run.get("stage")!="EFFECT_ATTEMPTED": raise RuntimeError("reconcile requires EFFECT_ATTEMPTED stage")
     token,eid=secret(a.effect_token_file),run["effect_id"]
-    obs=call(root,run,"fresh_observation_before_retry","GET","/v1/effects/"+quote(eid,safe=""))
+    obs=read_only(root,run,"fresh_observation_before_retry","/v1/effects/"+quote(eid,safe=""))
     if obs["transport_state"]=="UNKNOWN" or obs["http_status"] not in (200,404):
         run["stage"]="RECONCILIATION_UNKNOWN"; run["reconciliation_disposition"]="OBSERVATION_NOT_DECISIVE"; save(root,run)
         raise RuntimeError("fresh observation not decisive; stop before retry")
@@ -177,7 +196,7 @@ def reconcile(a):
     conflict=call(root,run,"same_key_different_payload_conflict","POST","/v1/effects",token,conflict_payload,{
       "Idempotency-Key":eid,"X-Request-Fingerprint":fingerprint(conflict_payload),"X-Correlation-ID":run["correlation_id"]},a.timeout_seconds)
     run["conflict_pass"]=conflict["http_status"]==409 and body(conflict).get("reason")=="CONFLICT"
-    final=call(root,run,"fresh_effect_reobservation","GET","/v1/effects/"+quote(eid,safe="")); fb=body(final)
+    final=read_only(root,run,"fresh_effect_reobservation","/v1/effects/"+quote(eid,safe="")); fb=body(final)
     run["fresh_reobservation_pass"]=final["http_status"]==200 and fb.get("effect_id")==eid and fb.get("generation")==2 and fb.get("payload")=={"amount":1} and fb.get("fingerprint")==h["X-Request-Fingerprint"]
     unknown=run.get("initial_effect_outcome")=="UNKNOWN"
     run["ambiguous_effect_recovery"]="VERIFIED_BOUNDED" if unknown and present and retry_ok and run["conflict_pass"] and run["fresh_reobservation_pass"] else "NOT_EXERCISED"
