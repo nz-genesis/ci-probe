@@ -19,11 +19,19 @@ def sanitize_result(result):
         match=re.search(r"<title[^>]*>(.*?)</title>",raw,re.IGNORECASE|re.DOTALL)
         title=re.sub(r"\s+"," ",match.group(1)).strip()[:120] if match else None
         challenge=("Just a moment" in raw or "__cf_chl" in raw or "challenges.cloudflare.com" in raw)
+        safe_preview=None
+        # Preserve only short, plain-text diagnostic tokens with a strict safe alphabet.
+        # Never preserve HTML, headers, credentials, URLs with query strings, or arbitrary bodies.
+        candidate=raw.strip()
+        if not challenge and re.fullmatch(r"[A-Za-z0-9 .,_:/-]{1,160}",candidate):
+            safe_preview=candidate
         result["response_body"]={
             "raw_body_sha256":hashlib.sha256(raw.encode("utf-8",errors="replace")).hexdigest(),
             "raw_body_chars":len(raw),"raw_body_redacted":True,"page_title":title,
             "cloudflare_challenge_detected":challenge,
         }
+        if safe_preview is not None:
+            result["response_body"]["safe_body_preview"]=safe_preview
     return result
 
 
