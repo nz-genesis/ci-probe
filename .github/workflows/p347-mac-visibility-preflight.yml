@@ -14,11 +14,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  mac-visibility:
-    name: physical Mac read-only visibility probes
+  deploy-authority:
+    name: deploy temporary read-only authority
     if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-mac-actor-v0' }}
-    runs-on: [self-hosted, macOS, p347-mac]
-    timeout-minutes: 12
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      authority_url: ${{ steps.deploy.outputs.authority_url }}
     steps:
       - name: Checkout exact triggering commit
         uses: actions/checkout@v4
@@ -26,13 +28,11 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 1
       - name: Verify exact checkout
-        shell: bash
         run: |
           set -euo pipefail
-          actual="$(git rev-parse HEAD)"
-          test "$actual" = "$GITHUB_SHA"
-          printf 'GITHUB_SHA=%s\nCHECKED_OUT_SHA=%s\n' "$GITHUB_SHA" "$actual"
-      - name: Deploy temporary authority for read-only discovery
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Deploy temporary authority
+        id: deploy
         shell: bash
         working-directory: p347/external-authority
         run: |
@@ -42,10 +42,10 @@ jobs:
           chmod 700 "$RUN_TMP"
           echo "P347_RUN_TMP=$RUN_TMP" >> "$GITHUB_ENV"
           trap 'rm -f "$RUN_TMP/.p347-secrets.json" "$RUN_TMP/deployment.raw.txt"' EXIT
-          python3 - <<'PY'
-          import json, secrets, os
+          python3 - "$RUN_TMP" <<'PY'
+          import json, secrets, sys
           from pathlib import Path
-          p=Path(os.environ["RUNNER_TEMP"])/("p347-mac-visibility-"+os.environ["GITHUB_RUN_ID"]+"-"+os.environ["GITHUB_RUN_ATTEMPT"])/".p347-secrets.json"
+          p=Path(sys.argv[1]) / ".p347-secrets.json"
           p.write_text(json.dumps({"P347_ADMIN_TOKEN":secrets.token_hex(32),"P347_EFFECT_TOKEN":secrets.token_hex(32)}),encoding="utf-8")
           p.chmod(0o600)
           PY
@@ -53,46 +53,86 @@ jobs:
           npx --yes wrangler@4.149.0 deploy --temporary --strict --secrets-file "$RUN_TMP/.p347-secrets.json" --var "P347_SOURCE_VERSION:$GITHUB_SHA" > "$RUN_TMP/deployment.raw.txt" 2>&1
           deploy_rc=$?
           set -e
-          python3 - "$RUN_TMP" "$deploy_rc" <<'PY'
+          python3 - "$RUN_TMP" "$deploy_rc" "$GITHUB_OUTPUT" <<'PY'
           import re, sys
           from pathlib import Path
-          root=Path(sys.argv[1]); rc=int(sys.argv[2])
+          root=Path(sys.argv[1]); rc=int(sys.argv[2]); output=Path(sys.argv[3])
           raw=(root/"deployment.raw.txt").read_text(errors="replace")
           safe=re.sub(r'https://dash\.cloudflare\.com/claim-preview\?claimToken=[^\s]+','https://dash.cloudflare.com/claim-preview?claimToken=[REDACTED]',raw)
           safe=re.sub(r'(?i)(P347_ADMIN_TOKEN|P347_EFFECT_TOKEN)[=:][^\s]+',r'\1=[REDACTED]',safe)
           (root/"deployment-diagnostic.txt").write_text(safe,encoding="utf-8")
           urls=re.findall(r'https://[A-Za-z0-9._-]+\.workers\.dev',raw)
-          if urls: (root/"authority-url.txt").write_text(urls[-1]+"\n",encoding="utf-8")
+          if urls:
+              (root/"authority-url.txt").write_text(urls[-1]+"\n",encoding="utf-8")
+              if rc == 0:
+                  with output.open("a",encoding="utf-8") as f: f.write("authority_url="+urls[-1]+"\n")
           print(safe[-8000:])
           print("P347_MAC_VISIBILITY_DEPLOY_EXIT="+str(rc))
           PY
           rm -f "$RUN_TMP/.p347-secrets.json" "$RUN_TMP/deployment.raw.txt"
           test "$deploy_rc" -eq 0
           test -s "$RUN_TMP/authority-url.txt"
-          echo "P347_AUTHORITY_URL_FILE=$RUN_TMP/authority-url.txt" >> "$GITHUB_ENV"
+      - name: Upload sanitized deployment diagnostic
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: p347-mac-visibility-deployment-${{ github.sha }}
+          path: ${{ runner.temp }}/p347-mac-visibility-${{ github.run_id }}-${{ github.run_attempt }}/deployment-diagnostic.txt
+          if-no-files-found: ignore
+      - name: Cleanup deployment temporary files
+        if: ${{ always() }}
+        run: rm -rf "$RUNNER_TEMP/p347-mac-visibility-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+
+  mac-visibility:
+    name: physical Mac read-only visibility probes
+    needs: deploy-authority
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-mac-actor-v0' }}
+    runs-on: [self-hosted, macOS, p347-mac]
+    timeout-minutes: 12
+    env:
+      P347_AUTHORITY_URL: ${{ needs.deploy-authority.outputs.authority_url }}
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify exact Mac checkout and runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 --version
+          curl --version
+          test -n "$P347_AUTHORITY_URL"
+      - name: Prepare private URL file
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_TMP="$RUNNER_TEMP/p347-mac-visibility-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir -m 700 -p "$RUN_TMP"
+          chmod 700 "$RUN_TMP"
+          printf '%s\n' "$P347_AUTHORITY_URL" > "$RUN_TMP/authority-url.txt"
+          chmod 600 "$RUN_TMP/authority-url.txt"
+          echo "P347_RUN_TMP=$RUN_TMP" >> "$GITHUB_ENV"
       - name: Discover Mac and authority IPs; open N100 capture window
         shell: bash
         run: |
           set -euo pipefail
           python3 p347/mac-actor/visibility_discovery.py \
-            --authority-url-file "$P347_AUTHORITY_URL_FILE" \
+            --authority-url-file "$P347_RUN_TMP/authority-url.txt" \
             --expected-source-version "$GITHUB_SHA" \
             --actor-source-version "$GITHUB_SHA" \
             --output "$P347_RUN_TMP/mac-visibility-discovery.json" \
             --window-seconds 120 \
             --probe-count 3
-      - name: Upload sanitized visibility discovery
+      - name: Upload sanitized Mac visibility discovery
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: p347-mac-visibility-${{ github.sha }}
-          path: |
-            ${{ runner.temp }}/p347-mac-visibility-${{ github.run_id }}-${{ github.run_attempt }}/mac-visibility-discovery.json
-            ${{ runner.temp }}/p347-mac-visibility-${{ github.run_id }}-${{ github.run_attempt }}/deployment-diagnostic.txt
+          name: p347-mac-visibility-discovery-${{ github.sha }}
+          path: ${{ runner.temp }}/p347-mac-visibility-${{ github.run_id }}-${{ github.run_attempt }}/mac-visibility-discovery.json
           if-no-files-found: ignore
-      - name: Cleanup temporary deployment credentials
+      - name: Cleanup Mac temporary files
         if: ${{ always() }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf "$RUNNER_TEMP/p347-mac-visibility-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+        run: rm -rf "$RUNNER_TEMP/p347-mac-visibility-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
