@@ -211,6 +211,10 @@ Mac-side PF может использоваться как experimental fault me
 - exact source/version identity;
 - synchronized wall/monotonic timing.
 
-**Mac actor implementation gap:** текущий repository tree не содержит dedicated P347 actor, который выполняет consequential effect, сохраняет timeout как `UNKNOWN`, затем делает fresh observation, same-key retry и conflict check. Существующая Mac execution matrix проверяет host identity/capabilities, но не заменяет этот actor. Read-only `curl /v1/state` достаточен только для topology-visibility preflight; он не разрешает faulted physical run. Сначала implement and test actor through the public CI probe, then use it against the fresh temporary authority.
+**Текущий статус Mac actor (2026-10-09):** dedicated actor реализован в p347/mac-actor/actor.py, source SHA 0eb631c597f2b3705a8f211245f123767b994c14; hosted-Linux contract tests 11/11 PASS, Node contract tests 17/17 PASS, external authority 7/7 PASS. Это закрывает только artifact/contract gap. Физический Mac runtime и N100 visibility всё ещё PENDING; lost_ack_exercised остаётся false до независимого fault-controller receipt и коррелированного N100 raw pcap/manifest.
+
+Workflow-assisted read-only preflight находится в .github/workflows/p347-mac-visibility-preflight.yml и запускается на self-hosted Mac runner. В логах появляется N100_CAPTURE_WINDOW_OPEN с MAC_IP, AUTHORITY_IP и задержкой 120 секунд до трёх read-only GET probes. Во время окна на N100 нужно запустить capture длительностью не менее 240 секунд, фильтр host MAC_IP и TCP/443. Сопоставь capture с Mac-side request timestamps и фактическими remote IP из артефакта. Если окно пропущено, visibility остаётся PENDING и preflight нужно повторить при готовом N100 capture.
+
+Read-only discovery не запускает mutation/effect и не активирует fault injector. Он не доказывает видимость N100 сам по себе и не разрешает faulted physical run.
 
 Если хотя бы один обязательный поток отсутствует, faulted run остаётся APPARATUS-ONLY / NOT ADMITTED.

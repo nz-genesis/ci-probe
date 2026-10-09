@@ -14,6 +14,10 @@ Actor не активирует и не управляет fault injector. N100 
 - Не печатай tokens, не включай их в evidence и не загружай секреты в публичные артефакты. Actor передаёт Authorization через временный файл mode 0600, не через argv; файл удаляется после единственного curl-вызова. Read-only GET повторяется ограниченно только при UNKNOWN/HTTP 523/Cloudflare 1042/1104; mutation не повторяется, consequential POST отправляется ровно один раз.
 - Используй clean exact actor checkout; prepare остановится на dirty tree.
 
+## Workflow-assisted topology preflight
+
+The workflow .github/workflows/p347-mac-visibility-preflight.yml runs on the physical self-hosted Mac runner, deploys a temporary authority and prints the actual MAC_IP/AUTHORITY_IP. It opens a 120-second window before three read-only GET probes. During that window, N100 must capture host MAC_IP and TCP/443 for at least 240 seconds. The workflow never starts or configures the fault injector. If the window is missed or no target-flow packets are observed, WITNESS_VISIBILITY remains PENDING/UNVERIFIED.
+
 ## 1. Точный checkout и тесты на Mac
 
 Задай ACTOR_SHA точным SHA проверенного commit/workflow, а не именем плавающей ветки:
