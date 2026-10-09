@@ -223,14 +223,21 @@ jobs:
               raise SystemExit(1)
           s,b=call("GET","/v1/state",retry_safe=True); evidence["cases"].append({"name":"fresh_state","status":s,"body":b}); require("fresh_state", s==200 and b.get("generation")==1, s, b)
           s,b=call("POST","/v1/admin/mutate",admin,body={}); evidence["cases"].append({"name":"authority_mutation","status":s,"body":b}); require("authority_mutation", s==200 and b.get("generation")==2, s, b)
-          h={"Idempotency-Key":"p347-real-e1","X-Request-Fingerprint":"fingerprint-1"}
-          s,b=call("POST","/v1/effects",effect,{"generation":1,"payload":{"amount":1}},h,retry_safe=True); evidence["cases"].append({"name":"stale_generation_reject","status":s,"body":b}); require("stale_generation_reject", s==409 and b.get("reason")=="STALE_REJECT", s, b)
+          import hashlib
+          def request_fingerprint(value):
+              canonical=json.dumps(value,sort_keys=True,separators=(",",":")).encode()
+              return hashlib.sha256(canonical).hexdigest()
+          effect_id="p347-real-e1"
+          stale={"generation":1,"payload":{"amount":1}}
+          h_stale={"Idempotency-Key":effect_id,"X-Request-Fingerprint":request_fingerprint(stale)}
+          s,b=call("POST","/v1/effects",effect,stale,h_stale,retry_safe=True); evidence["cases"].append({"name":"stale_generation_reject","status":s,"body":b}); require("stale_generation_reject", s==409 and b.get("reason")=="STALE_REJECT", s, b)
           current={"generation":2,"payload":{"amount":1}}
+          h={"Idempotency-Key":effect_id,"X-Request-Fingerprint":request_fingerprint(current)}
           s,b=call("POST","/v1/effects",effect,current,h,retry_safe=True); evidence["cases"].append({"name":"new_effect_or_recovered_after_ambiguous_response","status":s,"body":b}); require("new_effect_or_recovered_after_ambiguous_response", ((s==201 and b.get("duplicate") is False) or (s==200 and b.get("duplicate") is True)) and bool(b.get("effect_id")), s, b)
           eid=b["effect_id"]
           s,b=call("POST","/v1/effects",effect,current,h,retry_safe=True); evidence["cases"].append({"name":"same_key_same_payload_retry","status":s,"body":b}); require("same_key_same_payload_retry", s==200 and b.get("duplicate") is True and b.get("effect_id")==eid, s, b)
-          h2={"Idempotency-Key":"p347-real-e1","X-Request-Fingerprint":"fingerprint-2"}
           conflicting={"generation":2,"payload":{"amount":2}}
+          h2={"Idempotency-Key":effect_id,"X-Request-Fingerprint":request_fingerprint(conflicting)}
           s,b=call("POST","/v1/effects",effect,conflicting,h2,retry_safe=True); evidence["cases"].append({"name":"same_key_different_payload_conflict","status":s,"body":b}); require("same_key_different_payload_conflict", s==409 and b.get("reason")=="CONFLICT", s, b)
           s,b=call("GET","/v1/effects/"+eid,retry_safe=True); evidence["cases"].append({"name":"fresh_effect_reobservation","status":s,"body":b}); require("fresh_effect_reobservation", s==200 and b.get("effect_id")==eid and b.get("outcome")=="OBSERVED_SUCCESS", s, b)
           evidence["result"]="PASS"
