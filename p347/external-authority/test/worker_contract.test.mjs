@@ -5,9 +5,10 @@ import fs from "node:fs";
 const source = fs.readFileSync(new URL("../src/worker.mjs", import.meta.url), "utf8");
 
 function methodBody(name) {
-  const marker = `  ${name}(`;
-  const start = source.indexOf(marker);
-  assert.notEqual(start, -1, `missing method ${name}`);
+  const marker = new RegExp(`  (?:async )?${name}\\(`);
+  const match = marker.exec(source);
+  assert.notEqual(match, null, `missing method ${name}`);
+  const start = match.index;
   const next = source.indexOf("\n  }", start);
   assert.notEqual(next, -1, `unterminated method ${name}`);
   return source.slice(start, next);
