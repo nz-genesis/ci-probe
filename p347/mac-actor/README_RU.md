@@ -102,3 +102,6 @@ The previous physical-Mac attempt is run 37918930626 and returned HTTP 403 with 
 
 
 The first host-only route diagnostic (run 37922281656, source 21475049dc0cfdea76351063fb1bf76d3241c2bd) deployed successfully but GET /v1/state returned HTTP 404 from hosted Linux. Its body was redacted to hash/length only, so the exact 404 meaning remains unknown. The follow-up diagnostic uses a tested safe plain-text preview for short non-HTML bodies; challenge HTML remains redacted. Exact-source tests passed on source efafb0d9bb0f1c92be9c5c57cccde3521082038a (23 Python + 17 Node). A new [P347-ROUTE-DIAG] commit is authorized only for another hosted-Linux read-only diagnostic; physical Mac remains gated off.
+
+
+The second host-only route diagnostic (run 37922666946, source 64d20a6b265fa40762fc561a160e315583ab10c2) returned HTTP 404 with safe preview “error code: 1042”. The readiness classifier initially missed this plain-text representation; the defect was caught by CI on source bb2d3d1d6ba223df5e00647adc5a3c36a34fded1 and corrected. Exact-source CI passed on 666957c2902c56d8e8193a79c3eb3e78f95d4fa4: 24 Python + 17 Node. This route diagnostic will validate the bounded 1042/1104 retry path on a fresh temporary deployment. It remains host-only; the physical Mac job must stay skipped.
