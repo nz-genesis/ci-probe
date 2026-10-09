@@ -121,6 +121,7 @@ jobs:
           for attempt in range(1,31):
               status=None
               body=None
+              transport_error=False
               try:
                   req=Request(url+"/v1/state",method="GET",headers=headers)
                   with urlopen(req,timeout=10) as r:
@@ -134,8 +135,9 @@ jobs:
                   except Exception:
                       body={"raw":raw.decode(errors="replace")}
               except URLError as e:
+                  transport_error=True
                   body={"error":str(e)}
-              attempts.append({"attempt":attempt,"status":status,"body":body})
+              attempts.append({"attempt":attempt,"status":status,"transport_error":transport_error,"body":body})
               print(json.dumps(attempts[-1],sort_keys=True))
               if status==200 and body.get("authority")=="P347_EXTERNAL_AUTHORITY":
                   if body.get("source_version") != expected:
@@ -143,9 +145,9 @@ jobs:
                   ready=True
                   break
               error_code=body.get("error_code") if isinstance(body,dict) else None
-              # Bounded deployment-propagation diagnostic only: retry known
-              # Cloudflare 1042/1104 responses for at most 60 seconds.
-              if not (status == 404 and error_code == 1042) and not (status == 500 and error_code == 1104):
+              # Bounded readiness probe: retry transient transport failures and
+              # observed 1042/1104 deployment-propagation responses for at most 60 seconds.
+              if not transport_error and not (status == 404 and error_code == 1042) and not (status == 500 and error_code == 1104):
                   break
               time.sleep(2)
           Path("readiness.json").write_text(json.dumps({"url":url,"expected_source_version":expected,"ready":ready,"attempts":attempts},indent=2,sort_keys=True)+"\n",encoding="utf-8")
