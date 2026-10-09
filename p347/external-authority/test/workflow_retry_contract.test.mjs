@@ -30,6 +30,8 @@ test("idempotent effect operations opt into bounded safe retry", () => {
   assert.match(workflow, /call\("POST","\/v1\/effects",effect,current,h,retry_safe=True\)/);
   assert.match(workflow, /new_effect_or_recovered_after_ambiguous_response/);
   assert.match(workflow, /conflicting=\{"generation":2,"payload":\{"amount":2\}\}/);
+  assert.match(workflow, /def request_fingerprint\(value\):/);
+  assert.match(workflow, /hashlib\.sha256\(canonical\)\.hexdigest\(\)/);
   assert.match(workflow, /call\("POST","\/v1\/effects",effect,conflicting,h2,retry_safe=True\)/);
   assert.match(workflow, /call\("GET","\/v1\/effects\/"\+eid,retry_safe=True\)/);
 });
