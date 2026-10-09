@@ -28,7 +28,7 @@ jobs:
       - name: Record explicit research execution trigger
         run: |
           set -euo pipefail
-          printf '%s\n' 'P387 external source-native execution trigger: receipt-path correction rerun with completeness gate' 'No semantic fixture or candidate mapping is introduced by this step.' | tee p387-trigger.txt
+          printf '%s\n' 'P387 source-native witness: exact frozen external commit; real BPMN modeler and PouchDB; no Genesis mapping or architecture inference.' | tee p387-trigger.txt
 
       - name: Setup Node 16 for frozen Angular 14 lineage
         uses: actions/setup-node@v4
@@ -56,6 +56,13 @@ jobs:
           test -f package-lock.json
           node -e 'const p=require("./package.json"); if(p.name!=="bmdl-modeler") process.exit(1); if(p.version!=="1.2.0") process.exit(1); if(p.scripts?.test!=="jest") process.exit(1); if(p.scripts?.build!=="ng build") process.exit(1); console.log(JSON.stringify({name:p.name,version:p.version,test:p.scripts.test,build:p.scripts.build}))' | tee ../../p387-package-contract.txt
 
+      - name: Initialize source-native witness receipt
+        run: |
+          set -euo pipefail
+          cat > external/sbmd/p387-witness-receipt.json <<'JSON'
+          {"schema":"genesis.p387.source-native-witness.v1","status":"NOT_REACHED","reason":"witness step not reached"}
+          JSON
+
       - name: Install exact locked dependencies
         working-directory: external/sbmd
         run: npm ci
@@ -63,6 +70,34 @@ jobs:
       - name: Execute external implementation test suite
         working-directory: external/sbmd
         run: npm test -- --runInBand
+
+      - name: Install source-native witness harness
+        run: |
+          set -euo pipefail
+          cp probes/p387-source-native-witness.spec.ts external/sbmd/src/app/development-process-registry/running-process/p387-source-native-witness.spec.ts
+          sha256sum probes/p387-source-native-witness.spec.ts | tee p387-witness-harness-sha256.txt
+
+      - name: Install IndexedDB API polyfill for PouchDB in Jest
+        working-directory: external/sbmd
+        run: |
+          set -euo pipefail
+          npm install --no-save --ignore-scripts fake-indexeddb@5.0.2
+          node -e "require('fake-indexeddb/auto'); console.log('fake-indexeddb@5.0.2 loaded')" | tee ../../p387-witness-adapter.txt
+
+      - name: Execute source-native behavioral witness
+        id: p387-witness
+        working-directory: external/sbmd
+        env:
+          P387_PROBE_SHA: ${{ github.sha }}
+          P387_EXTERNAL_SHA: 4b49f93423cc2c17822f794a12187130c2c11202
+        run: |
+          set -euo pipefail
+          set +e
+          npm test -- --runInBand --runTestsByPath src/app/development-process-registry/running-process/p387-source-native-witness.spec.ts 2>&1 | tee ../../p387-witness-jest.log
+          status=${PIPESTATUS[0]}
+          printf '%s' "$status" > ../../p387-witness-exit-code.txt
+          exit "$status"
+
 
       - name: Build external implementation
         working-directory: external/sbmd
@@ -75,7 +110,19 @@ jobs:
           for f in p387-external-identity.txt p387-package-contract.txt p387-runner-identity.txt p387-trigger.txt; do
             test -s "$f"
           done
-          printf '%s\n' 'receipt_completeness=PASS' > p387-receipt-completeness.txt
+          if [ -s external/sbmd/p387-witness-receipt.json ]; then
+            cp external/sbmd/p387-witness-receipt.json p387-witness-receipt.json
+          else
+            printf '%s' '{"schema":"genesis.p387.source-native-witness.v1","status":"NO_RECEIPT","reason":"external receipt missing"}' > p387-witness-receipt.json
+          fi
+          if [ ! -s p387-witness-jest.log ]; then printf '%s' 'witness_test_log=NOT_REACHED' > p387-witness-jest.log; fi
+          if [ ! -s p387-witness-exit-code.txt ]; then printf '%s' 'NOT_REACHED' > p387-witness-exit-code.txt; fi
+          if [ ! -s p387-witness-harness-sha256.txt ]; then printf '%s' 'witness_harness=NOT_INSTALLED' > p387-witness-harness-sha256.txt; fi
+          if [ ! -s p387-witness-adapter.txt ]; then printf '%s' 'witness_adapter=NOT_INSTALLED' > p387-witness-adapter.txt; fi
+          for f in p387-witness-receipt.json p387-witness-jest.log p387-witness-exit-code.txt p387-witness-harness-sha256.txt p387-witness-adapter.txt; do
+            test -s "$f"
+          done
+          printf '%s' 'receipt_completeness=PASS' > p387-receipt-completeness.txt
 
       - name: Upload P387 exact hosted execution receipt
         if: ${{ always() }}
@@ -87,5 +134,10 @@ jobs:
             p387-package-contract.txt
             p387-runner-identity.txt
             p387-trigger.txt
+            p387-witness-receipt.json
+            p387-witness-jest.log
+            p387-witness-exit-code.txt
+            p387-witness-harness-sha256.txt
+            p387-witness-adapter.txt
             p387-receipt-completeness.txt
           if-no-files-found: error
