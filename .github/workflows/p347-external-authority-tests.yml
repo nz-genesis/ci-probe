@@ -5,6 +5,7 @@ on:
     branches:
       - research/p347-external-authority-v0
       - research/p347-external-authority-execution-v12-current
+      - research/p347-idempotency-recovery-hardening-2026-10-09
   workflow_dispatch:
 
 permissions:
@@ -12,12 +13,12 @@ permissions:
 
 
 env:
-  P347_WRANGLER_VERSION: "4.148.0"
+  P347_WRANGLER_VERSION: "4.149.0"
 
 jobs:
   authority-contract:
     name: external authority contract
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-v0' }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-idempotency-recovery-hardening-2026-10-09' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact triggering commit
@@ -34,7 +35,7 @@ jobs:
 
   external-authority-execution:
     name: real external authority execution
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-execution-v12-current' }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-idempotency-recovery-hardening-2026-10-09' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -53,10 +54,10 @@ jobs:
         run: npm test
 
       - name: Verify current Wrangler deployment contract
-        run: npx --yes wrangler@4.148.0 --version
+        run: npx --yes wrangler@4.149.0 --version
       - name: Validate Wrangler configuration without deployment
         working-directory: p347/external-authority
-        run: npx --yes wrangler@4.148.0 deploy --dry-run --strict
+        run: npx --yes wrangler@4.149.0 deploy --dry-run --strict
 
       - name: Deploy temporary external authority with one version
         working-directory: p347/external-authority
@@ -73,7 +74,7 @@ jobs:
           PY
           chmod 600 .p347-secrets.json
           set +e
-          npx --yes wrangler@4.148.0 deploy --temporary --strict --secrets-file .p347-secrets.json --var "P347_SOURCE_VERSION:$GITHUB_SHA" > deployment.raw.txt 2>&1
+          npx --yes wrangler@4.149.0 deploy --temporary --strict --secrets-file .p347-secrets.json --var "P347_SOURCE_VERSION:$GITHUB_SHA" > deployment.raw.txt 2>&1
           deploy_rc=$?
           set -e
           python3 - <<'PY'
@@ -185,7 +186,7 @@ jobs:
                           continue
                       return e.code,body_json
               raise RuntimeError("unreachable")
-          evidence={"probe":"P347_EXTERNAL_AUTHORITY_REAL_EXECUTION_V4","observed_at":datetime.now(timezone.utc).isoformat(),"source_version":source,"wrangler_version":os.environ.get("P347_WRANGLER_VERSION","4.148.0"),"authority_url":url,"cases":[]}
+          evidence={"probe":"P347_EXTERNAL_AUTHORITY_REAL_EXECUTION_V4","observed_at":datetime.now(timezone.utc).isoformat(),"source_version":source,"wrangler_version":os.environ.get("P347_WRANGLER_VERSION","4.149.0"),"authority_url":url,"cases":[]}
           def require(name, condition, status, body):
               print("CASE", name, "status=", status, "body=", json.dumps(body, sort_keys=True))
               if condition:
