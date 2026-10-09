@@ -35,10 +35,10 @@ test("effect lookup tolerates absent idempotency record", () => {
 });
 
 
-test("state digest includes generation and effect count", () => {
+test("state digest matches the recorded generation-only canonical contract", () => {
   const body = methodBody("currentState");
-  assert.match(body, /canonicalState\(generation, effectCount\)/);
-  assert.match(body, /sha256Hex\(state\)/);
+  assert.match(body, /sha256Hex\(JSON\.stringify\(\{\s*generation\s*\}\)\)/);
+  assert.match(body, /effect_count: effectCount/);
 });
 
 test("missing effect observation is handled without one-row exception", () => {
