@@ -163,12 +163,13 @@ jobs:
           from datetime import datetime, timezone
           from pathlib import Path
           from urllib.request import Request, urlopen
-          from urllib.error import HTTPError
+          from urllib.error import HTTPError, URLError
           base=Path.cwd()
           url=base.joinpath("authority_url.txt").read_text().strip()
           admin=base.joinpath("admin_token.tmp").read_text().strip()
           effect=base.joinpath("effect_token.tmp").read_text().strip()
           source=os.environ["GITHUB_SHA"]
+          transport_retry_events=[]
           def call(method,path,token=None,body=None,extra=None,retry_safe=False):
               headers={"accept":"application/json","user-agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36","accept-language":"en-US,en;q=0.9"}
               if token: headers["authorization"]="Bearer "+token
@@ -192,13 +193,24 @@ jobs:
                           e.code == 523
                       )
                       if retry_safe and retryable_edge_error and attempt < 15:
-                          print(f"bounded_safe_retry path={path} http_status={e.code} cloudflare_error_code={error_code} attempt={attempt}")
+                          event={"kind":"cloudflare_edge_error","path":path,"http_status":e.code,"cloudflare_error_code":error_code,"attempt":attempt}
+                          transport_retry_events.append(event)
+                          print("bounded_safe_retry "+json.dumps(event,sort_keys=True))
                           import time
                           time.sleep(2)
                           continue
                       return e.code,body_json
+                  except (URLError, TimeoutError) as e:
+                      event={"kind":"transport_error","path":path,"error_type":type(e).__name__,"attempt":attempt}
+                      if retry_safe and attempt < 15:
+                          transport_retry_events.append(event)
+                          print("bounded_safe_retry "+json.dumps(event,sort_keys=True))
+                          import time
+                          time.sleep(2)
+                          continue
+                      return None,{"transport_error":type(e).__name__,"detail":str(e),"attempt":attempt}
               raise RuntimeError("unreachable")
-          evidence={"probe":"P347_EXTERNAL_AUTHORITY_REAL_EXECUTION_V4","observed_at":datetime.now(timezone.utc).isoformat(),"source_version":source,"wrangler_version":os.environ.get("P347_WRANGLER_VERSION","4.149.0"),"authority_url":url,"cases":[]}
+          evidence={"probe":"P347_EXTERNAL_AUTHORITY_REAL_EXECUTION_V4","observed_at":datetime.now(timezone.utc).isoformat(),"source_version":source,"wrangler_version":os.environ.get("P347_WRANGLER_VERSION","4.149.0"),"authority_url":url,"transport_retry_events":transport_retry_events,"cases":[]}
           def require(name, condition, status, body):
               print("CASE", name, "status=", status, "body=", json.dumps(body, sort_keys=True))
               if condition:
