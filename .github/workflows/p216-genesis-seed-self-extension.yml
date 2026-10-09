@@ -7,10 +7,39 @@ on:
       - probes/p216-genesis-seed-self-extension.py
       - .github/workflows/p216-genesis-seed-self-extension.yml
 
+permissions:
+  contents: read
+
 jobs:
   p216:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - name: Record exact execution identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          {
+            echo "workflow=.github/workflows/p216-genesis-seed-self-extension.yml"
+            echo "trigger_sha=${GITHUB_SHA}"
+            echo "checked_out_sha=$(git rev-parse HEAD)"
+            echo "probe_path=probes/p216-genesis-seed-self-extension.py"
+            echo "probe_sha256=$(sha256sum probes/p216-genesis-seed-self-extension.py | cut -d' ' -f1)"
+            python3 --version
+          } | tee evidence/p216-receipt.txt
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
       - name: Run P216 bounded executable probe
-        run: python3 probes/p216-genesis-seed-self-extension.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 probes/p216-genesis-seed-self-extension.py 2>&1 | tee -a evidence/p216-receipt.txt
+      - name: Upload exact execution receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p216-execution-receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: evidence/p216-receipt.txt
+          if-no-files-found: error
+          retention-days: 30
