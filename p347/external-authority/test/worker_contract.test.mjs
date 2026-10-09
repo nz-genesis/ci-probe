@@ -5,9 +5,10 @@ import fs from "node:fs";
 const source = fs.readFileSync(new URL("../src/worker.mjs", import.meta.url), "utf8");
 
 function methodBody(name) {
-  const marker = `  ${name}(`;
-  const start = source.indexOf(marker);
-  assert.notEqual(start, -1, `missing method ${name}`);
+  const marker = new RegExp(`  (?:async )?${name}\\(`);
+  const match = marker.exec(source);
+  assert.notEqual(match, null, `missing method ${name}`);
+  const start = match.index;
   const next = source.indexOf("\n  }", start);
   assert.notEqual(next, -1, `unterminated method ${name}`);
   return source.slice(start, next);
@@ -31,4 +32,17 @@ test("effect lookup tolerates absent idempotency record", () => {
   assert.match(body, /SELECT effect_id, fingerprint, generation, effect_digest FROM effects WHERE effect_id = \?/);
   assert.match(body, /toArray\(\)\[0\] \?\? null/);
   assert.doesNotMatch(body, /SELECT effect_id, fingerprint, generation, effect_digest FROM effects WHERE effect_id = \?[\s\S]*?\.one\(\)/);
+});
+
+
+test("state digest matches the recorded generation-only canonical contract", () => {
+  const body = methodBody("currentState");
+  assert.match(body, /sha256Hex\(JSON\.stringify\(\{\s*generation\s*\}\)\)/);
+  assert.match(body, /effect_count: effectCount/);
+});
+
+test("missing effect observation is handled without one-row exception", () => {
+  const body = methodBody("observedEffect");
+  assert.match(body, /\.toArray\(\)\[0\] \?\? null/);
+  assert.doesNotMatch(body, /\.one\(\)/);
 });

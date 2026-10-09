@@ -5,6 +5,7 @@ on:
     branches:
       - research/p347-external-authority-v0
       - research/p347-external-authority-execution-v12-current
+      - research/p347-idempotency-recovery-hardening-2026-10-09
   workflow_dispatch:
 
 permissions:
@@ -12,12 +13,12 @@ permissions:
 
 
 env:
-  P347_WRANGLER_VERSION: "4.148.0"
+  P347_WRANGLER_VERSION: "4.149.0"
 
 jobs:
   authority-contract:
     name: external authority contract
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-v0' }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-idempotency-recovery-hardening-2026-10-09' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact triggering commit
@@ -34,7 +35,7 @@ jobs:
 
   external-authority-execution:
     name: real external authority execution
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-external-authority-execution-v12-current' }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-idempotency-recovery-hardening-2026-10-09' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -53,10 +54,10 @@ jobs:
         run: npm test
 
       - name: Verify current Wrangler deployment contract
-        run: npx --yes wrangler@4.148.0 --version
+        run: npx --yes wrangler@4.149.0 --version
       - name: Validate Wrangler configuration without deployment
         working-directory: p347/external-authority
-        run: npx --yes wrangler@4.148.0 deploy --dry-run --strict
+        run: npx --yes wrangler@4.149.0 deploy --dry-run --strict
 
       - name: Deploy temporary external authority with one version
         working-directory: p347/external-authority
@@ -73,7 +74,7 @@ jobs:
           PY
           chmod 600 .p347-secrets.json
           set +e
-          npx --yes wrangler@4.148.0 deploy --temporary --strict --secrets-file .p347-secrets.json --var "P347_SOURCE_VERSION:$GITHUB_SHA" > deployment.raw.txt 2>&1
+          npx --yes wrangler@4.149.0 deploy --temporary --strict --secrets-file .p347-secrets.json --var "P347_SOURCE_VERSION:$GITHUB_SHA" > deployment.raw.txt 2>&1
           deploy_rc=$?
           set -e
           python3 - <<'PY'
@@ -120,6 +121,7 @@ jobs:
           for attempt in range(1,31):
               status=None
               body=None
+              transport_error=False
               try:
                   req=Request(url+"/v1/state",method="GET",headers=headers)
                   with urlopen(req,timeout=10) as r:
@@ -127,25 +129,31 @@ jobs:
                       body=json.loads(r.read().decode())
               except HTTPError as e:
                   status=e.code
+                  raw=e.read()
                   try:
-                      body=json.loads(e.read().decode())
+                      body=json.loads(raw.decode())
                   except Exception:
-                      body={"raw":e.read().decode(errors="replace")}
+                      body={"raw":raw.decode(errors="replace")}
               except URLError as e:
+                  transport_error=True
                   body={"error":str(e)}
-              attempts.append({"attempt":attempt,"status":status,"body":body})
+              attempts.append({"attempt":attempt,"status":status,"transport_error":transport_error,"body":body})
               print(json.dumps(attempts[-1],sort_keys=True))
               if status==200 and body.get("authority")=="P347_EXTERNAL_AUTHORITY":
                   if body.get("source_version") != expected:
                       raise SystemExit("readiness source_version mismatch")
                   ready=True
                   break
-              if status not in (1042,404,1104):
+              error_code=body.get("error_code") if isinstance(body,dict) else None
+              # Bounded readiness probe: retry transient transport failures and
+              # observed 1042/1104 deployment-propagation responses for at most 60 seconds.
+              if not transport_error and not (status == 404 and error_code == 1042) and not (status == 500 and error_code == 1104):
                   break
               time.sleep(2)
           Path("readiness.json").write_text(json.dumps({"url":url,"expected_source_version":expected,"ready":ready,"attempts":attempts},indent=2,sort_keys=True)+"\n",encoding="utf-8")
           if not ready:
               raise SystemExit("external authority did not become ready within 60 seconds (including bounded 1104 propagation probe)")
+          PY
 
       - name: Execute real external authority discriminator
         working-directory: p347/external-authority
@@ -157,13 +165,14 @@ jobs:
           from datetime import datetime, timezone
           from pathlib import Path
           from urllib.request import Request, urlopen
-          from urllib.error import HTTPError
+          from urllib.error import HTTPError, URLError
           base=Path.cwd()
           url=base.joinpath("authority_url.txt").read_text().strip()
           admin=base.joinpath("admin_token.tmp").read_text().strip()
           effect=base.joinpath("effect_token.tmp").read_text().strip()
           source=os.environ["GITHUB_SHA"]
-          def call(method,path,token=None,body=None,extra=None):
+          transport_retry_events=[]
+          def call(method,path,token=None,body=None,extra=None,retry_safe=False):
               headers={"accept":"application/json","user-agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36","accept-language":"en-US,en;q=0.9"}
               if token: headers["authorization"]="Bearer "+token
               if body is not None: headers["content-type"]="application/json"
@@ -174,18 +183,36 @@ jobs:
                       with urlopen(req,timeout=30) as r:
                           return r.status,json.loads(r.read().decode())
                   except HTTPError as e:
+                      raw=e.read()
                       try:
-                          body_json=json.loads(e.read().decode())
+                          body_json=json.loads(raw.decode())
                       except Exception:
-                          body_json={"raw":e.read().decode(errors="replace")}
-                      if e.code in (1042,523) and attempt < 15:
-                          print(f"transport_retry path={path} status={e.code} attempt={attempt}")
+                          body_json={"raw":raw.decode(errors="replace")}
+                      error_code=body_json.get("error_code") if isinstance(body_json,dict) else None
+                      retryable_edge_error = (
+                          (e.code == 404 and error_code == 1042) or
+                          (e.code == 500 and error_code == 1104) or
+                          e.code == 523
+                      )
+                      if retry_safe and retryable_edge_error and attempt < 15:
+                          event={"kind":"cloudflare_edge_error","path":path,"http_status":e.code,"cloudflare_error_code":error_code,"attempt":attempt}
+                          transport_retry_events.append(event)
+                          print("bounded_safe_retry "+json.dumps(event,sort_keys=True))
                           import time
                           time.sleep(2)
                           continue
                       return e.code,body_json
+                  except (URLError, TimeoutError) as e:
+                      event={"kind":"transport_error","path":path,"error_type":type(e).__name__,"attempt":attempt}
+                      if retry_safe and attempt < 15:
+                          transport_retry_events.append(event)
+                          print("bounded_safe_retry "+json.dumps(event,sort_keys=True))
+                          import time
+                          time.sleep(2)
+                          continue
+                      return None,{"transport_error":type(e).__name__,"detail":str(e),"attempt":attempt}
               raise RuntimeError("unreachable")
-          evidence={"probe":"P347_EXTERNAL_AUTHORITY_REAL_EXECUTION_V4","observed_at":datetime.now(timezone.utc).isoformat(),"source_version":source,"wrangler_version":os.environ.get("P347_WRANGLER_VERSION","4.148.0"),"authority_url":url,"cases":[]}
+          evidence={"probe":"P347_EXTERNAL_AUTHORITY_REAL_EXECUTION_V4","observed_at":datetime.now(timezone.utc).isoformat(),"source_version":source,"wrangler_version":os.environ.get("P347_WRANGLER_VERSION","4.149.0"),"authority_url":url,"transport_retry_events":transport_retry_events,"cases":[]}
           def require(name, condition, status, body):
               print("CASE", name, "status=", status, "body=", json.dumps(body, sort_keys=True))
               if condition:
@@ -194,17 +221,25 @@ jobs:
               evidence["failure"]={"case":name,"status":status,"body":body}
               Path("p347-external-authority-failure.json").write_text(json.dumps(evidence,indent=2,sort_keys=True)+"\n",encoding="utf-8")
               raise SystemExit(1)
-          s,b=call("GET","/v1/state"); evidence["cases"].append({"name":"fresh_state","status":s,"body":b}); require("fresh_state", s==200 and b.get("generation")==1, s, b)
+          s,b=call("GET","/v1/state",retry_safe=True); evidence["cases"].append({"name":"fresh_state","status":s,"body":b}); require("fresh_state", s==200 and b.get("generation")==1, s, b)
           s,b=call("POST","/v1/admin/mutate",admin,body={}); evidence["cases"].append({"name":"authority_mutation","status":s,"body":b}); require("authority_mutation", s==200 and b.get("generation")==2, s, b)
-          h={"Idempotency-Key":"p347-real-e1","X-Request-Fingerprint":"fingerprint-1"}
-          s,b=call("POST","/v1/effects",effect,{"generation":1,"payload":{"amount":1}},h); evidence["cases"].append({"name":"stale_generation_reject","status":s,"body":b}); require("stale_generation_reject", s==409 and b.get("reason")=="STALE_REJECT", s, b)
+          import hashlib
+          def request_fingerprint(value):
+              canonical=json.dumps(value,sort_keys=True,separators=(",",":")).encode()
+              return hashlib.sha256(canonical).hexdigest()
+          effect_id="p347-real-e1"
+          stale={"generation":1,"payload":{"amount":1}}
+          h_stale={"Idempotency-Key":effect_id,"X-Request-Fingerprint":request_fingerprint(stale)}
+          s,b=call("POST","/v1/effects",effect,stale,h_stale,retry_safe=True); evidence["cases"].append({"name":"stale_generation_reject","status":s,"body":b}); require("stale_generation_reject", s==409 and b.get("reason")=="STALE_REJECT", s, b)
           current={"generation":2,"payload":{"amount":1}}
-          s,b=call("POST","/v1/effects",effect,current,h); evidence["cases"].append({"name":"new_effect","status":s,"body":b}); require("new_effect", s==201 and b.get("duplicate") is False, s, b)
+          h={"Idempotency-Key":effect_id,"X-Request-Fingerprint":request_fingerprint(current)}
+          s,b=call("POST","/v1/effects",effect,current,h,retry_safe=True); evidence["cases"].append({"name":"new_effect_or_recovered_after_ambiguous_response","status":s,"body":b}); require("new_effect_or_recovered_after_ambiguous_response", ((s==201 and b.get("duplicate") is False) or (s==200 and b.get("duplicate") is True)) and bool(b.get("effect_id")), s, b)
           eid=b["effect_id"]
-          s,b=call("POST","/v1/effects",effect,current,h); evidence["cases"].append({"name":"same_key_same_payload_retry","status":s,"body":b}); require("same_key_same_payload_retry", s==200 and b.get("duplicate") is True and b.get("effect_id")==eid, s, b)
-          h2={"Idempotency-Key":"p347-real-e1","X-Request-Fingerprint":"fingerprint-2"}
-          s,b=call("POST","/v1/effects",effect,current,h2); evidence["cases"].append({"name":"same_key_different_payload_conflict","status":s,"body":b}); require("same_key_different_payload_conflict", s==409 and b.get("reason")=="CONFLICT", s, b)
-          s,b=call("GET","/v1/effects/"+eid); evidence["cases"].append({"name":"fresh_effect_reobservation","status":s,"body":b}); require("fresh_effect_reobservation", s==200 and b.get("effect_id")==eid and b.get("outcome")=="OBSERVED_SUCCESS", s, b)
+          s,b=call("POST","/v1/effects",effect,current,h,retry_safe=True); evidence["cases"].append({"name":"same_key_same_payload_retry","status":s,"body":b}); require("same_key_same_payload_retry", s==200 and b.get("duplicate") is True and b.get("effect_id")==eid, s, b)
+          conflicting={"generation":2,"payload":{"amount":2}}
+          h2={"Idempotency-Key":effect_id,"X-Request-Fingerprint":request_fingerprint(conflicting)}
+          s,b=call("POST","/v1/effects",effect,conflicting,h2,retry_safe=True); evidence["cases"].append({"name":"same_key_different_payload_conflict","status":s,"body":b}); require("same_key_different_payload_conflict", s==409 and b.get("reason")=="CONFLICT", s, b)
+          s,b=call("GET","/v1/effects/"+eid,retry_safe=True); evidence["cases"].append({"name":"fresh_effect_reobservation","status":s,"body":b}); require("fresh_effect_reobservation", s==200 and b.get("effect_id")==eid and b.get("outcome")=="OBSERVED_SUCCESS", s, b)
           evidence["result"]="PASS"
           Path("p347-external-authority-evidence.json").write_text(json.dumps(evidence,indent=2,sort_keys=True)+"\n",encoding="utf-8")
           print("P347_EXTERNAL_AUTHORITY_REAL_EXECUTION=PASS")
