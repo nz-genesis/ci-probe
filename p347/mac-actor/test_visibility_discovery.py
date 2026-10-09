@@ -50,4 +50,14 @@ class VisibilityDiscoveryTests(unittest.TestCase):
         self.assertTrue(result["response_body"]["raw_body_redacted"])
         self.assertEqual(len(result["response_body"]["raw_body_sha256"]),64)
 
+    def test_manual_runbook_and_workflow_share_triggering_source_pin(self):
+        root=Path(__file__).resolve().parents[2]
+        readme=(root/"p347/mac-actor/README_RU.md").read_text(encoding="utf-8")
+        workflow=(root/".github/workflows/p347-mac-visibility-preflight.yml").read_text(encoding="utf-8")
+        self.assertIn('EXPECTED_AUTHORITY_SHA="$ACTOR_SHA"',readme)
+        self.assertIn('--expected-source-version "$EXPECTED_AUTHORITY_SHA"',readme)
+        self.assertIn('--var "P347_SOURCE_VERSION:$GITHUB_SHA"',workflow)
+        self.assertIn('--expected-source-version "$GITHUB_SHA"',workflow)
+        self.assertNotIn("eed787812545f80997e93a00266aee550a06e0b6",readme)
+
 if __name__=="__main__": unittest.main()
