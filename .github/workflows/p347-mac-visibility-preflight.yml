@@ -72,6 +72,25 @@ jobs:
           rm -f "$RUN_TMP/.p347-secrets.json" "$RUN_TMP/deployment.raw.txt"
           test "$deploy_rc" -eq 0
           test -s "$RUN_TMP/authority-url.txt"
+      - name: Verify read-only authority readiness from hosted Linux before physical Mac access
+        id: readiness
+        if: ${{ success() }}
+        working-directory: p347/external-authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ../mac-actor/authority_readiness.py \
+            --authority-url-file "$P347_RUN_TMP/authority-url.txt" \
+            --expected-source-version "$GITHUB_SHA" \
+            --actor-source-version "$GITHUB_SHA" \
+            --output "$P347_RUN_TMP/linux-authority-readiness.json"
+      - name: Upload sanitized Linux authority readiness
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: p347-linux-authority-readiness-${{ github.sha }}
+          path: ${{ runner.temp }}/p347-mac-visibility-${{ github.run_id }}-${{ github.run_attempt }}/linux-authority-readiness.json
+          if-no-files-found: ignore
       - name: Upload sanitized deployment diagnostic
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
