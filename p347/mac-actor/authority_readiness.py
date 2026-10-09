@@ -28,7 +28,7 @@ def is_transient(result):
     error_code = body.get("error_code")
     if error_code is None:
         preview = body.get("safe_body_preview", "")
-        match = re.fullmatch(r"error code:\\s*(1042|1104)", str(preview).strip(), re.IGNORECASE)
+        match = re.fullmatch(r"error code:\s*(1042|1104)", str(preview).strip(), re.IGNORECASE)
         if match:
             error_code = int(match.group(1))
     return (
