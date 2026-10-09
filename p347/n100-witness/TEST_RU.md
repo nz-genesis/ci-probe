@@ -211,6 +211,98 @@ Mac-side PF может использоваться как experimental fault me
 - exact source/version identity;
 - synchronized wall/monotonic timing.
 
-**Mac actor implementation gap:** текущий repository tree не содержит dedicated P347 actor, который выполняет consequential effect, сохраняет timeout как `UNKNOWN`, затем делает fresh observation, same-key retry и conflict check. Существующая Mac execution matrix проверяет host identity/capabilities, но не заменяет этот actor. Read-only `curl /v1/state` достаточен только для topology-visibility preflight; он не разрешает faulted physical run. Сначала implement and test actor through the public CI probe, then use it against the fresh temporary authority.
+**Статус Mac actor (2026-10-09):** dedicated actor находится в p347/mac-actor/actor.py. Historical receipt run 37912388643 подтверждает source 0eb631c597f2b3705a8f211245f123767b994c14 (11 Python actor tests + 17 Node tests + authority 7/7 PASS), но это не подтверждение текущего branch HEAD после последующих изменений. Перед каждым execution обязательно разреши current branch HEAD и требуй exact-source contract receipt; не копируй исторический SHA в команды. В более позднем source b8216acd15e1e668633d67891fae52408ba8018c contract tests прошли 17 Python + 17 Node, но реальный authority job был SKIPPED. Физический Mac runtime и N100 visibility остаются PENDING; lost_ack_exercised остаётся false до независимого fault-controller receipt и коррелированного N100 raw pcap/manifest.
+
+Workflow-assisted read-only preflight находится в .github/workflows/p347-mac-visibility-preflight.yml. Обычные push не разворачивают temporary authority. Commit с маркером [P347-ROUTE-DIAG] запускает только hosted-Linux deployment/readiness diagnostic. Маркер [P347-PHYSICAL-ARMED] запускает hosted-Linux gate и допускает physical Mac probes только после успешной readiness. Физический Mac job выполняется только при push в research/p347-mac-actor-v0 с точным commit-message marker [P347-PHYSICAL-ARMED] либо через workflow_dispatch после появления workflow на default branch, и только после успешной hosted-Linux readiness проверки. Не добавляй marker к обычным commits. Не arm-ь запуск, пока оператор N100 не готов к capture. Перед ручным запуском открой N100 terminal и подготовь capture command; сразу после появления N100_CAPTURE_WINDOW_OPEN с MAC_IP, AUTHORITY_IP и задержкой 120 секунд запусти capture длительностью не менее 240 секунд, фильтр по фактическому MAC_IP и TCP/443, а target IP возьми из Mac-side discovery. HTTP 403 challenge или source mismatch fail-closed; не обходи security controls и не считай этот результат packet loss. Сопоставь capture с Mac-side request timestamps и фактическими remote IP из артефакта. Если окно пропущено, visibility остаётся PENDING и preflight повторяется только при готовом N100 capture.
+
+Read-only discovery не запускает mutation/effect и не активирует fault injector. Он не доказывает видимость N100 сам по себе и не разрешает faulted physical run.
 
 Если хотя бы один обязательный поток отсутствует, faulted run остаётся APPARATUS-ONLY / NOT ADMITTED.
+
+
+## 1A. Proxmox + LXC deployment boundary (mandatory before physical capture)
+
+N100 is a Proxmox host with workload isolated into LXC containers. Do **not** assume that a shell inside the Hermes container can see packets received by the physical NIC, and do not grant Hermes privileged-container access merely to make tcpdump work.
+
+Recommended role separation:
+
+- **Proxmox host/root:** management plane only. Use it for read-only topology inventory and, only if required, minimal physical-NIC / Linux-bridge / VLAN / switch-mirror plumbing. Do not run the experiment as an unrestricted root workflow.
+- **Dedicated witness LXC** (suggested name: `lxc-p347-witness`): owns the capture script, tcpdump, raw pcap, manifest and hashes. It gets only the capture interface and capabilities needed for packet capture. No GitHub token, Mac SSH key, authority token, Hermes runtime, or fault-injection controller.
+- **Hermes LXC:** orchestration/research role. It can read/write only the required GitHub repositories through a scoped GitHub App/fine-grained credential and can request a bounded Mac operation through the existing trusted GitHub Actions Mac runner or a separate restricted SSH command. Hermes is not the packet witness and must not receive Proxmox root credentials.
+- **Mac:** actor/execution node. Keep its GitHub runner credential, local files and authority tokens separate from the witness.
+- **External authority:** separate authority plane; no authority secret is copied into the witness LXC.
+
+The witness LXC is a security boundary, not proof of network visibility. It must receive a copy of the actual Mac → authority packets from a switch SPAN/mirror port, or be on a verified forwarding path. A normal Proxmox bridge/veth or the fact that Hermes and N100 share a LAN does not make unicast traffic visible to the witness. Do not infer visibility from `tcpdump` starting successfully.
+
+### Read-only inventory — Proxmox host
+
+Run from the Proxmox host shell only to identify the existing topology. These commands do not change configuration:
+
+```bash
+set -eu
+pveversion -v
+pct list
+ip -br link
+ip -br addr
+ip route
+bridge link
+bridge vlan show
+```
+
+For the candidate Hermes CT, substitute its actual CTID (do not guess it):
+
+```bash
+pct config <HERMES_CTID>
+```
+
+Record the CTID, NIC names, bridges, VLAN tags, physical uplinks, and whether there is a spare physical NIC or a managed switch capable of SPAN/mirroring. Redact public IPs, MAC addresses and other identifying network details before sharing output externally. Do not paste tokens or private keys.
+
+### Read-only inventory — Hermes LXC
+
+Inside the Hermes container:
+
+```bash
+set -eu
+hostname
+cat /etc/os-release
+ip -br link
+ip -br addr
+ip route
+id
+grep '^CapEff:' /proc/self/status
+command -v tcpdump || true
+```
+
+This inventory tells us what Hermes can see from its own network namespace; it does not prove what the Proxmox host or a separate witness LXC can see.
+
+### Admission choices
+
+1. **Preferred:** managed-switch SPAN/mirror of the Mac-facing/uplink traffic to a dedicated physical NIC on N100; expose that NIC to a dedicated witness LXC through a deliberately designed Proxmox network mapping. Verify packet visibility before the experiment.
+2. **Alternative:** a deliberately configured forwarding/bridge path through N100, with a separate witness interface. This changes network topology and must be planned/tested before enabling; do not improvise it on the production LAN.
+3. **Not admissible:** capture only on Hermes's ordinary veth, assume promiscuous mode sees switched unicast, use Mac-local capture as the independent witness, or classify an empty pcap as packet loss.
+
+Do not edit `/etc/pve/lxc/<CTID>.conf`, enable `nesting`, make a container privileged, add broad `CAP_NET_ADMIN`, or bind-mount host network devices until inventory establishes the actual NIC/bridge topology and the narrowest workable configuration. In particular, `CAP_NET_RAW`/tcpdump availability alone is not enough: the packets must physically reach the selected interface.
+
+### Access model for Hermes
+
+GitHub access and Mac access are separate capabilities:
+
+- GitHub: grant only repository-specific access required for code/PR operations and Actions read/monitoring. Do not grant organization administration, repository secrets management, or unrelated repository access by default.
+- Mac: prefer triggering/observing the existing trusted, ephemeral GitHub Actions runner for bounded P347 jobs. If direct SSH is independently needed for general PAOE operation, use a dedicated macOS account, a separate key, and an allowlisted command wrapper; do not use the Mac owner's interactive account or unrestricted sudo.
+- Proxmox: no root SSH credential in Hermes. Host-level changes remain a separate, explicit administration operation.
+- Witness: Hermes may request an allowlisted `start-capture` / `stop-and-manifest` operation after the operator arms the run, but the witness must not accept arbitrary shell commands or let Hermes alter raw evidence after capture.
+
+For the current P347 experiment, do not build broad SSH access first. Establish the witness topology and capture readiness; the existing workflow already provides the Mac actor path. The initial visibility preflight can be started manually inside the dedicated witness LXC after the actual interface and Mac-observed IP are known.
+
+### Decision gate
+
+Before arming `[P347-PHYSICAL-ARMED]`, the operator must identify:
+
+- which physical NIC receives the mirror feed (or prove the forwarding path);
+- how that NIC reaches the witness capture namespace;
+- the dedicated witness CTID and its non-privileged configuration;
+- the capture interface name inside that LXC;
+- the exact operator command/window for starting capture;
+- where raw pcap, manifest and SHA-256 will be retained privately.
+
+If any item is unknown, remain at topology inventory / preflight. No physical run, fault injection or consequential POST is authorized by this section alone.
