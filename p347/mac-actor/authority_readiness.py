@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -24,10 +25,16 @@ def is_transient(result):
     body = result.get("response_body")
     body = body if isinstance(body, dict) else {}
     status = result.get("http_status")
+    error_code = body.get("error_code")
+    if error_code is None:
+        preview = body.get("safe_body_preview", "")
+        match = re.fullmatch(r"error code:\\s*(1042|1104)", str(preview).strip(), re.IGNORECASE)
+        if match:
+            error_code = int(match.group(1))
     return (
         result.get("transport_state") == "UNKNOWN"
         or status == 523
-        or (status, body.get("error_code")) in TRANSIENT_EDGE
+        or (status, error_code) in TRANSIENT_EDGE
     )
 
 
