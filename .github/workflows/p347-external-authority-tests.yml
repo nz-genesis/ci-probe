@@ -230,7 +230,8 @@ jobs:
           eid=b["effect_id"]
           s,b=call("POST","/v1/effects",effect,current,h,retry_safe=True); evidence["cases"].append({"name":"same_key_same_payload_retry","status":s,"body":b}); require("same_key_same_payload_retry", s==200 and b.get("duplicate") is True and b.get("effect_id")==eid, s, b)
           h2={"Idempotency-Key":"p347-real-e1","X-Request-Fingerprint":"fingerprint-2"}
-          s,b=call("POST","/v1/effects",effect,current,h2,retry_safe=True); evidence["cases"].append({"name":"same_key_different_payload_conflict","status":s,"body":b}); require("same_key_different_payload_conflict", s==409 and b.get("reason")=="CONFLICT", s, b)
+          conflicting={"generation":2,"payload":{"amount":2}}
+          s,b=call("POST","/v1/effects",effect,conflicting,h2,retry_safe=True); evidence["cases"].append({"name":"same_key_different_payload_conflict","status":s,"body":b}); require("same_key_different_payload_conflict", s==409 and b.get("reason")=="CONFLICT", s, b)
           s,b=call("GET","/v1/effects/"+eid,retry_safe=True); evidence["cases"].append({"name":"fresh_effect_reobservation","status":s,"body":b}); require("fresh_effect_reobservation", s==200 and b.get("effect_id")==eid and b.get("outcome")=="OBSERVED_SUCCESS", s, b)
           evidence["result"]="PASS"
           Path("p347-external-authority-evidence.json").write_text(json.dumps(evidence,indent=2,sort_keys=True)+"\n",encoding="utf-8")
