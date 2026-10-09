@@ -37,6 +37,30 @@ class AuthorityReadinessTests(unittest.TestCase):
         sleep.assert_called_once_with(2)
         self.assertEqual(attempts[-1]["result"]["remote_ip"], "198.51.100.20")
 
+    def test_sanitized_plain_text_1042_and_1104_use_bounded_transient_retry(self):
+        ready = response(200, {
+            "authority": "P347_EXTERNAL_AUTHORITY",
+            "source_version": "sha",
+        })
+        for status, code in ((404, 1042), (500, 1104)):
+            with self.subTest(status=status, code=code):
+                transient = response(status, {"raw": "error code: " + str(code)})
+                request = Mock(side_effect=[transient, ready])
+                sleep = Mock()
+                attempts, ok, error = readiness.one_probe(
+                    "https://authority.workers.dev", "sha", request, sleep,
+                    max_attempts=4, interval_seconds=2,
+                )
+                self.assertTrue(ok)
+                self.assertIsNone(error)
+                self.assertEqual(len(attempts), 2)
+                self.assertEqual(request.call_count, 2)
+                sleep.assert_called_once_with(2)
+                self.assertEqual(
+                    attempts[0]["result"]["response_body"]["safe_body_preview"],
+                    "error code: " + str(code),
+                )
+
     def test_cloudflare_403_challenge_fails_closed_without_retry_or_raw_html(self):
         challenge = response(403, {
             "raw": '<html><title>Just a moment...</title><script>__cf_chl_tk=secret</script></html>'
