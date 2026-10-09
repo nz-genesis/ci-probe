@@ -57,6 +57,20 @@ class AuthorityReadinessTests(unittest.TestCase):
         self.assertNotIn("secret", str(body))
         self.assertNotIn("__cf_chl_tk", str(body))
 
+    def test_unclassified_plain_text_404_is_not_retried_and_keeps_safe_diagnostic(self):
+        absent = response(404, {"raw": "not found"})
+        request = Mock(return_value=absent)
+        sleep = Mock()
+        attempts, ok, error = readiness.one_probe(
+            "https://authority.workers.dev", "sha", request, sleep,
+            max_attempts=30, interval_seconds=2,
+        )
+        self.assertFalse(ok)
+        self.assertEqual(len(attempts), 1)
+        self.assertEqual(request.call_count, 1)
+        sleep.assert_not_called()
+        self.assertEqual(attempts[0]["result"]["response_body"]["safe_body_preview"], "not found")
+
     def test_source_version_mismatch_fails_closed_without_retry(self):
         mismatch = response(200, {
             "authority": "P347_EXTERNAL_AUTHORITY",
