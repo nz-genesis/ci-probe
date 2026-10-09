@@ -42,6 +42,7 @@ class MacActorContractTests(unittest.TestCase):
         self.assertEqual(run.call_count,1)
         command=run.call_args.args[0]
         self.assertEqual(command[-1],"https://authority.example/v1/effects")
+        self.assertIn("accept-language: en-US,en;q=0.9"," ".join(command))
         self.assertNotIn(token," ".join(command))
         auth_ref=next(v[1:] for v in command if v.startswith("@"))
         self.assertFalse(Path(auth_ref).exists())

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Read-only Mac-side discovery for the P347/N100 topology visibility preflight."""
-import argparse, json, os, platform, subprocess, sys, time, uuid
+import argparse, hashlib, json, os, platform, re, subprocess, sys, time, uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from actor import request
@@ -9,6 +9,23 @@ TRANSIENT_EDGE={(404,1042),(500,1104)}
 
 def utc():
     return datetime.now(timezone.utc).isoformat()
+
+def sanitize_result(result):
+    """Keep public artifacts useful without publishing Cloudflare challenge HTML/tokens."""
+    result=dict(result)
+    body=result.get("response_body")
+    if isinstance(body,dict) and isinstance(body.get("raw"),str):
+        raw=body["raw"]
+        match=re.search(r"<title[^>]*>(.*?)</title>",raw,re.IGNORECASE|re.DOTALL)
+        title=re.sub(r"\s+"," ",match.group(1)).strip()[:120] if match else None
+        challenge=("Just a moment" in raw or "__cf_chl" in raw or "challenges.cloudflare.com" in raw)
+        result["response_body"]={
+            "raw_body_sha256":hashlib.sha256(raw.encode("utf-8",errors="replace")).hexdigest(),
+            "raw_body_chars":len(raw),"raw_body_redacted":True,"page_title":title,
+            "cloudflare_challenge_detected":challenge,
+        }
+    return result
+
 
 def write_evidence(path,evidence):
     path=Path(path).expanduser().resolve()
@@ -28,7 +45,7 @@ def transient(result):
 def one_probe(url,expected_source,name,request_fn=request,sleep_fn=time.sleep,max_attempts=5):
     correlation_id=str(uuid.uuid4()); attempts=[]
     for attempt in range(1,max_attempts+1):
-        r=dict(request_fn(url+"/v1/state",method="GET",headers={"X-Correlation-ID":correlation_id},timeout=10.0))
+        r=sanitize_result(request_fn(url+"/v1/state",method="GET",headers={"X-Correlation-ID":correlation_id},timeout=10.0))
         r.update({"name":name,"attempt":attempt,"correlation_id":correlation_id})
         attempts.append(r); b=r.get("response_body"); b=b if isinstance(b,dict) else {}
         if r.get("http_status")==200 and r.get("transport_state")=="HTTP_RESPONSE_OBSERVED":

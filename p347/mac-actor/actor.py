@@ -38,12 +38,11 @@ def request(url,method="GET",token=None,body=None,headers=None,timeout=20.0):
     if timeout<=0: raise ValueError("timeout must be positive")
     cmd=["curl","--silent","--show-error","--ipv4","--http1.1","--connect-timeout","10",
          "--max-time",str(timeout),"--request",method.upper(),"--header","accept: application/json",
-         "--header","user-agent: "+UA,"--write-out","\n"+META+"%{http_code}\t%{local_ip}\t%{remote_ip}\t%{remote_port}\t%{time_total}\n"]
+         "--header","user-agent: "+UA,"--header","accept-language: en-US,en;q=0.9","--write-out","\n"+META+"%{http_code}\t%{local_ip}\t%{remote_ip}\t%{remote_port}\t%{time_total}\n"]
     if body is not None: cmd += ["--header","content-type: application/json","--data-binary","@-"]
     for k,v in (headers or {}).items():
         if any(c in k+v for c in "\r\n"): raise ValueError("newline in HTTP header")
         cmd += ["--header",k+": "+v]
-    cmd.append(url)
     start,start_ns=utc(),time.monotonic_ns()
     try:
         with tempfile.TemporaryDirectory(prefix="p347-curl-") as temp_dir:
@@ -53,6 +52,7 @@ def request(url,method="GET",token=None,body=None,headers=None,timeout=20.0):
                 auth_file.write_text("authorization: Bearer "+token+"\n",encoding="utf-8")
                 auth_file.chmod(0o600)
                 cmd += ["--header","@"+str(auth_file)]
+            cmd.append(url)
             p=subprocess.run(cmd,input=None if body is None else canon(body),capture_output=True,text=True,timeout=timeout+5,check=False)
             result=parse_curl(p.stdout,p.stderr,p.returncode)
     except (subprocess.TimeoutExpired,OSError) as e:

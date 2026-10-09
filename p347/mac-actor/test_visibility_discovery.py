@@ -1,3 +1,4 @@
+import json
 import unittest
 from pathlib import Path
 from unittest.mock import Mock
@@ -38,5 +39,15 @@ class VisibilityDiscoveryTests(unittest.TestCase):
         self.assertIn('"lost_ack_exercised":False',source)
         self.assertNotIn('"/v1/admin/mutate"',source)
         self.assertNotIn('"/v1/effects"',source)
+
+    def test_cloudflare_challenge_html_is_redacted_from_public_evidence(self):
+        raw='<html><head><title>Just a moment...</title></head><script>__cf_chl_tk=temporary-secret</script></html>'
+        result=discovery.sanitize_result({"http_status":403,"response_body":{"raw":raw},"transport_state":"HTTP_RESPONSE_OBSERVED"})
+        serialized=json.dumps(result)
+        self.assertNotIn("temporary-secret",serialized)
+        self.assertNotIn("__cf_chl_tk",serialized)
+        self.assertTrue(result["response_body"]["cloudflare_challenge_detected"])
+        self.assertTrue(result["response_body"]["raw_body_redacted"])
+        self.assertEqual(len(result["response_body"]["raw_body_sha256"]),64)
 
 if __name__=="__main__": unittest.main()
