@@ -105,3 +105,8 @@ The first host-only route diagnostic (run 37922281656, source 21475049dc0cfdea76
 
 
 The second host-only route diagnostic (run 37922666946, source 64d20a6b265fa40762fc561a160e315583ab10c2) returned HTTP 404 with safe preview “error code: 1042”. The readiness classifier initially missed this plain-text representation; the defect was caught by CI on source bb2d3d1d6ba223df5e00647adc5a3c36a34fded1 and corrected. Exact-source CI passed on 666957c2902c56d8e8193a79c3eb3e78f95d4fa4: 24 Python + 17 Node. This route diagnostic will validate the bounded 1042/1104 retry path on a fresh temporary deployment. It remains host-only; the physical Mac job must stay skipped.
+
+
+### Physical-run gate correction — 2026-10-09
+
+The physical Mac job now requires a push to `research/p347-mac-actor-v0` with commit message marker `[P347-PHYSICAL-ARMED]`. Manual `workflow_dispatch` may perform the hosted-Linux readiness diagnostic, but it does not start the physical Mac job. This change preserves the requirement that N100 capture be operator-ready before physical probes. It is a workflow-safety correction, not Mac/N100 visibility evidence.
