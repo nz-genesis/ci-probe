@@ -226,7 +226,7 @@ jobs:
           h={"Idempotency-Key":"p347-real-e1","X-Request-Fingerprint":"fingerprint-1"}
           s,b=call("POST","/v1/effects",effect,{"generation":1,"payload":{"amount":1}},h,retry_safe=True); evidence["cases"].append({"name":"stale_generation_reject","status":s,"body":b}); require("stale_generation_reject", s==409 and b.get("reason")=="STALE_REJECT", s, b)
           current={"generation":2,"payload":{"amount":1}}
-          s,b=call("POST","/v1/effects",effect,current,h,retry_safe=True); evidence["cases"].append({"name":"new_effect","status":s,"body":b}); require("new_effect", s==201 and b.get("duplicate") is False, s, b)
+          s,b=call("POST","/v1/effects",effect,current,h,retry_safe=True); evidence["cases"].append({"name":"new_effect_or_recovered_after_ambiguous_response","status":s,"body":b}); require("new_effect_or_recovered_after_ambiguous_response", ((s==201 and b.get("duplicate") is False) or (s==200 and b.get("duplicate") is True)) and bool(b.get("effect_id")), s, b)
           eid=b["effect_id"]
           s,b=call("POST","/v1/effects",effect,current,h,retry_safe=True); evidence["cases"].append({"name":"same_key_same_payload_retry","status":s,"body":b}); require("same_key_same_payload_retry", s==200 and b.get("duplicate") is True and b.get("effect_id")==eid, s, b)
           h2={"Idempotency-Key":"p347-real-e1","X-Request-Fingerprint":"fingerprint-2"}
