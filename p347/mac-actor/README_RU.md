@@ -16,7 +16,14 @@ Actor не активирует и не управляет fault injector. N100 
 
 ## Workflow-assisted topology preflight
 
-The workflow .github/workflows/p347-mac-visibility-preflight.yml runs on the physical self-hosted Mac runner, deploys a temporary authority and prints the actual MAC_IP/AUTHORITY_IP. It opens a 120-second window before three read-only GET probes. During that window, N100 must capture host MAC_IP and TCP/443 for at least 240 seconds. The workflow never starts or configures the fault injector. If the window is missed or no target-flow packets are observed, WITNESS_VISIBILITY remains PENDING/UNVERIFIED.
+Workflow: .github/workflows/p347-mac-visibility-preflight.yml.
+
+- A push to this branch performs only a hosted-Linux deployment/readiness diagnostic. It must not run physical Mac probes.
+- The physical Mac job runs only for an explicit GitHub Actions workflow_dispatch on branch research/p347-mac-actor-v0. Do not start it until N100 is open and the operator is ready to begin capture as soon as the initial Mac probe emits N100_CAPTURE_WINDOW_OPEN.
+- Before the Mac job is allowed to run, the hosted-Linux readiness probe must observe HTTP 200 JSON with authority=P347_EXTERNAL_AUTHORITY and source_version equal to the exact triggering SHA. It retries only bounded known transient transport/1042/1104/523 conditions. HTTP 401/403 challenges and source mismatches fail closed.
+- After readiness passes, the physical Mac runner deploys/probes the same exact source and emits actual MAC_IP/AUTHORITY_IP plus a 120-second capture window before three read-only GET probes. During that window, N100 must capture host MAC_IP and TCP/443 for at least 240 seconds using the actual remote IP reported by Mac. Preserve raw pcap and manifest.
+- The workflow never starts or configures the fault injector. If the window is missed or no target-flow packets are observed, WITNESS_VISIBILITY remains PENDING/UNVERIFIED. A failed readiness diagnostic is not packet-loss evidence and must not be bypassed by running the Mac job directly.
+- Current official Cloudflare temporary-account guidance describes --temporary as a preview/test path and recommends a permanent account for production CI/CD: https://developers.cloudflare.com/workers/platform/claim-deployments/. A 403 challenge is a run-specific observation, not permission to bypass Cloudflare controls.
 
 ## 1. Точный checkout и тесты на Mac
 
