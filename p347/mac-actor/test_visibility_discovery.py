@@ -59,6 +59,7 @@ class VisibilityDiscoveryTests(unittest.TestCase):
         self.assertIn('--var "P347_SOURCE_VERSION:$GITHUB_SHA"',workflow)
         self.assertIn('--expected-source-version "$GITHUB_SHA"',workflow)
         self.assertNotIn("eed787812545f80997e93a00266aee550a06e0b6",readme)
+        self.assertIn("contains(github.event.head_commit.message, '[P347-PHYSICAL-ARMED]')",workflow)
         self.assertIn("github.event_name == 'workflow_dispatch'",workflow)
         self.assertIn("authority_readiness.py",workflow)
         self.assertIn("p347-linux-authority-readiness-",workflow)
