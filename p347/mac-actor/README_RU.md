@@ -94,3 +94,8 @@ ambiguous_effect_recovery=VERIFIED_BOUNDED возможно только есл�
 Каталог RUN_DIR остаётся локальным и приватным. Не загружай его автоматически в публичный CI. Сопоставь evidence с authority trace, Mac-side socket/application trace, N100 raw pcap/events/meta/manifest и точными source identities.
 
 P347_MAC_ACTOR_* означает только результат actor stage. Это не закрывает WITNESS_VISIBILITY, lost-ACK/partition, physical effect или P347+ gate.
+
+
+### Host-only route diagnostic record
+
+The previous physical-Mac attempt is run 37918930626 and returned HTTP 403 with a redacted Cloudflare challenge before opening any N100 capture window. The next host-only comparison must use a commit message containing [P347-ROUTE-DIAG] and must not contain [P347-PHYSICAL-ARMED]. Record the exact source SHA, hosted-Linux HTTP status, authority identity/source_version result, actual remote IP, artifact ID and SHA-256. If the result is a 403 challenge, stop and preserve it; do not arm the Mac job, broaden retry classification or bypass Cloudflare security.
