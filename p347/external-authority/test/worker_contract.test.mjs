@@ -32,3 +32,16 @@ test("effect lookup tolerates absent idempotency record", () => {
   assert.match(body, /toArray\(\)\[0\] \?\? null/);
   assert.doesNotMatch(body, /SELECT effect_id, fingerprint, generation, effect_digest FROM effects WHERE effect_id = \?[\s\S]*?\.one\(\)/);
 });
+
+
+test("state digest includes generation and effect count", () => {
+  const body = methodBody("currentState");
+  assert.match(body, /canonicalState\(generation, effectCount\)/);
+  assert.match(body, /sha256Hex\(state\)/);
+});
+
+test("missing effect observation is handled without one-row exception", () => {
+  const body = methodBody("observedEffect");
+  assert.match(body, /\.toArray\(\)\[0\] \?\? null/);
+  assert.doesNotMatch(body, /\.one\(\)/);
+});
