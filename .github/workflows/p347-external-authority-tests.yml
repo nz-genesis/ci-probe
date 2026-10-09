@@ -169,7 +169,7 @@ jobs:
           admin=base.joinpath("admin_token.tmp").read_text().strip()
           effect=base.joinpath("effect_token.tmp").read_text().strip()
           source=os.environ["GITHUB_SHA"]
-          def call(method,path,token=None,body=None,extra=None):
+          def call(method,path,token=None,body=None,extra=None,retry_safe=False):
               headers={"accept":"application/json","user-agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36","accept-language":"en-US,en;q=0.9"}
               if token: headers["authorization"]="Bearer "+token
               if body is not None: headers["content-type"]="application/json"
@@ -185,8 +185,14 @@ jobs:
                           body_json=json.loads(raw.decode())
                       except Exception:
                           body_json={"raw":raw.decode(errors="replace")}
-                      if e.code in (1042,523) and attempt < 15:
-                          print(f"transport_retry path={path} status={e.code} attempt={attempt}")
+                      error_code=body_json.get("error_code") if isinstance(body_json,dict) else None
+                      retryable_edge_error = (
+                          (e.code == 404 and error_code == 1042) or
+                          (e.code == 500 and error_code == 1104) or
+                          e.code == 523
+                      )
+                      if retry_safe and retryable_edge_error and attempt < 15:
+                          print(f"bounded_safe_retry path={path} http_status={e.code} cloudflare_error_code={error_code} attempt={attempt}")
                           import time
                           time.sleep(2)
                           continue
@@ -201,17 +207,17 @@ jobs:
               evidence["failure"]={"case":name,"status":status,"body":body}
               Path("p347-external-authority-failure.json").write_text(json.dumps(evidence,indent=2,sort_keys=True)+"\n",encoding="utf-8")
               raise SystemExit(1)
-          s,b=call("GET","/v1/state"); evidence["cases"].append({"name":"fresh_state","status":s,"body":b}); require("fresh_state", s==200 and b.get("generation")==1, s, b)
+          s,b=call("GET","/v1/state",retry_safe=True); evidence["cases"].append({"name":"fresh_state","status":s,"body":b}); require("fresh_state", s==200 and b.get("generation")==1, s, b)
           s,b=call("POST","/v1/admin/mutate",admin,body={}); evidence["cases"].append({"name":"authority_mutation","status":s,"body":b}); require("authority_mutation", s==200 and b.get("generation")==2, s, b)
           h={"Idempotency-Key":"p347-real-e1","X-Request-Fingerprint":"fingerprint-1"}
-          s,b=call("POST","/v1/effects",effect,{"generation":1,"payload":{"amount":1}},h); evidence["cases"].append({"name":"stale_generation_reject","status":s,"body":b}); require("stale_generation_reject", s==409 and b.get("reason")=="STALE_REJECT", s, b)
+          s,b=call("POST","/v1/effects",effect,{"generation":1,"payload":{"amount":1}},h,retry_safe=True); evidence["cases"].append({"name":"stale_generation_reject","status":s,"body":b}); require("stale_generation_reject", s==409 and b.get("reason")=="STALE_REJECT", s, b)
           current={"generation":2,"payload":{"amount":1}}
-          s,b=call("POST","/v1/effects",effect,current,h); evidence["cases"].append({"name":"new_effect","status":s,"body":b}); require("new_effect", s==201 and b.get("duplicate") is False, s, b)
+          s,b=call("POST","/v1/effects",effect,current,h,retry_safe=True); evidence["cases"].append({"name":"new_effect","status":s,"body":b}); require("new_effect", s==201 and b.get("duplicate") is False, s, b)
           eid=b["effect_id"]
-          s,b=call("POST","/v1/effects",effect,current,h); evidence["cases"].append({"name":"same_key_same_payload_retry","status":s,"body":b}); require("same_key_same_payload_retry", s==200 and b.get("duplicate") is True and b.get("effect_id")==eid, s, b)
+          s,b=call("POST","/v1/effects",effect,current,h,retry_safe=True); evidence["cases"].append({"name":"same_key_same_payload_retry","status":s,"body":b}); require("same_key_same_payload_retry", s==200 and b.get("duplicate") is True and b.get("effect_id")==eid, s, b)
           h2={"Idempotency-Key":"p347-real-e1","X-Request-Fingerprint":"fingerprint-2"}
-          s,b=call("POST","/v1/effects",effect,current,h2); evidence["cases"].append({"name":"same_key_different_payload_conflict","status":s,"body":b}); require("same_key_different_payload_conflict", s==409 and b.get("reason")=="CONFLICT", s, b)
-          s,b=call("GET","/v1/effects/"+eid); evidence["cases"].append({"name":"fresh_effect_reobservation","status":s,"body":b}); require("fresh_effect_reobservation", s==200 and b.get("effect_id")==eid and b.get("outcome")=="OBSERVED_SUCCESS", s, b)
+          s,b=call("POST","/v1/effects",effect,current,h2,retry_safe=True); evidence["cases"].append({"name":"same_key_different_payload_conflict","status":s,"body":b}); require("same_key_different_payload_conflict", s==409 and b.get("reason")=="CONFLICT", s, b)
+          s,b=call("GET","/v1/effects/"+eid,retry_safe=True); evidence["cases"].append({"name":"fresh_effect_reobservation","status":s,"body":b}); require("fresh_effect_reobservation", s==200 and b.get("effect_id")==eid and b.get("outcome")=="OBSERVED_SUCCESS", s, b)
           evidence["result"]="PASS"
           Path("p347-external-authority-evidence.json").write_text(json.dumps(evidence,indent=2,sort_keys=True)+"\n",encoding="utf-8")
           print("P347_EXTERNAL_AUTHORITY_REAL_EXECUTION=PASS")
