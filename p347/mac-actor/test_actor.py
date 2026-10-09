@@ -41,6 +41,7 @@ class MacActorContractTests(unittest.TestCase):
                 {"generation":2,"payload":{"amount":1}},{"Idempotency-Key":"e1"},3)
         self.assertEqual(run.call_count,1)
         command=run.call_args.args[0]
+        self.assertEqual(command[-1],"https://authority.example/v1/effects")
         self.assertNotIn(token," ".join(command))
         auth_ref=next(v[1:] for v in command if v.startswith("@"))
         self.assertFalse(Path(auth_ref).exists())

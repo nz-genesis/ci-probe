@@ -43,6 +43,7 @@ def request(url,method="GET",token=None,body=None,headers=None,timeout=20.0):
     for k,v in (headers or {}).items():
         if any(c in k+v for c in "\r\n"): raise ValueError("newline in HTTP header")
         cmd += ["--header",k+": "+v]
+    cmd.append(url)
     start,start_ns=utc(),time.monotonic_ns()
     try:
         with tempfile.TemporaryDirectory(prefix="p347-curl-") as temp_dir:
