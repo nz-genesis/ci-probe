@@ -86,7 +86,7 @@ jobs:
   mac-visibility:
     name: physical Mac read-only visibility probes
     needs: deploy-authority
-    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-mac-actor-v0' }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-mac-actor-v0' && github.event_name == 'workflow_dispatch' }}
     runs-on: [self-hosted, macOS, p347-mac]
     timeout-minutes: 12
     env:
