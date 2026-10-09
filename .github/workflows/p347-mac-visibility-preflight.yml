@@ -16,14 +16,14 @@ concurrency:
 jobs:
   mac-visibility:
     name: physical Mac read-only visibility probes
-    if: ${ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-mac-actor-v0' }}
+    if: ${{ github.repository == 'nz-genesis/ci-probe' && github.ref == 'refs/heads/research/p347-mac-actor-v0' }}
     runs-on: [self-hosted, macOS, p347-mac]
     timeout-minutes: 12
     steps:
       - name: Checkout exact triggering commit
         uses: actions/checkout@v4
         with:
-          ref: ${ github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 1
       - name: Verify exact checkout
         shell: bash
@@ -82,16 +82,16 @@ jobs:
             --window-seconds 120 \
             --probe-count 3
       - name: Upload sanitized visibility discovery
-        if: ${ always() }}
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: p347-mac-visibility-${ github.sha }}
+          name: p347-mac-visibility-${{ github.sha }}
           path: |
-            ${ runner.temp }}/p347-mac-visibility-${ github.run_id }}-${ github.run_attempt }}/mac-visibility-discovery.json
-            ${ runner.temp }}/p347-mac-visibility-${ github.run_id }}-${ github.run_attempt }}/deployment-diagnostic.txt
+            ${{ runner.temp }}/p347-mac-visibility-${{ github.run_id }}-${{ github.run_attempt }}/mac-visibility-discovery.json
+            ${{ runner.temp }}/p347-mac-visibility-${{ github.run_id }}-${{ github.run_attempt }}/deployment-diagnostic.txt
           if-no-files-found: ignore
       - name: Cleanup temporary deployment credentials
-        if: ${ always() }}
+        if: ${{ always() }}
         shell: bash
         run: |
           set -euo pipefail
