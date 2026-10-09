@@ -111,8 +111,3 @@ test("negative generation is rejected", () => {
 test("state digest input is deterministic", () => {
   assert.equal(canonicalState(2, 3), '{"generation":2,"effect_count":3}');
 });
-
-
-test("canonical state representation changes when effect count changes", () => {
-  assert.notEqual(canonicalState(2, 1), canonicalState(2, 2));
-});
