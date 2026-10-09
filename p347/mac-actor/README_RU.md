@@ -99,3 +99,6 @@ P347_MAC_ACTOR_* означает только результат actor stage. �
 ### Host-only route diagnostic record
 
 The previous physical-Mac attempt is run 37918930626 and returned HTTP 403 with a redacted Cloudflare challenge before opening any N100 capture window. The next host-only comparison must use a commit message containing [P347-ROUTE-DIAG] and must not contain [P347-PHYSICAL-ARMED]. Record the exact source SHA, hosted-Linux HTTP status, authority identity/source_version result, actual remote IP, artifact ID and SHA-256. If the result is a 403 challenge, stop and preserve it; do not arm the Mac job, broaden retry classification or bypass Cloudflare security.
+
+
+The first host-only route diagnostic (run 37922281656, source 21475049dc0cfdea76351063fb1bf76d3241c2bd) deployed successfully but GET /v1/state returned HTTP 404 from hosted Linux. Its body was redacted to hash/length only, so the exact 404 meaning remains unknown. The follow-up diagnostic uses a tested safe plain-text preview for short non-HTML bodies; challenge HTML remains redacted. Exact-source tests passed on source efafb0d9bb0f1c92be9c5c57cccde3521082038a (23 Python + 17 Node). A new [P347-ROUTE-DIAG] commit is authorized only for another hosted-Linux read-only diagnostic; physical Mac remains gated off.
