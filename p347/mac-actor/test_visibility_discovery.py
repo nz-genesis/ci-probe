@@ -59,5 +59,11 @@ class VisibilityDiscoveryTests(unittest.TestCase):
         self.assertIn('--var "P347_SOURCE_VERSION:$GITHUB_SHA"',workflow)
         self.assertIn('--expected-source-version "$GITHUB_SHA"',workflow)
         self.assertNotIn("eed787812545f80997e93a00266aee550a06e0b6",readme)
+        self.assertIn("github.event_name == 'workflow_dispatch'",workflow)
+        self.assertIn("authority_readiness.py",workflow)
+        self.assertIn("p347-linux-authority-readiness-",workflow)
+        test_workflow=(root/".github/workflows/p347-external-authority-tests.yml").read_text(encoding="utf-8")
+        self.assertIn("pull_request:",test_workflow)
+        self.assertIn("github.event.pull_request.head.sha",test_workflow)
 
 if __name__=="__main__": unittest.main()
