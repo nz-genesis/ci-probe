@@ -28,5 +28,6 @@ test("authority mutation is not retried automatically", () => {
 
 test("idempotent effect operations opt into bounded safe retry", () => {
   assert.match(workflow, /call\("POST","\/v1\/effects",effect,current,h,retry_safe=True\)/);
+  assert.match(workflow, /new_effect_or_recovered_after_ambiguous_response/);
   assert.match(workflow, /call\("GET","\/v1\/effects\/"\+eid,retry_safe=True\)/);
 });
