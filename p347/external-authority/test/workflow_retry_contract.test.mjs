@@ -14,7 +14,7 @@ test("edge and ambiguous transport retries are bounded and limited to explicitly
   assert.match(workflow, /e\.code == 500 and error_code == 1104/);
   assert.match(workflow, /e\.code == 523/);
   assert.match(workflow, /if retry_safe and retryable_edge_error and attempt < 15:/);
-  assert.match(workflow, /except \\(URLError, TimeoutError\\) as e:/);
+  assert.match(workflow, /except \(URLError, TimeoutError\) as e:/);
   assert.match(workflow, /if retry_safe and attempt < 15:/);
   assert.match(workflow, /"transport_retry_events":transport_retry_events/);
 });
