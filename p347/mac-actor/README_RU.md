@@ -9,7 +9,7 @@ Actor не активирует и не управляет fault injector. N100 
 ## Перед запуском
 
 - Сначала выполни read-only Mac↔N100 visibility preflight из p347/n100-witness/TEST_RU.md.
-- Разверни свежую external authority с точного source SHA eed787812545f80997e93a00266aee550a06e0b6 (run 37902065459, Wrangler 4.149.0). Не используй просроченный URL.
+- Разверни свежую external authority из того же exact source SHA, который используется для actor checkout. Для workflow-assisted preflight это `$GITHUB_SHA`; для manual run используй `ACTOR_SHA` из exact clean checkout и передай тот же SHA как `--expected-source-version`. Не pin-ь authority на исторический SHA из предыдущего run.
 - Секреты храни только вне Git: ~/.local/share/p347-authority/{authority-url,admin-token,effect-token}. Token files должны иметь mode 0600; URL-файл содержит только workers.dev URL, не claim URL.
 - Не печатай tokens, не включай их в evidence и не загружай секреты в публичные артефакты. Actor передаёт Authorization через временный файл mode 0600, не через argv; файл удаляется после единственного curl-вызова. Read-only GET повторяется ограниченно только при UNKNOWN/HTTP 523/Cloudflare 1042/1104; mutation не повторяется, consequential POST отправляется ровно один раз.
 - Используй clean exact actor checkout; prepare остановится на dirty tree.
@@ -30,6 +30,8 @@ if [ ! -d "$REPO_DIR/.git" ]; then git clone https://github.com/nz-genesis/ci-pr
 git -C "$REPO_DIR" fetch origin
 git -C "$REPO_DIR" checkout --detach "$ACTOR_SHA"
 test "$(git -C "$REPO_DIR" rev-parse HEAD)" = "$ACTOR_SHA"
+# Authority source and actor source MUST be identical for this run.
+printf 'ACTOR_SHA=%s\nEXPECTED_AUTHORITY_SHA=%s\n' "$ACTOR_SHA" "$EXPECTED_AUTHORITY_SHA"
 test -z "$(git -C "$REPO_DIR" status --porcelain --untracked-files=normal)"
 cd "$REPO_DIR"
 python3 --version
@@ -49,7 +51,8 @@ test -f "$SECRET_DIR/admin-token"
 test -f "$SECRET_DIR/effect-token"
 test "$(stat -f '%Lp' "$SECRET_DIR/admin-token")" = "600"
 test "$(stat -f '%Lp' "$SECRET_DIR/effect-token")" = "600"
-EXPECTED_AUTHORITY_SHA="eed787812545f80997e93a00266aee550a06e0b6"
+EXPECTED_AUTHORITY_SHA="$ACTOR_SHA"
+test "$EXPECTED_AUTHORITY_SHA" = "$ACTOR_SHA"
 RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
 RUN_DIR="$HOME/p347-mac-actor-runs/$RUN_ID"
 python3 p347/mac-actor/actor.py prepare --expected-source-version "$EXPECTED_AUTHORITY_SHA" --run-dir "$RUN_DIR"
