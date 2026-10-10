@@ -23,7 +23,7 @@ jobs:
           set -euo pipefail
           actual="$(git rev-parse HEAD)"
           test "$actual" = "$GITHUB_SHA"
-          printf 'GITHUB_SHA=%s\\nCHECKED_OUT_SHA=%s\\n' "$GITHUB_SHA" "$actual"
+          printf 'GITHUB_SHA=%s\nCHECKED_OUT_SHA=%s\n' "$GITHUB_SHA" "$actual"
       - name: Run generic composer context retry contract
         run: python3 probes/generic-composer-context-retry-contract.py
       - name: Capture receipt
@@ -31,11 +31,11 @@ jobs:
         shell: bash
         run: |
           {
-            printf 'workflow=%s\\n' "$GITHUB_WORKFLOW"
-            printf 'run_id=%s\\n' "$GITHUB_RUN_ID"
-            printf 'run_attempt=%s\\n' "$GITHUB_RUN_ATTEMPT"
-            printf 'commit=%s\\n' "$GITHUB_SHA"
-            printf 'job_status=%s\\n' "${{ job.status }}"
+            printf 'workflow=%s\n' "$GITHUB_WORKFLOW"
+            printf 'run_id=%s\n' "$GITHUB_RUN_ID"
+            printf 'run_attempt=%s\n' "$GITHUB_RUN_ATTEMPT"
+            printf 'commit=%s\n' "$GITHUB_SHA"
+            printf 'job_status=%s\n' "${{ job.status }}"
           } > workspace-context-retry-receipt.txt
       - name: Upload exact execution receipt
         if: always()
