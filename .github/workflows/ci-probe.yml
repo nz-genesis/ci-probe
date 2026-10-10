@@ -176,6 +176,9 @@ jobs:
           path: p347-stronger-preflight.json
           if-no-files-found: error
 
+      - name: Execute public-safe generic workspace lifecycle contract probe
+        run: python3 probes/generic-workspace-lifecycle-contract.py
+
       - name: Verify probe artifact
         run: |
           test -f ci-probe-result.txt
