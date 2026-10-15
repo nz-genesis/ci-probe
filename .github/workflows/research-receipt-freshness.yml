@@ -1,0 +1,24 @@
+name: Genesis Receipt Freshness Boundary Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "probes/research-receipt-freshness/**"
+      - ".github/workflows/research-receipt-freshness.yml"
+  pull_request:
+    paths:
+      - "probes/research-receipt-freshness/**"
+      - ".github/workflows/research-receipt-freshness.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  receipt-freshness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run bounded receipt freshness model
+        run: python3 probes/research-receipt-freshness/probe.py
