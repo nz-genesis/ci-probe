@@ -1,0 +1,21 @@
+name: P273 Anchor Rotation Byzantine
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p273:
+    name: p273-anchor-rotation-byzantine
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute bounded P273 probe
+        run: python3 p273_anchor_rotation_byzantine_test.py
