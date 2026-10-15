@@ -1,0 +1,21 @@
+name: External Effect Crash
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  external-effect-crash:
+    name: external-effect-crash-reconciliation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute external-effect experiment
+        run: PYTHONPATH=. python3 external_effect_crash_test.py
