@@ -3,6 +3,9 @@
 The probe separates authority state, realization state, external effect,
 and verification. It deliberately does not infer absence of effect from
 cancellation or authority revocation.
+
+Verification note: this module is a generic executable experiment and
+contains no Genesis-private architecture or canonical decision.
 """
 from dataclasses import dataclass
 from enum import Enum
@@ -50,38 +53,26 @@ def verify() -> None:
     authorized = (Event("authorized", 10),)
     revoked_before_execution = authorized + (Event("revoked", 20),)
 
-    # Admission/authority at the realization boundary can change before
-    # execution begins; this does not retroactively create an effect.
     assert authority_at(revoked_before_execution, 15) is Outcome.AUTHORIZED
     assert authority_at(revoked_before_execution, 20) is Outcome.REVOKED
     assert effect_state((), 20) is Outcome.UNKNOWN
 
-    # Revocation while execution is in flight is not equivalent to failure or
-    # absence of an external effect.
     in_flight = revoked_before_execution + (Event("executing", 21),)
     assert authority_at(in_flight, 21) is Outcome.REVOKED
     assert effect_state(in_flight, 21) is Outcome.UNKNOWN
 
-    # Cancellation provides no proof that an external effect did not occur.
     cancelled = in_flight + (Event("cancelled", 22),)
     assert effect_state(cancelled, 22) is Outcome.UNKNOWN
 
-    # An observed effect remains an effect even if cancellation happened first.
     effect_after_cancel = cancelled + (Event("effect_observed", 23),)
     assert effect_state(effect_after_cancel, 23) is Outcome.EFFECT_OBSERVED
 
-    # Only explicit verification can establish absence of effect.
     no_effect = cancelled + (Event("no_effect_verified", 24),)
     assert effect_state(no_effect, 24) is Outcome.NO_EFFECT_VERIFIED
 
-    # Conflicting authority evidence remains explicit.
-    conflict = (
-        Event("authorized", 20),
-        Event("revoked", 20),
-    )
+    conflict = (Event("authorized", 20), Event("revoked", 20))
     assert authority_at(conflict, 20) is Outcome.CONFLICTING
 
-    # Future or invalid evidence cannot create current certainty.
     assert authority_at((Event("revoked", 30),), 20) is Outcome.UNKNOWN
     assert authority_at((Event("authorized", 20, valid=False),), 20) is Outcome.UNKNOWN
 
