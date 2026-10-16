@@ -1,0 +1,25 @@
+name: Genesis Stage 0 Contract Boundary
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "probes/genesis-stage0-contract-boundary/**"
+      - ".github/workflows/research-genesis-stage0-contract-boundary.yml"
+  pull_request:
+    paths:
+      - "probes/genesis-stage0-contract-boundary/**"
+      - ".github/workflows/research-genesis-stage0-contract-boundary.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  stage0-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute exact Stage 0 reference tests
+        working-directory: probes/genesis-stage0-contract-boundary
+        run: python3 -m unittest -v
