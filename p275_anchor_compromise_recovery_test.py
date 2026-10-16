@@ -54,6 +54,7 @@ def recover(old: Anchor, recovery: frozenset[str], new: Anchor) -> Verdict:
     return Verdict.VALID if len(recovery) >= new.threshold else Verdict.UNKNOWN
 
 def run():
+    # P275 bounded model: recovery authority is intentionally external to mutable Genesis state.
     a1 = Anchor("A1", 1, frozenset({"s1","s2","s3","b"}), 3)
     r1 = Root("R1", 1, "GENESIS", 1, "d1")
     r2 = Root("R2", 2, "d1", 1, "d2")
