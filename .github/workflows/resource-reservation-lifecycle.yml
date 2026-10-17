@@ -2,6 +2,10 @@ name: Generic Resource Reservation Lifecycle
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "probes/test_resource_reservation_lifecycle.py"
+      - ".github/workflows/resource-reservation-lifecycle.yml"
   push:
     paths:
       - "probes/test_resource_reservation_lifecycle.py"
