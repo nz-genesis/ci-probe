@@ -17,7 +17,7 @@ jobs:
   p452-generic-control:
     if: >-
       github.event.issue.number == 116 &&
-      github.event.comment.user.login == 'zhukoff777' &&
+      (github.actor == 'zhukoff777' || github.actor == 'chatgpt-codex-connector[bot]') &&
       startsWith(github.event.comment.body, '/p452-run ')
     runs-on: ubuntu-latest
     timeout-minutes: 10
