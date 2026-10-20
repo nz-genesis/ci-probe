@@ -68,7 +68,16 @@ jobs:
           python-version: "3.12"
 
       - name: Run generic P452 execution control
-        run: python3 probes/p452-generic-execution-control.py
+        shell: bash
+        env:
+          P452_TARGET_SHA: ${{ steps.target.outputs.target_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$P452_TARGET_SHA"
+          # The receipt's commit field must identify the tested checkout, not
+          # the default-branch commit that caused the issue_comment event.
+          export GITHUB_SHA="$P452_TARGET_SHA"
+          python3 probes/p452-generic-execution-control.py
 
       - name: Upload exact-commit P452 receipt
         if: always()
