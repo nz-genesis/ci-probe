@@ -1,0 +1,88 @@
+name: P452 Comment Dispatch Bridge
+
+# Narrow operator command for the public, Genesis-agnostic P452 probe.
+# This workflow is active only after review and merge to the default branch.
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p452-comment-dispatch-${{ github.event.issue.number }}-${{ github.event.comment.id }}
+  cancel-in-progress: false
+
+jobs:
+  p452-generic-control:
+    if: >-
+      github.event.issue.number == 116 &&
+      github.event.comment.user.login == 'zhukoff777' &&
+      startsWith(github.event.comment.body, '/p452-run ')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout default branch for trusted workflow context
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate exact command and target commit
+        id: target
+        shell: bash
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          TARGET_SHA="$(python3 - <<'PY'
+          import os
+          import re
+          body = os.environ["COMMENT_BODY"]
+          match = re.fullmatch(r"/p452-run ([0-9a-fA-F]{40})", body)
+          if match is None:
+              raise SystemExit("Rejected: expected exactly '/p452-run <40-character commit SHA>'.")
+          print(match.group(1).lower())
+          PY
+          )"
+          git cat-file -e "${TARGET_SHA}^{commit}"
+          git merge-base --is-ancestor "$TARGET_SHA" "origin/$DEFAULT_BRANCH"
+          printf 'TARGET_SHA=%s\n' "$TARGET_SHA" >> "$GITHUB_ENV"
+          printf 'target_sha=%s\n' "$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "Requested target is a commit reachable from the default branch: $TARGET_SHA"
+
+      - name: Checkout exact validated target
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout --detach "$TARGET_SHA"
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$TARGET_SHA"
+          printf 'GITHUB_SHA=%s\nCHECKED_OUT_SHA=%s\n' "$TARGET_SHA" "$actual"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run generic P452 execution control
+        shell: bash
+        env:
+          P452_TARGET_SHA: ${{ steps.target.outputs.target_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$P452_TARGET_SHA"
+          # The receipt's commit field must identify the tested checkout, not
+          # the default-branch commit that caused the issue_comment event.
+          export GITHUB_SHA="$P452_TARGET_SHA"
+          python3 probes/p452-generic-execution-control.py
+
+      - name: Upload exact-commit P452 receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p452-generic-control-${{ steps.target.outputs.target_sha }}
+          path: p452-generic-control-result.json
+          if-no-files-found: error
