@@ -31,6 +31,8 @@ jobs:
           uname -a
           echo "runner=${RUNNER_NAME}"
           echo "os=${RUNNER_OS}"
+      - name: Execute generic safe state-file open probe
+        run: python3 probes/generic-safe-ledger-file-open.py
       - name: Execute deterministic substrate probe
         run: python3 probe.py
       - name: Execute generic action semantics tests
