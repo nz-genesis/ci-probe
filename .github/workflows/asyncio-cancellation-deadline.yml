@@ -1,0 +1,26 @@
+name: Generic asyncio cancellation semantics
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'probes/asyncio-cancellation-deadline.py'
+      - 'probes/ASYNCIO-CANCELLATION-DEADLINE.md'
+      - '.github/workflows/asyncio-cancellation-deadline.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  python-asyncio-314:
+    name: Python asyncio 3.14.7
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14.7'
+          cache: false
+      - name: Execute standard-library cancellation probe
+        run: python probes/asyncio-cancellation-deadline.py
