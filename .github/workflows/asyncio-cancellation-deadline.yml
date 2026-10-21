@@ -21,6 +21,5 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.14.7'
-          cache: false
       - name: Execute standard-library cancellation probe
         run: python probes/asyncio-cancellation-deadline.py
