@@ -59,6 +59,8 @@ export class P347Authority extends DurableObject {
   async currentState() {
     const generation = this.currentGeneration();
     const effectCount = this.effectCount();
+    // P347's recorded external contract intentionally hashes canonical {"generation":N}.
+    // effect_count is exposed separately and is not part of this generation token.
     const digest = await sha256Hex(JSON.stringify({ generation }));
     return { generation, effect_count: effectCount, state_digest: digest };
   }
@@ -120,7 +122,7 @@ export class P347Authority extends DurableObject {
   async observedEffect(effectId) {
     const row = this.ctx.storage.sql
       .exec("SELECT effect_id, fingerprint, generation, effect_digest, payload_json, created_at FROM effects WHERE effect_id = ?", effectId)
-      .one();
+      .toArray()[0] ?? null;
     if (!row) return null;
     return {
       effect_id: row.effect_id,
