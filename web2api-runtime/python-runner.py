@@ -8,13 +8,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 candidate = os.environ.get("BROWSER_CANDIDATE")
-if candidate not in {"playwright-python", "patchright-python"}:
-    raise SystemExit(f"Unsupported candidate: {candidate}")
+if candidate != "playwright-python":
+    raise SystemExit(f"Only playwright-python is permitted by this public probe; unsupported candidate: {candidate}")
 
-if candidate == "playwright-python":
-    from playwright.sync_api import sync_playwright
-else:
-    from patchright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):

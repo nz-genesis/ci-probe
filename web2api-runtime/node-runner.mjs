@@ -6,9 +6,10 @@ import { performance } from 'node:perf_hooks';
 import process from 'node:process';
 
 const candidate = process.env.BROWSER_CANDIDATE;
-if (!['playwright-node', 'patchright-node'].includes(candidate)) throw new Error(`Unsupported candidate: ${candidate}`);
-const pkg = candidate === 'playwright-node' ? 'playwright' : 'patchright';
-const { chromium } = await import(pkg);
+if (candidate !== 'playwright-node') {
+  throw new Error(`Only playwright-node is permitted by this public probe; unsupported candidate: ${candidate}`);
+}
+const { chromium } = await import('playwright');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'web2api-runtime-'));
 const profileA = path.join(root, 'profile-a');

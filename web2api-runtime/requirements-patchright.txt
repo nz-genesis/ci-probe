@@ -1,1 +1,2 @@
-patchright==1.62.3
+# Stock Patchright is excluded from this public probe because its standard build bundles stealth/evasion behavior.
+# No package is installed or executed. A stripped non-evasive fork requires separate source audit and scope review.

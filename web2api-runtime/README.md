@@ -10,14 +10,16 @@ Execute the same semantic BrowserRuntime acceptance primitives on public GitHub-
 
 The experiment deliberately uses a deterministic local HTTP fixture. It does **not** contact ChatGPT, Gemini, Claude or any other provider.
 
-## Candidate matrix
+## Current candidate matrix (checked 2026-11-03)
 
-- Playwright + Node.js 24
-- Patchright + Node.js 24
-- Playwright + Python 3.14
-- Patchright + Python 3.14
+| Candidate | Runtime / package | Status |
+|---|---|---|
+| Playwright Node | Node.js 24.21.0 / `playwright@1.64.1` | Active generic probe |
+| Playwright Python | CPython 3.14.10 / `playwright==1.64.1` | Active generic probe |
+| Patchright Node | `patchright@1.64.3` | Excluded: stock build bundles stealth/evasion changes |
+| Patchright Python | `patchright==1.64.4` | Excluded: stock build bundles stealth/evasion changes |
 
-Exact dependency versions are pinned in the experiment workflow/configuration and must be rechecked before canonical runtime selection.
+This probe intentionally executes only Playwright. The stock Patchright build applies automation-concealment changes in its standard patch pipeline; it is not installed or executed here. A future stripped non-evasive fork would be a separate experiment requiring complete source audit and a new public scope review.
 
 ## Tested semantics
 
@@ -33,7 +35,7 @@ Exact dependency versions are pinned in the experiment workflow/configuration an
 10. exercise closed-browser detection;
 11. record timing and process-memory observations where available.
 
-This experiment does **not** establish provider authentication, provider readiness, Web2API protocol compatibility, production security, or anti-bot properties.
+This experiment does **not** establish provider authentication, provider readiness, Web2API protocol compatibility, production security, or anti-bot properties. Its Playwright result is generic public execution evidence only; it does not prove private Web2API integration.
 
 ## Evidence rule
 
