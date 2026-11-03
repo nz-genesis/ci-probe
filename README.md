@@ -55,7 +55,7 @@ No automatic write-back to `nz-genesis/genesis-lab` is permitted.
 
 ## Current generic probes
 
-The repository contains bounded probes for execution, authority/revocation, recovery, idempotency, concurrency, external-effect reconciliation, adversarial evidence and related generic substrate behavior. These are historical or generic execution artifacts, not a single cumulative semantic proof.
+The repository contains bounded probes for execution, authority/revocation, recovery, idempotency, concurrency, external-effect reconciliation, adversarial evidence and related generic substrate behavior. The [JSON parser resource probe](probes/json-parser-resource-probe.md) adds a generic CPython decoding/resource observation; it does not test any private application's semantics. These are independent, bounded experiments, not a single cumulative semantic proof.
 
 ## Continuous integration
 
