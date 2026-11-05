@@ -234,7 +234,7 @@ class AtomicPublicationTests(unittest.TestCase):
             replaced = {"value": False}
 
             def replace_ancestor_before_open(path, flags, *args, dir_fd=None, **kwargs):
-                if path == "ancestor" and dir_fd is not None and not replaced["value"]:
+                if path == "reports" and dir_fd is not None and not replaced["value"]:
                     os.rename(ancestor, moved)
                     (ancestor / "reports").mkdir(parents=True)
                     replaced["value"] = True
@@ -272,7 +272,7 @@ class AtomicPublicationTests(unittest.TestCase):
             supported_dir_fd = os.supports_dir_fd
             with mock.patch.object(os, "open", side_effect=replace_ancestor_before_child_open) as wrapped_open:
                 with mock.patch.object(os, "supports_dir_fd", supported_dir_fd | {wrapped_open}):
-                    with self.assertRaisesRegex(RuntimeError, "parent path changed during publication"):
+                    with self.assertRaisesRegex(RuntimeError, "parent path chain changed during preflight"):
                         atomic_publish(parent, "race.json", {"status": "must-not-publish"})
             self.assertTrue(swapped["value"])
             self.assertFalse((moved / "reports" / "race.json").exists())
