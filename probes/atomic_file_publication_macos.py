@@ -216,6 +216,78 @@ class AtomicPublicationTests(unittest.TestCase):
             finally:
                 os.chmod(directory, 0o700)
 
+    def test_macos_acl_can_grant_directory_write_without_posix_mode_write(self):
+        if sys.platform != "darwin":
+            self.skipTest("macOS ACL semantics are the subject of this probe")
+
+        sudo_identity = subprocess.run(
+            ["/usr/bin/sudo", "-n", "-u", "nobody", "/usr/bin/id", "-u"],
+            capture_output=True, text=True,
+        )
+        if sudo_identity.returncode != 0:
+            self.skipTest("runner cannot execute a command as the unprivileged nobody account")
+        nobody_uid = int(sudo_identity.stdout.strip())
+        if nobody_uid in (0, os.geteuid()):
+            self.skipTest("nobody did not resolve to a distinct unprivileged identity")
+
+        directory = Path(tempfile.mkdtemp(prefix="acl-mode-boundary-", dir="/tmp")).resolve(strict=True)
+        target = directory / "created-by-nobody"
+        try:
+            os.chmod(directory, 0o700)
+            baseline = subprocess.run(
+                ["/usr/bin/sudo", "-n", "-u", "nobody", "/usr/bin/touch", str(target)],
+                capture_output=True, text=True,
+            )
+            self.assertNotEqual(
+                baseline.returncode, 0,
+                "the unprivileged identity unexpectedly wrote before an ACL was added",
+            )
+            self.assertFalse(target.exists())
+
+            subprocess.run(
+                ["/bin/chmod", "+a", "everyone allow search,add_file", str(directory)],
+                check=True, capture_output=True, text=True,
+            )
+            mode_after_acl = stat.S_IMODE(directory.stat().st_mode)
+            self.assertEqual(
+                mode_after_acl, 0o700,
+                "adding the ACL unexpectedly changed the POSIX mode bits",
+            )
+            acl_listing = subprocess.run(
+                ["/bin/ls", "-lde", str(directory)],
+                check=True, capture_output=True, text=True,
+            ).stdout
+            self.assertIn("everyone allow", acl_listing)
+            self.assertIn("search", acl_listing)
+            self.assertIn("add_file", acl_listing)
+
+            acl_attempt = subprocess.run(
+                ["/usr/bin/sudo", "-n", "-u", "nobody", "/usr/bin/touch", str(target)],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(
+                acl_attempt.returncode, 0,
+                "the ACL did not grant the expected directory-entry operation: "
+                + acl_attempt.stderr,
+            )
+            self.assertTrue(target.is_file())
+            print(json.dumps({
+                "observation": "EXTENDED_ACL_GRANTED_DIRECTORY_WRITE",
+                "posix_mode_octal": oct(mode_after_acl),
+                "unprivileged_uid": nobody_uid,
+                "baseline_write_exit": baseline.returncode,
+                "acl_write_exit": acl_attempt.returncode,
+            }, sort_keys=True))
+        finally:
+            if target.exists():
+                target.unlink()
+            subprocess.run(
+                ["/bin/chmod", "-N", str(directory)],
+                capture_output=True, text=True,
+            )
+            os.chmod(directory, 0o700)
+            directory.rmdir()
+
     def test_process_kill_after_publish_keeps_final_file_complete(self):
         with tempfile.TemporaryDirectory(prefix="atomic-post-publish-kill-") as temp:
             directory = Path(temp).resolve(strict=True)
