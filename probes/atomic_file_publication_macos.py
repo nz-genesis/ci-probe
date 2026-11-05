@@ -290,7 +290,7 @@ class AtomicPublicationTests(unittest.TestCase):
 
     def test_child_directory_fd_is_closed_when_fstat_fails(self):
         with tempfile.TemporaryDirectory(prefix="atomic-fstat-close-") as temp:
-            directory = Path(temp)
+            directory = Path(temp).resolve(strict=True)
             (directory / "child").mkdir()
             real_open = os.open
             real_fstat = os.fstat
@@ -317,7 +317,7 @@ class AtomicPublicationTests(unittest.TestCase):
 
     def test_parent_directory_fd_is_closed_when_staging_token_fails(self):
         with tempfile.TemporaryDirectory(prefix="atomic-token-close-") as temp:
-            directory = Path(temp)
+            directory = Path(temp).resolve(strict=True)
             real_open = os.open
             real_fstat = os.fstat
             opened_directory_fds = []
@@ -328,12 +328,14 @@ class AtomicPublicationTests(unittest.TestCase):
                     opened_directory_fds.append(fd)
                 return fd
 
-            with mock.patch.object(os, "open", side_effect=capture_directory_open):
-                with mock.patch.object(
-                    secrets, "token_hex", side_effect=OSError("injected token source failure")
-                ):
-                    with self.assertRaisesRegex(OSError, "injected token source failure"):
-                        atomic_publish(directory, "report.json", {"status": "not-written"})
+            supported_dir_fd = os.supports_dir_fd
+            with mock.patch.object(os, "open", side_effect=capture_directory_open) as wrapped_open:
+                with mock.patch.object(os, "supports_dir_fd", supported_dir_fd | {wrapped_open}):
+                    with mock.patch.object(
+                        secrets, "token_hex", side_effect=OSError("injected token source failure")
+                    ):
+                        with self.assertRaisesRegex(OSError, "injected token source failure"):
+                            atomic_publish(directory, "report.json", {"status": "not-written"})
 
             self.assertTrue(opened_directory_fds)
             for fd in opened_directory_fds:
