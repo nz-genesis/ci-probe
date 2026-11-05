@@ -17,6 +17,29 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest import mock
+
+
+def open_directory_no_follow(directory: Path) -> int:
+    """Open each absolute path component relative to an already-open parent."""
+    if not directory.is_absolute():
+        raise ValueError("directory must be absolute")
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    current_fd = os.open(os.sep, flags)
+    try:
+        for component in directory.parts[1:]:
+            if component in ("", ".", ".."):
+                raise ValueError("non-canonical path component")
+            next_fd = os.open(component, flags, dir_fd=current_fd)
+            os.close(current_fd)
+            current_fd = next_fd
+        return current_fd
+    except BaseException:
+        try:
+            os.close(current_fd)
+        except OSError:
+            pass
+        raise
 
 
 def atomic_publish(directory: Path, final_name: str, payload: dict) -> Path:
@@ -31,7 +54,7 @@ def atomic_publish(directory: Path, final_name: str, payload: dict) -> Path:
         raise RuntimeError("required no-follow directory-relative primitives unavailable")
 
     directory = directory.resolve(strict=True)
-    directory_fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    directory_fd = open_directory_no_follow(directory)
     staging_name = f".atomic-publication-{secrets.token_hex(16)}.tmp"
     staging_created = False
     file_fd = None
@@ -62,6 +85,19 @@ def atomic_publish(directory: Path, final_name: str, payload: dict) -> Path:
         os.unlink(staging_name, dir_fd=directory_fd)
         staging_created = False
         os.fsync(directory_fd)
+        try:
+            path_stat = os.stat(directory, follow_symlinks=False)
+        except OSError:
+            path_stat = None
+        opened_stat = os.fstat(directory_fd)
+        if (path_stat is None
+                or (path_stat.st_dev, path_stat.st_ino) != (opened_stat.st_dev, opened_stat.st_ino)):
+            try:
+                os.unlink(final_name, dir_fd=directory_fd)
+                os.fsync(directory_fd)
+            except OSError as cleanup_error:
+                raise RuntimeError("parent path changed and final-name cleanup failed") from cleanup_error
+            raise RuntimeError("parent path changed during publication")
     except BaseException:
         if file_fd is not None:
             try:
@@ -164,6 +200,37 @@ class AtomicPublicationTests(unittest.TestCase):
                              {"status": "complete", "payload": "fully-staged"})
             self.assertEqual({item.name for item in directory.iterdir()},
                              {".directory-fsync-paused", "published.json"})
+
+    def test_ancestor_symlink_replacement_does_not_redirect_publication(self):
+        with tempfile.TemporaryDirectory(prefix="atomic-parent-race-") as temp:
+            root = Path(temp)
+            ancestor = root / "ancestor"
+            parent = ancestor / "reports"
+            parent.mkdir(parents=True)
+            moved = root / "ancestor-moved"
+            redirect = root / "redirect"
+            redirected_parent = redirect / "reports"
+            redirected_parent.mkdir(parents=True)
+            real_open = os.open
+            swapped = {"value": False}
+
+            def replace_ancestor_before_child_open(path, flags, *args, dir_fd=None, **kwargs):
+                if path == "reports" and dir_fd is not None and not swapped["value"]:
+                    os.rename(ancestor, moved)
+                    os.symlink(redirect, ancestor, target_is_directory=True)
+                    swapped["value"] = True
+                return real_open(path, flags, *args, dir_fd=dir_fd, **kwargs)
+
+            supported_dir_fd = os.supports_dir_fd
+            with mock.patch.object(os, "open", side_effect=replace_ancestor_before_child_open) as wrapped_open:
+                with mock.patch.object(os, "supports_dir_fd", supported_dir_fd | {wrapped_open}):
+                    with self.assertRaisesRegex(RuntimeError, "parent path changed during publication"):
+                        atomic_publish(parent, "race.json", {"status": "must-not-publish"})
+            self.assertTrue(swapped["value"])
+            self.assertFalse((moved / "reports" / "race.json").exists())
+            self.assertFalse((redirected_parent / "race.json").exists())
+            self.assertEqual(list((moved / "reports").iterdir()), [])
+            self.assertEqual(list(redirected_parent.iterdir()), [])
 
     def test_process_kill_during_staging_never_publishes_final_name(self):
         with tempfile.TemporaryDirectory(prefix="atomic-kill-") as temp:
