@@ -42,10 +42,10 @@ def atomic_publish(directory: Path, final_name: str, payload: dict) -> Path:
             dir_fd=directory_fd,
         )
         staging_created = True
-        with os.fdopen(file_fd, "w", encoding="utf-8", newline="\\n") as stream:
+        with os.fdopen(file_fd, "w", encoding="utf-8", newline="\n") as stream:
             file_fd = None
             json.dump(payload, stream, ensure_ascii=True, sort_keys=True, indent=2)
-            stream.write("\\n")
+            stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
             staged = os.fstat(stream.fileno())
@@ -182,7 +182,7 @@ def main() -> int:
         "os_stat_no_follow": os.stat in os.supports_follow_symlinks,
     }
     Path("atomic-file-publication-receipt.json").write_text(
-        json.dumps(receipt, sort_keys=True, indent=2) + "\\n", encoding="utf-8"
+        json.dumps(receipt, sort_keys=True, indent=2) + "\n", encoding="utf-8"
     )
     print(json.dumps(receipt, sort_keys=True))
     return 0 if result.wasSuccessful() else 1
