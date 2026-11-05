@@ -1,0 +1,51 @@
+name: Generic atomic file publication — macOS ARM64
+
+on:
+  pull_request:
+    paths:
+      - "probes/atomic_file_publication_macos.py"
+      - ".github/workflows/atomic-file-publication-macos-arm64.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  atomic-publication:
+    name: macOS ARM64 filesystem publication semantics
+    runs-on: macos-26
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify runner and checkout identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(uname -m)" = "arm64"
+          sw_vers
+          python3 --version
+          printf 'GITHUB_SHA=%s\nCHECKED_OUT_SHA=%s\nARCH=%s\n' "$GITHUB_SHA" "$(git rev-parse HEAD)" "$(uname -m)"
+      - name: Set up current Python 3.14
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - name: Execute generic filesystem publication probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python --version
+          python probes/atomic_file_publication_macos.py 2>&1 | tee atomic-file-publication-output.txt
+      - name: Upload exact execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atomic-file-publication-macos-arm64-${{ github.sha }}
+          path: |
+            atomic-file-publication-output.txt
+            atomic-file-publication-receipt.json
+          if-no-files-found: error
