@@ -14,6 +14,8 @@ This file is the navigation and ownership map for the public repository. It prev
 | `independent-replication/` | **ACTIVE** | current clean-room reconstruction surface; IR-V2 | may generate candidate-independent raw evidence; semantic adjudication occurs outside this repo |
 | `independence/` | **HISTORICAL / CONTROL** | earlier factorization verification surface | not a second independent evidence lineage |
 | `probes/` | **GENERIC / HISTORICAL-MIXED** | public executable experiments | each probe has its own bounded scope; not automatically part of IR-V2 |
+
+| `probes/atomic_file_publication_macos.py` | **ACTIVE / GENERIC** | macOS ARM64 atomic publication and failure-boundary observation; generic POSIX filesystem substrate only | exact workflow/run evidence; does not prove any private application implementation |
 | `probes/json-parser-resource-probe.py` | **ACTIVE / GENERIC** | isolated CPython JSON parser resource observation at 1/4/8 MiB | exact runner/runtime only; no private application or semantic claim |
 | `.github/workflows/` | **EXECUTION** | hosted CI definitions | a workflow run proves only the steps it executes; individual runs must be referenced for execution claims |
 | `tools/` | **UTILITY** | generic verification helpers | utility code, not semantic evidence by itself |
