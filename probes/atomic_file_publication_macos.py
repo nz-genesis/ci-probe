@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 
 
@@ -138,6 +139,32 @@ class AtomicPublicationTests(unittest.TestCase):
             finally:
                 os.chmod(directory, 0o700)
 
+    def test_process_kill_after_publish_keeps_final_file_complete(self):
+        with tempfile.TemporaryDirectory(prefix="atomic-post-publish-kill-") as temp:
+            directory = Path(temp).resolve(strict=True)
+            marker = directory / ".directory-fsync-paused"
+            target = directory / "published.json"
+            child = subprocess.Popen(
+                [sys.executable, __file__, "--crash-after-publish", str(directory), str(marker)],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            )
+            try:
+                deadline = time.monotonic() + 10
+                while not marker.exists() and child.poll() is None and time.monotonic() < deadline:
+                    time.sleep(0.01)
+                self.assertTrue(marker.exists(), "child did not reach the pre-directory-fsync boundary")
+                child.kill()
+                child.wait(timeout=5)
+            finally:
+                if child.poll() is None:
+                    child.kill()
+                    child.wait(timeout=5)
+            self.assertTrue(target.is_file())
+            self.assertEqual(json.loads(target.read_text(encoding="utf-8")),
+                             {"status": "complete", "payload": "fully-staged"})
+            self.assertEqual({item.name for item in directory.iterdir()},
+                             {".directory-fsync-paused", "published.json"})
+
     def test_process_kill_during_staging_never_publishes_final_name(self):
         with tempfile.TemporaryDirectory(prefix="atomic-kill-") as temp:
             directory = Path(temp)
@@ -154,6 +181,22 @@ class AtomicPublicationTests(unittest.TestCase):
             self.assertLessEqual(staging[0].stat().st_size, 4096)
 
 
+def crash_after_publish_child(directory: Path, marker: Path) -> None:
+    real_fsync = os.fsync
+    calls = 0
+
+    def pause_before_directory_fsync(fd: int) -> None:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            marker.write_text("ready", encoding="utf-8")
+            time.sleep(30)
+        real_fsync(fd)
+
+    os.fsync = pause_before_directory_fsync
+    atomic_publish(directory, "published.json", {"status": "complete", "payload": "fully-staged"})
+
+
 def crash_child(directory: Path) -> None:
     signal.signal(signal.SIGXFSZ, signal.SIG_DFL)
     resource.setrlimit(resource.RLIMIT_FSIZE, (4096, 4096))
@@ -163,6 +206,9 @@ def crash_child(directory: Path) -> None:
 def main() -> int:
     if len(sys.argv) == 3 and sys.argv[1] == "--crash-child":
         crash_child(Path(sys.argv[2]))
+        return 0
+    if len(sys.argv) == 4 and sys.argv[1] == "--crash-after-publish":
+        crash_after_publish_child(Path(sys.argv[2]), Path(sys.argv[3]))
         return 0
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(AtomicPublicationTests)
     result = unittest.TextTestRunner(verbosity=2).run(suite)
