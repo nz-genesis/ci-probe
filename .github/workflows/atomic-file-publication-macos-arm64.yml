@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - "experiment/atomic-file-publication-parent-race-2026-11-05"
+      - "experiment/atomic-file-publication-parent-inode-race-2026-11-05"
     paths:
       - "probes/atomic_file_publication_macos.py"
       - ".github/workflows/atomic-file-publication-macos-arm64.yml"

@@ -54,7 +54,14 @@ def atomic_publish(directory: Path, final_name: str, payload: dict) -> Path:
         raise RuntimeError("required no-follow directory-relative primitives unavailable")
 
     directory = directory.resolve(strict=True)
+    expected_parent = os.stat(directory, follow_symlinks=False)
     directory_fd = open_directory_no_follow(directory)
+    opened_parent = os.fstat(directory_fd)
+    if (opened_parent.st_dev, opened_parent.st_ino) != (
+        expected_parent.st_dev, expected_parent.st_ino
+    ):
+        os.close(directory_fd)
+        raise RuntimeError("parent changed between preflight and open")
     staging_name = f".atomic-publication-{secrets.token_hex(16)}.tmp"
     staging_created = False
     file_fd = None
@@ -200,6 +207,32 @@ class AtomicPublicationTests(unittest.TestCase):
                              {"status": "complete", "payload": "fully-staged"})
             self.assertEqual({item.name for item in directory.iterdir()},
                              {".directory-fsync-paused", "published.json"})
+
+    def test_real_ancestor_directory_replacement_is_detected_before_write(self):
+        with tempfile.TemporaryDirectory(prefix="atomic-parent-inode-race-") as temp:
+            root = Path(temp)
+            ancestor = root / "ancestor"
+            parent = ancestor / "reports"
+            parent.mkdir(parents=True)
+            moved = root / "ancestor-original"
+            real_open = os.open
+            replaced = {"value": False}
+
+            def replace_ancestor_before_open(path, flags, *args, dir_fd=None, **kwargs):
+                if path == "ancestor" and dir_fd is not None and not replaced["value"]:
+                    os.rename(ancestor, moved)
+                    (ancestor / "reports").mkdir(parents=True)
+                    replaced["value"] = True
+                return real_open(path, flags, *args, dir_fd=dir_fd, **kwargs)
+
+            supported_dir_fd = os.supports_dir_fd
+            with mock.patch.object(os, "open", side_effect=replace_ancestor_before_open) as wrapped_open:
+                with mock.patch.object(os, "supports_dir_fd", supported_dir_fd | {wrapped_open}):
+                    with self.assertRaisesRegex(RuntimeError, "parent changed between preflight and open"):
+                        atomic_publish(parent, "race.json", {"status": "must-not-publish"})
+            self.assertTrue(replaced["value"])
+            self.assertEqual(list((moved / "reports").iterdir()), [])
+            self.assertEqual(list((ancestor / "reports").iterdir()), [])
 
     def test_ancestor_symlink_replacement_does_not_redirect_publication(self):
         with tempfile.TemporaryDirectory(prefix="atomic-parent-race-") as temp:
