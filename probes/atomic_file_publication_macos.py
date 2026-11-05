@@ -86,6 +86,7 @@ def atomic_publish(directory: Path, final_name: str, payload: dict) -> Path:
     staging_name = None
     staging_created = False
     file_fd = None
+    published_identity = None
     try:
         staging_name = f".atomic-publication-{secrets.token_hex(16)}.tmp"
         file_fd = os.open(
@@ -111,6 +112,7 @@ def atomic_publish(directory: Path, final_name: str, payload: dict) -> Path:
             if (not stat.S_ISREG(published.st_mode)
                     or (published.st_dev, published.st_ino) != (staged.st_dev, staged.st_ino)):
                 raise RuntimeError("published entry does not match the fsynced staging inode")
+            published_identity = (published.st_dev, published.st_ino)
         os.unlink(staging_name, dir_fd=directory_fd)
         staging_created = False
         os.fsync(directory_fd)
@@ -123,9 +125,18 @@ def atomic_publish(directory: Path, final_name: str, payload: dict) -> Path:
             os.close(check_fd)
         if published_chain != expected_chain:
             try:
+                current_final = os.stat(
+                    final_name, dir_fd=directory_fd, follow_symlinks=False
+                )
+                if (not stat.S_ISREG(current_final.st_mode)
+                        or published_identity is None
+                        or (current_final.st_dev, current_final.st_ino) != published_identity):
+                    raise RuntimeError(
+                        "final-name changed before cleanup; refusing to remove unrelated entry"
+                    )
                 os.unlink(final_name, dir_fd=directory_fd)
                 os.fsync(directory_fd)
-            except OSError as cleanup_error:
+            except (OSError, RuntimeError) as cleanup_error:
                 raise RuntimeError("parent path chain changed and final-name cleanup failed") from cleanup_error
             raise RuntimeError("parent path chain changed during publication")
     except BaseException:
@@ -341,6 +352,42 @@ class AtomicPublicationTests(unittest.TestCase):
             for fd in opened_directory_fds:
                 with self.assertRaises(OSError):
                     real_fstat(fd)
+
+    def test_chain_mismatch_cleanup_does_not_unlink_replaced_final_entry(self):
+        with tempfile.TemporaryDirectory(prefix="atomic-chain-cleanup-race-") as temp:
+            root = Path(temp).resolve(strict=True)
+            ancestor = root / "ancestor"
+            parent = ancestor / "reports"
+            parent.mkdir(parents=True)
+            moved = root / "ancestor-original"
+            real_fsync = os.fsync
+            replaced = {"value": False}
+            output = parent / "race.json"
+
+            def replace_parent_and_final_before_directory_fsync(fd):
+                current = os.fstat(fd)
+                if stat.S_ISDIR(current.st_mode) and not replaced["value"]:
+                    os.rename(ancestor, moved)
+                    ancestor.mkdir(mode=0o777)
+                    os.rename(moved / "reports", ancestor / "reports")
+                    output.unlink()
+                    output.write_text("foreign-entry", encoding="utf-8")
+                    replaced["value"] = True
+                return real_fsync(fd)
+
+            with mock.patch.object(
+                os, "fsync", side_effect=replace_parent_and_final_before_directory_fsync
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeError, "parent path chain changed and final-name cleanup failed"
+                ) as caught:
+                    atomic_publish(parent, "race.json", {"status": "must-not-publish"})
+
+            self.assertTrue(replaced["value"])
+            self.assertIn("refusing to remove unrelated entry", str(caught.exception.__cause__))
+            self.assertEqual(output.read_text(encoding="utf-8"), "foreign-entry")
+            self.assertEqual(list((ancestor / "reports").iterdir()), [output])
+            self.assertEqual(list(moved.iterdir()), [])
 
     def test_ancestor_replacement_with_same_parent_inode_is_detected(self):
         with tempfile.TemporaryDirectory(prefix="atomic-chain-race-") as temp:
