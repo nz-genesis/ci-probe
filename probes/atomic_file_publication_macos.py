@@ -85,7 +85,7 @@ class AtomicPublicationTests(unittest.TestCase):
         self.assertIn(os.stat, os.supports_dir_fd)
         self.assertIn(os.stat, os.supports_follow_symlinks)
         with tempfile.TemporaryDirectory(prefix="atomic-publish-") as temp:
-            directory = Path(temp)
+            directory = Path(temp).resolve(strict=True)
             target = atomic_publish(directory, "result.json", {"status": "complete", "items": [1, 2, 3]})
             self.assertEqual(json.loads(target.read_text(encoding="utf-8")),
                              {"status": "complete", "items": [1, 2, 3]})
