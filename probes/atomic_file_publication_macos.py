@@ -221,9 +221,11 @@ class AtomicPublicationTests(unittest.TestCase):
                     swapped["value"] = True
                 return real_open(path, flags, *args, dir_fd=dir_fd, **kwargs)
 
-            with mock.patch.object(os, "open", side_effect=replace_ancestor_before_child_open):
-                with self.assertRaisesRegex(RuntimeError, "parent path changed during publication"):
-                    atomic_publish(parent, "race.json", {"status": "must-not-publish"})
+            supported_dir_fd = os.supports_dir_fd
+            with mock.patch.object(os, "open", side_effect=replace_ancestor_before_child_open) as wrapped_open:
+                with mock.patch.object(os, "supports_dir_fd", supported_dir_fd | {wrapped_open}):
+                    with self.assertRaisesRegex(RuntimeError, "parent path changed during publication"):
+                        atomic_publish(parent, "race.json", {"status": "must-not-publish"})
             self.assertTrue(swapped["value"])
             self.assertFalse((moved / "reports" / "race.json").exists())
             self.assertFalse((redirected_parent / "race.json").exists())
