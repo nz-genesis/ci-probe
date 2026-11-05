@@ -34,8 +34,15 @@ def open_directory_no_follow(directory: Path) -> tuple[int, tuple[tuple[int, int
             if component in ("", ".", ".."):
                 raise ValueError("non-canonical path component")
             next_fd = os.open(component, flags, dir_fd=current_fd)
-            next_stat = os.fstat(next_fd)
-            identities.append((next_stat.st_dev, next_stat.st_ino))
+            try:
+                next_stat = os.fstat(next_fd)
+                identities.append((next_stat.st_dev, next_stat.st_ino))
+            except BaseException:
+                try:
+                    os.close(next_fd)
+                except OSError:
+                    pass
+                raise
             try:
                 os.close(current_fd)
             except BaseException:
@@ -76,10 +83,11 @@ def atomic_publish(directory: Path, final_name: str, payload: dict) -> Path:
     if confirmed_chain != expected_chain:
         os.close(directory_fd)
         raise RuntimeError("parent path chain changed during preflight")
-    staging_name = f".atomic-publication-{secrets.token_hex(16)}.tmp"
+    staging_name = None
     staging_created = False
     file_fd = None
     try:
+        staging_name = f".atomic-publication-{secrets.token_hex(16)}.tmp"
         file_fd = os.open(
             staging_name,
             os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
@@ -126,7 +134,7 @@ def atomic_publish(directory: Path, final_name: str, payload: dict) -> Path:
                 os.close(file_fd)
             except OSError:
                 pass
-        if staging_created:
+        if staging_created and staging_name is not None:
             try:
                 os.unlink(staging_name, dir_fd=directory_fd)
             except OSError:
@@ -279,6 +287,58 @@ class AtomicPublicationTests(unittest.TestCase):
             self.assertFalse((redirected_parent / "race.json").exists())
             self.assertEqual(list((moved / "reports").iterdir()), [])
             self.assertEqual(list(redirected_parent.iterdir()), [])
+
+    def test_child_directory_fd_is_closed_when_fstat_fails(self):
+        with tempfile.TemporaryDirectory(prefix="atomic-fstat-close-") as temp:
+            directory = Path(temp)
+            (directory / "child").mkdir()
+            real_open = os.open
+            real_fstat = os.fstat
+            opened = []
+
+            def capture_open(*args, **kwargs):
+                fd = real_open(*args, **kwargs)
+                opened.append(fd)
+                return fd
+
+            def fail_child_fstat(fd):
+                if len(opened) == 2 and fd == opened[-1]:
+                    raise OSError("injected child fstat failure")
+                return real_fstat(fd)
+
+            with mock.patch.object(os, "open", side_effect=capture_open):
+                with mock.patch.object(os, "fstat", side_effect=fail_child_fstat):
+                    with self.assertRaisesRegex(OSError, "injected child fstat failure"):
+                        open_directory_no_follow(directory / "child")
+
+            self.assertEqual(len(opened), 2)
+            with self.assertRaises(OSError):
+                real_fstat(opened[1])
+
+    def test_parent_directory_fd_is_closed_when_staging_token_fails(self):
+        with tempfile.TemporaryDirectory(prefix="atomic-token-close-") as temp:
+            directory = Path(temp)
+            real_open = os.open
+            real_fstat = os.fstat
+            opened_directory_fds = []
+
+            def capture_directory_open(*args, **kwargs):
+                fd = real_open(*args, **kwargs)
+                if stat.S_ISDIR(real_fstat(fd).st_mode):
+                    opened_directory_fds.append(fd)
+                return fd
+
+            with mock.patch.object(os, "open", side_effect=capture_directory_open):
+                with mock.patch.object(
+                    secrets, "token_hex", side_effect=OSError("injected token source failure")
+                ):
+                    with self.assertRaisesRegex(OSError, "injected token source failure"):
+                        atomic_publish(directory, "report.json", {"status": "not-written"})
+
+            self.assertTrue(opened_directory_fds)
+            for fd in opened_directory_fds:
+                with self.assertRaises(OSError):
+                    real_fstat(fd)
 
     def test_ancestor_replacement_with_same_parent_inode_is_detected(self):
         with tempfile.TemporaryDirectory(prefix="atomic-chain-race-") as temp:
