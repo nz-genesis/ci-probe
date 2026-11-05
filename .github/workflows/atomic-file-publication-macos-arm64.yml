@@ -5,6 +5,12 @@ on:
     paths:
       - "probes/atomic_file_publication_macos.py"
       - ".github/workflows/atomic-file-publication-macos-arm64.yml"
+  push:
+    branches:
+      - "experiment/atomic-file-publication-parent-race-2026-11-05"
+    paths:
+      - "probes/atomic_file_publication_macos.py"
+      - ".github/workflows/atomic-file-publication-macos-arm64.yml"
   workflow_dispatch:
 
 permissions:
