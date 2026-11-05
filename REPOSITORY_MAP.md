@@ -15,7 +15,7 @@ This file is the navigation and ownership map for the public repository. It prev
 | `independence/` | **HISTORICAL / CONTROL** | earlier factorization verification surface | not a second independent evidence lineage |
 | `probes/` | **GENERIC / HISTORICAL-MIXED** | public executable experiments | each probe has its own bounded scope; not automatically part of IR-V2 |
 
-| `probes/atomic_file_publication_macos.py` | **ACTIVE / GENERIC** | macOS ARM64 atomic publication, no-follow component traversal, ancestor-symlink and full parent identity-chain replacement race observation; generic POSIX filesystem substrate only | exact workflow/run evidence; does not prove any private application implementation |
+| `probes/atomic_file_publication_macos.py` | **ACTIVE / GENERIC** | macOS ARM64 atomic publication, no-follow component traversal, ancestor-symlink/full parent identity-chain race observation and descriptor cleanup fault injection; generic POSIX filesystem substrate only | exact workflow/run evidence; does not prove any private application implementation |
 | `probes/json-parser-resource-probe.py` | **ACTIVE / GENERIC** | isolated CPython JSON parser resource observation at 1/4/8 MiB | exact runner/runtime only; no private application or semantic claim |
 | `.github/workflows/` | **EXECUTION** | hosted CI definitions | a workflow run proves only the steps it executes; individual runs must be referenced for execution claims |
 | `tools/` | **UTILITY** | generic verification helpers | utility code, not semantic evidence by itself |
