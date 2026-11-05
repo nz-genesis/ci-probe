@@ -29,7 +29,7 @@ jobs:
           test "$(uname -m)" = "arm64"
           sw_vers
           python3 --version
-          printf 'GITHUB_SHA=%s\\nCHECKED_OUT_SHA=%s\\nARCH=%s\\n' "$GITHUB_SHA" "$(git rev-parse HEAD)" "$(uname -m)"
+          printf 'GITHUB_SHA=%s\nCHECKED_OUT_SHA=%s\nARCH=%s\n' "$GITHUB_SHA" "$(git rev-parse HEAD)" "$(uname -m)"
       - name: Set up current Python 3.14
         uses: actions/setup-python@v6
         with:
