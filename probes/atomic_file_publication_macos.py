@@ -234,6 +234,8 @@ class AtomicPublicationTests(unittest.TestCase):
         target = directory / "created-by-nobody"
         try:
             os.chmod(directory, 0o700)
+            mode_before_acl = stat.S_IMODE(directory.stat().st_mode)
+            self.assertEqual(mode_before_acl, 0o700)
             baseline = subprocess.run(
                 ["/usr/bin/sudo", "-n", "-u", "nobody", "/usr/bin/touch", str(target)],
                 capture_output=True, text=True,
@@ -271,6 +273,7 @@ class AtomicPublicationTests(unittest.TestCase):
                 + acl_attempt.stderr,
             )
             self.assertTrue(target.is_file())
+            self.assertEqual(target.stat().st_uid, nobody_uid)
             print(json.dumps({
                 "observation": "EXTENDED_ACL_GRANTED_DIRECTORY_WRITE",
                 "posix_mode_octal": oct(mode_after_acl),
