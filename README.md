@@ -58,7 +58,7 @@ No automatic write-back to `nz-genesis/genesis-lab` is permitted.
 The repository contains bounded probes for execution, authority/revocation, recovery, idempotency, concurrency, external-effect reconciliation, adversarial evidence and related generic substrate behavior. The [JSON parser resource probe](probes/json-parser-resource-probe.md) adds a generic CPython decoding/resource observation; it does not test any private application's semantics. These are independent, bounded experiments, not a single cumulative semantic proof.
 
 
-- [Generic atomic file publication probe](probes/atomic_file_publication_macos.py) — macOS ARM64 / Python 3.14 observation of staged file writes, `fsync`, exclusive hard-link publication, permission denial, concurrent publishers, process termination and ancestor-symlink replacement, real ancestor-directory replacement and full path-component identity revalidation (including replacement that preserves the final parent inode); generic OS substrate only, not application integration evidence.
+- [Generic atomic file publication probe](probes/atomic_file_publication_macos.py) — macOS ARM64 / Python 3.14 observation of staged file writes, `fsync`, exclusive hard-link publication, permission denial, concurrent publishers, process termination and ancestor-symlink replacement, real ancestor-directory replacement and full path-component identity revalidation (including replacement that preserves the final parent inode), and descriptor cleanup under injected fstat/token-generation failures; generic OS substrate only, not application integration evidence.
 
 ## Continuous integration
 
