@@ -25,16 +25,18 @@ BUSY_TIMEOUT_MS = 15_000
 def connect(path: str) -> sqlite3.Connection:
     db = sqlite3.connect(path, timeout=BUSY_TIMEOUT_MS / 1000, isolation_level=None)
     db.execute(f"PRAGMA busy_timeout={BUSY_TIMEOUT_MS}")
-    db.execute("PRAGMA synchronous=FULL")
+    db.execute("PRAGMA synchronous=EXTRA")
     db.execute("PRAGMA foreign_keys=ON")
+    db.execute("PRAGMA trusted_schema=OFF")
     return db
 
 
 def initialize(path: str) -> tuple[str, int]:
     db = connect(path)
     try:
-        mode = str(db.execute("PRAGMA journal_mode=WAL").fetchone()[0]).lower()
+        mode = str(db.execute("PRAGMA journal_mode=DELETE").fetchone()[0]).lower()
         synchronous = int(db.execute("PRAGMA synchronous").fetchone()[0])
+        trusted_schema = int(db.execute("PRAGMA trusted_schema").fetchone()[0])
         db.execute(
             """
             CREATE TABLE IF NOT EXISTS operation (
@@ -70,7 +72,7 @@ def initialize(path: str) -> tuple[str, int]:
         db.execute(
             "CREATE INDEX IF NOT EXISTS operation_status_idx ON operation(status)"
         )
-        return mode, synchronous
+        return mode, synchronous, trusted_schema
     finally:
         db.close()
 
@@ -283,9 +285,10 @@ def run() -> dict[str, Any]:
     ctx = multiprocessing.get_context("spawn")
     with tempfile.TemporaryDirectory(prefix="sqlite-journal-probe-") as directory:
         db_path = str(Path(directory) / DB_NAME)
-        mode, synchronous = initialize(db_path)
-        assert mode == "wal", mode
-        assert synchronous == 2, synchronous  # SQLite FULL
+        mode, synchronous, trusted_schema = initialize(db_path)
+        assert mode == "delete", mode
+        assert synchronous == 3, synchronous  # SQLite EXTRA
+        assert trusted_schema == 0, trusted_schema
 
         # Real independent processes race to claim the same scoped key.
         worker_count = 12
@@ -366,6 +369,12 @@ def run() -> dict[str, Any]:
         status, attempts = read_operation(db_path, no_effect_id) or ("MISSING", -1)
         assert recovery_classification(status) == "UNKNOWN_REQUIRES_RECONCILIATION"
         assert attempts == 1
+        repeated, repeated_id = claim(
+            db_path, "principal-C", "caller-C", "write", "v1",
+            "barrier-no-effect", "digest-C"
+        )
+        assert repeated == "EXISTING" and repeated_id == no_effect_id
+        assert read_operation(db_path, no_effect_id)[1] == 1
 
         # Crash after an independent local marker is durable but before the
         # journal records observation. The journal still cannot claim success
@@ -387,14 +396,17 @@ def run() -> dict[str, Any]:
         status, attempts = read_operation(db_path, effect_id) or ("MISSING", -1)
         assert recovery_classification(status) == "UNKNOWN_REQUIRES_RECONCILIATION"
         assert attempts == 1
+        repeated, repeated_id = claim(
+            db_path, "principal-D", "caller-D", "write", "v1",
+            "barrier-with-marker", "digest-D"
+        )
+        assert repeated == "EXISTING" and repeated_id == effect_id
+        assert read_operation(db_path, effect_id)[1] == 1
 
         # The raw idempotency key is not stored in the database. Check the DB
         # and its sidecar files after checkpointing the WAL.
-        db = connect(db_path)
-        try:
-            db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-        finally:
-            db.close()
+        # DELETE journal mode does not use WAL sidecars. Closing the final
+        # connection must leave the database in its committed state.
         database_files = list(Path(directory).glob(DB_NAME + "*"))
         assert database_files
         assert all(b"same-key" not in file.read_bytes() for file in database_files)
@@ -406,7 +418,8 @@ def run() -> dict[str, Any]:
             "python_version": __import__("sys").version.split()[0],
             "sqlite_version": sqlite3.sqlite_version,
             "journal_mode": mode,
-            "synchronous": "FULL",
+            "synchronous": "EXTRA",
+            "trusted_schema": "OFF",
             "processes": worker_count,
             "same_key_race": {
                 "created": outcomes.count("CREATED"),
@@ -420,8 +433,9 @@ def run() -> dict[str, Any]:
             "crash_after_local_marker_before_observation": "UNKNOWN_NO_REDISPATCH",
             "raw_idempotency_key_persisted": False,
             "integrity_check": "ok",
-            "scope": "single-host local SQLite file; no network filesystem or multi-host claim",
+            "scope": "single-host local SQLite rollback-journal file; no network filesystem or multi-host claim",
             "external_effect_limit": "local marker fixture only; no provider or remote-system evidence",
+            "key_fingerprint_limit": "SHA-256 test fixture only; not a production secret or key-rotation design",
         }
 
 
