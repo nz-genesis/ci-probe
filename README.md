@@ -57,6 +57,8 @@ No automatic write-back to `nz-genesis/genesis-lab` is permitted.
 
 The repository contains bounded probes for execution, authority/revocation, recovery, idempotency, concurrency, external-effect reconciliation, adversarial evidence and related generic substrate behavior. The [JSON parser resource probe](probes/json-parser-resource-probe.md) adds a generic CPython decoding/resource observation; it does not test any private application's semantics. These are independent, bounded experiments, not a single cumulative semantic proof.
 
+- [Durable idempotency SQLite boundary probe](probes/durable_idempotency_sqlite_boundary.py) — generic single-host SQLite WAL/FULL experiment: 12-process atomic key claim, namespace isolation, digest conflict, abrupt process termination before commit and after the durable dispatch barrier, and UNKNOWN/no-redispatch recovery. The local marker is a test fixture only; this does not establish provider or remote-system behavior. The dedicated workflow tests Python 3.14.7 (repository baseline), 3.14.10 and 3.15.2.
+
 
 - [Generic atomic file publication probe](probes/atomic_file_publication_macos.py) — macOS ARM64 / Python 3.14 observation of staged file writes, `fsync`, exclusive hard-link publication, permission denial, concurrent publishers, process termination and ancestor-symlink replacement, real ancestor-directory replacement and full path-component identity revalidation (including replacement that preserves the final parent inode), and descriptor cleanup under injected fstat/token-generation failures; generic OS substrate only, not application integration evidence.
 

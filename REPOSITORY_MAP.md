@@ -1,7 +1,7 @@
 # CI Probe — Repository Map
 
 **Status:** ACTIVE GOVERNANCE / PUBLIC SUBSTRATE
-**Date:** 2026-09-04
+**Date:** 2026-11-06
 
 ## Purpose
 
@@ -17,6 +17,8 @@ This file is the navigation and ownership map for the public repository. It prev
 
 | `probes/atomic_file_publication_macos.py` | **ACTIVE / GENERIC** | macOS ARM64 atomic publication, no-follow component traversal, ancestor-symlink/full parent identity-chain race observation and descriptor cleanup fault injection; generic POSIX filesystem substrate only | exact workflow/run evidence; does not prove any private application implementation |
 | `probes/json-parser-resource-probe.py` | **ACTIVE / GENERIC** | isolated CPython JSON parser resource observation at 1/4/8 MiB | exact runner/runtime only; no private application or semantic claim |
+| `probes/durable_idempotency_sqlite_boundary.py` | **ACTIVE / GENERIC** | single-host SQLite WAL/FULL atomic claim, 12-process race, digest conflict, namespace isolation and abrupt process-crash/UNKNOWN boundary | exact Python/SQLite/runtime and runner only; local marker fixture is not provider evidence; no multi-host or remote-system claim |
+| `.github/workflows/durable-idempotency-sqlite-boundary.yml` | **ACTIVE / GENERIC** | exact-branch/path-scoped Python/SQLite runtime matrix | only the named probe and exact completed run/job/logs; no private application or provider acceptance |
 | `.github/workflows/` | **EXECUTION** | hosted CI definitions | a workflow run proves only the steps it executes; individual runs must be referenced for execution claims |
 | `tools/` | **UTILITY** | generic verification helpers | utility code, not semantic evidence by itself |
 | root `*_PROBE*` / probe scripts | **LEGACY / REVIEWED** | older generic substrate probes | retain until explicit deprecation/removal record exists; do not treat as the active semantic challenge |
