@@ -11,11 +11,11 @@ This is a public, project-agnostic executable experiment. It contains no private
 - Reconciliation classifies an already-attempted execution without executing it again.
 - A failed status alone does not authorize a new operation retry; effect certainty must explicitly confirm no effect, and a new identity/fresh admission is still required.
 - The scenario matrix distinguishes pre-effect failure, possible effect, partial effect, unknown and unresolved reconciliation.
-- Scenario-matrix workflow runs the complete unittest suite under action_probe/, not only a hand-written smoke script.
+- The dedicated scenario workflow runs both the root generic action-contract tests and the full scenario-matrix test module.
 
 ## Explicit limitations
 
-The probe has no persistence, network, provider integration, external side effect or real authorization authority. It does not claim exactly-once delivery, distributed consensus, physical-world safety, durability or security of arbitrary external executors. Other repository probes for late evidence, artifact closure, external-effect recovery and evidence-scope binding are separate experiments; their results are not silently combined into one proof.
+The probe has no persistence, network, provider integration, external side effect or real authorization authority. Its fixtures model inputs and observations; they are not an actual provider or computer executor. It does not claim exactly-once delivery, distributed consensus, physical-world safety, durability or security of arbitrary external executors. Other repository probes for late evidence, artifact closure, external-effect recovery and evidence-scope binding are separate experiments; their results are not silently combined into one proof.
 
 A passing run establishes only the behavior of these generic models and deterministic fixtures. It is not proof of any private system's architecture or behavior.
 
@@ -38,4 +38,4 @@ A passing run establishes only the behavior of these generic models and determin
             ↓
     private evidence record
 
-Private Genesis artifacts must never be copied into this repository merely to make an experiment easier to run.
+Private artifacts must never be copied into this repository merely to make an experiment easier to run.

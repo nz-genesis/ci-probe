@@ -42,6 +42,26 @@ class ScenarioMatrixTests(unittest.TestCase):
         self.assertEqual(item.expected, (State.UNRESOLVED,))
         self.assertFalse(item.new_operation_retry_candidate)
 
+    def test_scenario_names_are_unique(self):
+        names = [item.name for item in SCENARIOS]
+        self.assertEqual(len(names), len(set(names)))
+
+    def test_every_scenario_retry_annotation_matches_the_rule(self):
+        for item in SCENARIOS:
+            with self.subTest(scenario=item.name):
+                self.assertTrue(item.expected)
+                self.assertEqual(
+                    item.new_operation_retry_candidate,
+                    new_operation_retry_candidate(item.expected[-1], item.effect_certainty),
+                )
+
+    def test_unknown_scenarios_never_claim_no_effect_without_reconciliation(self):
+        for item in SCENARIOS:
+            if State.UNKNOWN in item.expected or State.UNRESOLVED in item.expected:
+                with self.subTest(scenario=item.name):
+                    self.assertIn(item.effect_certainty, {EffectCertainty.POSSIBLE, EffectCertainty.PARTIAL})
+                    self.assertFalse(item.new_operation_retry_candidate)
+
 
 if __name__ == "__main__":
     unittest.main()
