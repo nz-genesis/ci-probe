@@ -33,3 +33,16 @@ This is a public, project-agnostic experimental fixture. It records only generic
 The dedicated workflow runs the root generic action-contract test module and this scenario-matrix test module. The repository smoke workflow independently runs the root action-contract module. A workflow result proves only the tests actually executed at its exact commit and job.
 
 The probe has no persistence, network, provider integration, external side effect or real authorization authority. Its observations do not prove a private system's implementation or acceptance.
+
+
+## Reproducible execution evidence — 2026-11-07
+
+- Source commit under test: 91d622f224a298cd3b010862cb61f97e2245143c.
+- Workflow: https://github.com/nz-genesis/ci-probe/actions/runs/42382451041
+- Job: generic-execution-scenarios, job ID 128432736252.
+- Result: SUCCESS; runner log reports Ran 23 tests and OK.
+- Executed suites: root test_action_probe.py plus action_probe/test_scenario_matrix.py.
+- Runner: GitHub-hosted ubuntu-latest; Python 3 runtime selected by runner default (no explicit version pin in this workflow).
+- The workflow checked out the branch commit shown above and completed the documentation-presence check.
+
+This is a generic fixture/model test result only. It does not establish private Web2API implementation behavior, real provider permission, physical computer effects, durable recovery, concurrency safety or production acceptance. Unrelated branch-push workflow runs are not included in this evidence claim.
