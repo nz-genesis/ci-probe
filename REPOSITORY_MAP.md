@@ -14,7 +14,7 @@ This file is the navigation and ownership map for the public repository. It prev
 | independent-replication/ | **ACTIVE** | current clean-room reconstruction surface; IR-V2 | candidate-independent raw evidence; semantic adjudication occurs outside this repo |
 | independence/ | **HISTORICAL / CONTROL** | earlier factorization verification surface | not a second independent evidence lineage |
 | probes/ | **GENERIC / HISTORICAL-MIXED** | public executable experiments | each probe has its own bounded scope; not automatically part of IR-V2 |
-| action_probe.py + action_probe/ | **ACTIVE / GENERIC** | consequential-action contract, exact admission binding, revocation recheck, unknown-state reconciliation and effect-certainty-aware retry matrix | exact workflow/run evidence; no private project semantics or external side effects |
+| action_probe.py + action_probe/ | **ACTIVE / GENERIC** | consequential-action contract, exact admission binding, revocation recheck, unknown-state reconciliation and effect-certainty-aware retry matrix | exact workflow/run evidence; no private project semantics or external side effects; the folder intentionally has no __init__.py because its name shares a root module |
 | ACTION_PROBE_SCOPE.md | **ACTIVE GENERIC SCOPE** | boundary for generic consequential-action probe | generic execution substrate only |
 | PUBLIC_SCOPE.md | **ACTIVE POLICY** | public/private boundary | controls what may be published |
 | SECURITY.md | **ACTIVE POLICY** | security/confidentiality boundary | controls secrets/private material |

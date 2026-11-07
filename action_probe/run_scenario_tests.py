@@ -1,18 +1,18 @@
-"""Run the full scenario-matrix unittest suite."""
+"""Run the full scenario-matrix unittest suite without shadowing root action_probe.py."""
 from pathlib import Path
 import sys
 import unittest
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+PROBE_DIR = Path(__file__).resolve().parent
+if str(PROBE_DIR) not in sys.path:
+    sys.path.insert(0, str(PROBE_DIR))
 
 
 def main():
     suite = unittest.defaultTestLoader.discover(
-        start_dir=str(ROOT / "action_probe"),
+        start_dir=str(PROBE_DIR),
         pattern="test_*.py",
-        top_level_dir=str(ROOT),
+        top_level_dir=str(PROBE_DIR),
     )
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     if not result.wasSuccessful():

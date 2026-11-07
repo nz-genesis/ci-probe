@@ -1,6 +1,6 @@
 import unittest
 
-from action_probe.scenario_matrix import SCENARIOS, EffectCertainty, State, new_operation_retry_candidate
+from scenario_matrix import SCENARIOS, EffectCertainty, State, new_operation_retry_candidate
 
 
 class ScenarioMatrixTests(unittest.TestCase):
