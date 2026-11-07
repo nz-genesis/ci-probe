@@ -2,6 +2,13 @@ name: Execution Scenario Matrix
 
 on:
   push:
+    paths:
+      - ".github/workflows/scenario-matrix.yml"
+      - "action_probe.py"
+      - "test_action_probe.py"
+      - "action_probe/**"
+      - "ACTION_PROBE_SCOPE.md"
+      - "research/EXECUTION_SCENARIO_MATRIX.md"
   workflow_dispatch:
 
 permissions:
@@ -14,7 +21,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1; Node 24 runtime
 
       - name: Execute generic action contract and scenario suites
         run: PYTHONPATH=. python3 action_probe/run_scenario_tests.py

@@ -11,7 +11,7 @@ This is a public, project-agnostic executable experiment. It contains no private
 - Reconciliation classifies an already-attempted execution without executing it again.
 - A failed status alone does not authorize a new operation retry; effect certainty must explicitly confirm no effect, and a new identity/fresh admission is still required.
 - The scenario matrix distinguishes pre-effect failure, possible effect, partial effect, unknown and unresolved reconciliation.
-- The dedicated scenario workflow runs both the root generic action-contract tests and the full scenario-matrix test module.
+- The dedicated scenario workflow runs both the root generic action-contract tests and the full scenario-matrix test module. Its push trigger is path-scoped to the files it owns, it retains manual dispatch, and its checkout action is pinned to actions/checkout v7.0.1 (full commit SHA, Node 24 runtime).
 
 ## Explicit limitations
 
