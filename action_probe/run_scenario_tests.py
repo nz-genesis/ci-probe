@@ -1,22 +1,22 @@
-from scenario_matrix import SCENARIOS, State, retry_policy
+"""Run the full scenario-matrix unittest suite."""
+from pathlib import Path
+import sys
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 
 def main():
-    revoked = next(s for s in SCENARIOS if s.name == "revoked_before_execution")
-    assert revoked.expected == (State.REJECTED,)
-    assert revoked.retry_allowed is False
-
-    assert retry_policy(State.UNKNOWN) is False
-    assert retry_policy(State.FAILED) is True
-
-    partial = next(s for s in SCENARIOS if s.name == "partial_effect")
-    assert State.PARTIAL in partial.expected
-    assert State.UNKNOWN in partial.expected
-    assert partial.retry_allowed is False
-
-    success = next(s for s in SCENARIOS if s.name == "successful_execution")
-    assert success.expected[-1] == State.VERIFIED
-
+    suite = unittest.defaultTestLoader.discover(
+        start_dir=str(ROOT / "action_probe"),
+        pattern="test_*.py",
+        top_level_dir=str(ROOT),
+    )
+    result = unittest.TextTestRunner(verbosity=2).run(suite)
+    if not result.wasSuccessful():
+        raise SystemExit(1)
     print("EXECUTION_SCENARIO_MATRIX_OK")
 
 

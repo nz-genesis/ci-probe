@@ -8,64 +8,34 @@ This repository contains only deliberately public, generic experiments and infra
 
 ## Repository map
 
-See [`REPOSITORY_MAP.md`](REPOSITORY_MAP.md) for ownership, active/historical boundaries and evidence-counting rules.
+See [REPOSITORY_MAP.md](REPOSITORY_MAP.md) for ownership, active/historical boundaries and evidence-counting rules.
 
-```text
-ROOT
-├── probes/                     generic executable probes
-├── tools/                      generic verification utilities
-├── independence/               historical/control factorization surface
-├── independent-replication/    ACTIVE clean-room replication surface
-└── .github/workflows/          public CI workflows
-```
+    ROOT
+    ├── probes/                     generic executable probes
+    ├── tools/                      generic verification utilities
+    ├── action_probe/               active generic action scenario matrix
+    ├── independence/               historical/control factorization surface
+    ├── independent-replication/    ACTIVE clean-room replication surface
+    └── .github/workflows/          public CI workflows
 
-### Active clean-room replication
+## Active clean-room replication
 
-The **only active entrypoint for materially independent reconstruction is**:
-
-`independent-replication/`
-
-Use its current frozen challenge and runbook. The active public call is the IR-V2 challenge described in `independent-replication/INDEPENDENT_REPLICATION_CALL.md`.
-
-The older `independence/` directory is retained as a historical/control surface. It is not a second independent evidence lineage and must not be treated as the current replication entrypoint.
-
-### P385 external implementation execution boundary
-
-P385 uses this public repository as an execution surface for the frozen external `lucmoreau/ProvToolbox` implementation. The external implementation itself is immutable for the experiment; only the public runner environment may supply prerequisites required by the frozen build. The current target is commit `bbff1d7eecd15175e6be8a055f67d311e40f9f04` (ProvToolbox 2.2.4).
-
-The P385 job is `p385-frozen-external-provtoolbox` in `.github/workflows/p287-verifier-dependency-substitution.yml`. A configured or queued job is not evidence: P385 counts only an observed runner execution with exact checkout identity, logs and reproducible receipt. External execution success is still not, by itself, Genesis semantic concordance or universal-minimality evidence.
+The only active entrypoint for materially independent reconstruction is independent-replication/. Use its current frozen challenge and runbook. The older independence/ directory is a historical/control surface, not a second independent evidence lineage.
 
 ## Evidence boundary
 
-A successful public run establishes only the behavior checked by that public artifact. It does not establish any private Genesis semantic claim by itself. Public execution evidence may be reviewed and, when warranted, imported into the private Genesis research corpus with explicit provenance and epistemic scope.
-
-The intended flow is:
-
-```text
-public generic artifact
-        ↓
-public execution / raw evidence
-        ↓
-private review + adjudication
-        ↓
-Genesis Lab evidence record
-```
-
-No automatic write-back to `nz-genesis/genesis-lab` is permitted.
+A successful public run establishes only the behavior checked by that public artifact. It does not establish any private Genesis semantic claim by itself. Public execution evidence may be reviewed and imported into the private research corpus only with explicit provenance and epistemic scope. No automatic write-back is permitted.
 
 ## Current generic probes
 
-The repository contains bounded probes for execution, authority/revocation, recovery, idempotency, concurrency, external-effect reconciliation, adversarial evidence and related generic substrate behavior. The [JSON parser resource probe](probes/json-parser-resource-probe.md) adds a generic CPython decoding/resource observation; it does not test any private application's semantics. These are independent, bounded experiments, not a single cumulative semantic proof.
+The repository contains bounded probes for execution, authority/revocation, recovery, idempotency, concurrency, external-effect reconciliation, adversarial evidence and related generic substrate behavior. The active action probe tests exact admission binding, revocation at dispatch, unknown-state reconciliation and effect-certainty-aware retry candidates. Other probes separately cover late evidence, artifact closure, external-effect recovery and evidence-scope binding. These are independent experiments, not a cumulative semantic proof.
 
-
-- [Generic atomic file publication probe](probes/atomic_file_publication_macos.py) — macOS ARM64 / Python 3.14 observation of staged file writes, `fsync`, exclusive hard-link publication, permission denial, concurrent publishers, process termination and ancestor-symlink replacement, real ancestor-directory replacement and full path-component identity revalidation (including replacement that preserves the final parent inode), and descriptor cleanup under injected fstat/token-generation failures; generic OS substrate only, not application integration evidence.
+- [Generic atomic file publication probe](probes/atomic_file_publication_macos.py) — macOS ARM64 / Python 3.14 observation of staged file writes, fsync, exclusive hard-link publication, permission denial, concurrent publishers, process termination and ancestor-path replacement; generic OS substrate only.
 
 ## Continuous integration
 
-See [`ROOT_WORKFLOW_POLICY.md`](ROOT_WORKFLOW_POLICY.md).
-
-`.github/workflows/ci-probe.yml` is the generic repository smoke/substrate workflow. It must not be interpreted as a universal semantic test suite. Experiment-specific workflows remain separately scoped and their individual run conclusions must be reported from their exact workflow run, job and logs.
+See ROOT_WORKFLOW_POLICY.md. The generic ci-probe workflow is not a universal semantic test suite. Experiment-specific conclusions must be tied to exact workflow runs, jobs and logs.
 
 ## Security
 
-See `PUBLIC_SCOPE.md` and `SECURITY.md` for the public/private boundary and execution safety rules.
+See PUBLIC_SCOPE.md and SECURITY.md for the public/private boundary and execution safety rules.
